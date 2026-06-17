@@ -1,0 +1,20 @@
+# VM에서 직접 실행할 때 사용하는 Compose 템플릿
+# 사용법: docker compose -f docker-compose.vm.yml up -d
+# IMAGE_TAG 환경변수를 설정하거나 .env 파일에 작성하세요.
+#   예: IMAGE_TAG=deundeun/backend:latest docker compose -f docker-compose.vm.yml up -d
+
+services:
+  api:
+    image: ${IMAGE_TAG:-deundeun/backend:latest}
+    container_name: deundeun-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - /opt/deundeun/.env
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
