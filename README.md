@@ -4,6 +4,108 @@ deundeun 서비스의 FastAPI 백엔드 저장소입니다.
 
 ---
 
+## 아키텍처 구조
+
+FastAPI는 **검진 분석 모델을 직접 보유하지 않습니다.** 별도 AI 분석 서버에 요청을 보내고 결과를 저장·제공하는 중간 서버 역할을 합니다.
+
+```
+Frontend
+  ↓
+FastAPI Backend
+  ↓
+External Analysis Server
+  ↓
+Fine-tuned AI Model
+```
+
+```
+Client Request
+  ↓
+API Router (app/api/v1/)      — URL 정의·DTO 검증·응답 반환만
+  ↓
+Service (app/domains/*/service.py)  — 비즈니스 로직
+  ↓
+Repository (app/domains/*/repository.py)  — DB CRUD
+  ↓
+DB
+
+외부 연동 시:
+Service → Infrastructure Client (app/infrastructure/)
+```
+
+### 폴더별 역할
+
+| 폴더 | 역할 |
+|------|------|
+| `app/core/` | 전체 공통 기능 (config, security, exceptions, response 포맷) |
+| `app/database/` | DB 연결·세션 관리 (SQLAlchemy) |
+| `app/api/v1/` | API URL 정의 및 라우터 집계 |
+| `app/domains/` | 도메인별 비즈니스 로직 (auth, record, analysis, mission 등) |
+| `app/infrastructure/` | 외부 서비스 연동 (external_analysis, storage, email, push, wearable) |
+| `app/workers/` | 자동 실행 백그라운드 작업 (analysis_result, wearable_sync 등) |
+| `tests/` | pytest 기반 테스트 |
+| `docs/` | 구현 현황 문서 |
+
+### API 엔드포인트 구조
+
+```
+/api/v1/auth/*           — 로그인·회원가입·이메일 인증
+/api/v1/onboarding/*     — 최초 검진 등록·웨어러블 설정
+/api/v1/home/*           — 홈 Aggregation
+/api/v1/missions/*       — 오늘의 미션·완료·캘린더
+/api/v1/records/*        — 검진 결과지 업로드·기록·항목별 수치
+/api/v1/analysis/*       — 분석 요청·상태·결과·callback
+/api/v1/characters/*     — 게임 캐릭터·성장
+/api/v1/my/*             — 내 정보·알림 설정·탈퇴
+/api/v1/notifications/*  — 알림 조회·설정
+```
+
+### 구현 현황
+
+상세 구현 현황은 [docs/implementation-status.md](docs/implementation-status.md)를 참고하세요.
+
+---
+
+## DB 후보 비교
+
+| 후보 | 장점 | 단점 | 적합도 |
+|------|------|------|--------|
+| **PostgreSQL** | JSONB, Alembic 생태계, GCP Cloud SQL 지원 | 로컬에 Docker 필요 | **1순위** |
+| **MySQL** | GCP Cloud SQL 지원, 친숙도 | JSON 처리 제한적 | 2순위 |
+| **SQLite** | 셋업 제로, CI 가벼움 | 운영 부적합 | 개발/CI 전용 병행 가능 |
+
+DB 확정 후 할 일:
+- [ ] `DATABASE_URL` 설정
+- [ ] `alembic init` → 첫 migration (users 테이블)
+- [ ] CI workflow에 DB service container 추가
+
+---
+
+## 로컬 실행
+
+```bash
+# 의존성 설치
+pip install -r requirements-dev.txt
+
+# 환경변수 설정
+cp .env.example .env
+# .env 파일에서 필요한 값 수정
+
+# 서버 실행
+uvicorn app.main:app --reload
+
+# API 문서 확인
+open http://localhost:8000/docs
+
+# 테스트
+pytest tests/
+
+# 린트
+ruff check .
+```
+
+---
+
 ## 브랜치 전략
 
 | 브랜치 | 용도 |
