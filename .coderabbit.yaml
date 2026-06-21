@@ -1,0 +1,95 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+
+language: ko-KR
+tone_instructions: "간결하고 실행 가능한 피드백을 제공하세요. 보안, 아키텍처 경계, 비동기 처리, 에러 핸들링을 우선 검토하세요."
+
+reviews:
+  profile: chill
+  high_level_summary: true
+  collapse_walkthrough: true
+  poem: false
+  request_changes_workflow: false
+
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - main
+      - develop
+
+  path_filters:
+    - "!**/.git/**"
+    - "!**/__pycache__/**"
+    - "!**/.pytest_cache/**"
+    - "!**/.ruff_cache/**"
+    - "!**/.venv/**"
+    - "!**/venv/**"
+    - "!**/*.pyc"
+
+  path_instructions:
+    - path: "app/api/v1/**"
+      instructions: |
+        API Router 레이어입니다. URL 정의, DTO(Pydantic) 검증, 응답 반환만 담당해야 합니다.
+        - 비즈니스 로직·DB 접근이 라우터에 있으면 service/repository로 분리하도록 지적하세요.
+        - Depends()로 의존성 주입, async 엔드포인트 일관성을 확인하세요.
+        - 인증이 필요한 엔드포인트에 보호가 누락되지 않았는지 확인하세요.
+
+    - path: "app/domains/**/service.py"
+      instructions: |
+        Service 레이어(비즈니스 로직)입니다.
+        - repository/infrastructure를 통해서만 외부·DB에 접근하는지 확인하세요.
+        - 도메인 정책(policy) 위반, 트랜잭션 경계, 예외 변환(도메인 예외 → HTTP)을 검토하세요.
+        - 외부 분석 서버 연동 시 타임아웃·재시도·상태 전이가 안전한지 확인하세요.
+
+    - path: "app/domains/**/repository.py"
+      instructions: |
+        Repository 레이어(DB CRUD)입니다.
+        - SQLAlchemy 세션 사용, N+1 쿼리, 불필요한 전체 조회를 검토하세요.
+        - 비즈니스 로직이 섞이지 않았는지 확인하세요.
+
+    - path: "app/domains/**/models.py"
+      instructions: |
+        SQLAlchemy 모델입니다.
+        - 인덱스, nullable, 관계(relationship) 정의, 마이그레이션 호환성을 검토하세요.
+        - 민감 정보(비밀번호 해시 등)가 평문으로 저장되지 않는지 확인하세요.
+
+    - path: "app/infrastructure/**"
+      instructions: |
+        외부 서비스 연동 클라이언트입니다.
+        - httpx 등 비동기 HTTP 클라이언트, 타임아웃, 재시도, 에러 매핑을 검토하세요.
+        - API 키·시크릿이 하드코딩되지 않았는지 확인하세요.
+        - external_analysis 연동 시 callback URL·상태 코드 처리를 확인하세요.
+
+    - path: "app/workers/**"
+      instructions: |
+        백그라운드 워커/스케줄러입니다.
+        - 장시간 블로킹 호출, 예외 처리, 재시도·멱등성을 검토하세요.
+        - 스케줄러 중복 실행 시 부작용이 없는지 확인하세요.
+
+    - path: "app/core/**"
+      instructions: |
+        전역 공통 모듈(config, security, exceptions)입니다.
+        - 설정값은 환경 변수로 주입되는지, 기본값에 시크릿이 없는지 확인하세요.
+        - 전역 예외 핸들러가 일관된 응답 포맷을 반환하는지 검토하세요.
+
+    - path: "tests/**"
+      instructions: |
+        pytest 테스트입니다.
+        - 핵심 비즈니스 로직·API 계약을 검증하는지 확인하세요.
+        - 과도한 mock, 구현 세부에 묶인 테스트는 지적하세요.
+
+    - path: "Dockerfile"
+      instructions: |
+        프로덕션 Docker 이미지입니다.
+        - 멀티스테이지 빌드, non-root 실행, 불필요한 dev 의존성 제외를 검토하세요.
+
+    - path: ".github/workflows/**"
+      instructions: |
+        CI/CD 워크플로우입니다.
+        - lint(ruff), test(pytest), docker build 단계가 일관되는지 확인하세요.
+
+  tools:
+    ruff:
+      enabled: true
+    hadolint:
+      enabled: true
