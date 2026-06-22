@@ -1,8 +1,12 @@
+import pytest
+from pydantic import ValidationError
+
 from app.domains.ocr.schemas import OcrJobResponse
 from app.domains.record.models import CheckupMetricResult
 from app.domains.record.schemas import (
     MetricBulkUpdateRequest,
     MetricResponse,
+    MetricUpdateItem,
     MetricUpdateRequest,
     UploadResponse,
     VerifyRequest,
@@ -70,3 +74,27 @@ def test_record_request_schemas_parse_nested_metric_updates():
     assert bulk.metrics[0].metric_id == 3
     assert verify.metrics is None
     assert upload.ocr_job_id == 1
+
+
+@pytest.mark.parametrize(
+    ("schema", "payload"),
+    [
+        (MetricUpdateRequest, {"value": ""}),
+        (MetricUpdateRequest, {"value": "1" * 51}),
+        (MetricUpdateItem, {"metric_id": 3, "value": ""}),
+        (MetricUpdateItem, {"metric_id": 3, "value": "1" * 51}),
+    ],
+)
+def test_metric_update_rejects_invalid_value_length(schema, payload):
+    with pytest.raises(ValidationError):
+        schema(**payload)
+
+
+@pytest.mark.parametrize("schema", [MetricUpdateRequest, MetricUpdateItem])
+def test_metric_update_rejects_unit_longer_than_database_column(schema):
+    payload = {"value": "24.1", "unit": "u" * 21}
+    if schema is MetricUpdateItem:
+        payload["metric_id"] = 3
+
+    with pytest.raises(ValidationError):
+        schema(**payload)

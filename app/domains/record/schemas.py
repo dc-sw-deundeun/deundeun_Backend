@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class UploadResponse(BaseModel):
@@ -38,14 +38,14 @@ class MetricResponse(BaseModel):
 
 
 class MetricUpdateRequest(BaseModel):
-    value: str
-    unit: str | None = None
+    value: str = Field(min_length=1, max_length=50)
+    unit: str | None = Field(default=None, max_length=20)
 
 
 class MetricUpdateItem(BaseModel):
     metric_id: int
-    value: str
-    unit: str | None = None
+    value: str = Field(min_length=1, max_length=50)
+    unit: str | None = Field(default=None, max_length=20)
 
 
 class MetricBulkUpdateRequest(BaseModel):
