@@ -1,4 +1,5 @@
 import pytest
+from sqlalchemy.exc import IntegrityError
 
 from app.domains.ocr.models import OcrJob
 from app.domains.record.models import CheckupMetricResult
@@ -79,6 +80,15 @@ def test_upsert_rejects_missing_record_without_creating_orphan(db_session):
         repo.upsert_ocr_metrics(999_999, [_parsed("bmi", "24.1")])
 
     assert repo.list_metrics(999_999) == []
+
+
+def test_unique_constraint_user_file_hash(db_session):
+    repo = RecordRepository(db_session)
+    repo.create_record(1, "UPLOAD", "s3://a.png", "dup")
+    db_session.commit()
+    with pytest.raises(IntegrityError):
+        repo.create_record(1, "UPLOAD", "s3://b.png", "dup")
+    db_session.rollback()
 
 
 def test_delete_record_cascade_returns_file_urls(db_session):

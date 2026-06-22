@@ -61,6 +61,7 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_checkup_records_file_hash'), 'checkup_records', ['file_hash'], unique=False)
     op.create_index(op.f('ix_checkup_records_user_id'), 'checkup_records', ['user_id'], unique=False)
+    op.create_unique_constraint("uq_checkup_records_user_file_hash", "checkup_records", ["user_id", "file_hash"])
     op.create_table('meal_records',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.PrimaryKeyConstraint('id')
@@ -93,6 +94,7 @@ def downgrade() -> None:
     op.drop_table('meal_records')
     op.drop_index(op.f('ix_checkup_records_user_id'), table_name='checkup_records')
     op.drop_index(op.f('ix_checkup_records_file_hash'), table_name='checkup_records')
+    op.drop_constraint("uq_checkup_records_user_file_hash", "checkup_records", type_="unique")
     op.drop_table('checkup_records')
     op.drop_index(op.f('ix_checkup_metric_results_record_id'), table_name='checkup_metric_results')
     op.drop_table('checkup_metric_results')

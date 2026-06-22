@@ -1,6 +1,7 @@
 import hashlib
 
 from fastapi import APIRouter, Depends, File, Response, UploadFile
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -51,10 +52,19 @@ async def upload_checkup(
     file_url = await ocr_service._file_storage.upload(
         f"checkups/{user_id}/{file_hash}.png", content
     )
-    record = record_repo.create_record(user_id, "UPLOAD", file_url, file_hash)
-    db.flush()
-    job = await ocr_service.create_job(record.id, user_id)
-    db.commit()
+    try:
+        record = record_repo.create_record(user_id, "UPLOAD", file_url, file_hash)
+        db.flush()
+        job = await ocr_service.create_job(record.id, user_id)
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        existing = record_repo.find_by_user_and_hash(user_id, file_hash)
+        response.status_code = 200
+        return success_response(
+            message="이미 업로드된 검진 결과지입니다.",
+            data=UploadResponse(record_id=existing.id, ocr_job_id=0).model_dump(),
+        )
     return success_response(
         message="업로드 완료. OCR 처리를 시작합니다.",
         data=UploadResponse(record_id=record.id, ocr_job_id=job.id).model_dump(),

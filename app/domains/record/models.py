@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, Column, DateTime, Float, Integer, String, Text
+from sqlalchemy import Boolean, Column, DateTime, Float, Integer, String, Text, UniqueConstraint
 
 from app.database.base import Base
 
@@ -11,6 +11,9 @@ def _now() -> datetime:
 
 class CheckupRecord(Base):
     __tablename__ = "checkup_records"
+    __table_args__ = (
+        UniqueConstraint("user_id", "file_hash", name="uq_checkup_records_user_file_hash"),
+    )
 
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, nullable=False, index=True)  # 논리 참조, FK 없음
