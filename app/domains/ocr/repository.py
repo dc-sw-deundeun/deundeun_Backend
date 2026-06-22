@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -42,6 +42,8 @@ class OcrRepository:
         if job is None:
             return None
         job.status = OcrStatus.PROCESSING.value
+        # requested_at를 처리 시작 시각으로 갱신한다(생성 시각은 created_at에 보존).
+        # find_stuck_jobs가 '처리 시작 이후 경과'로 stuck을 판정하기 위함.
         job.requested_at = _now()
         self._db.flush()
         return job
@@ -62,8 +64,6 @@ class OcrRepository:
         self._db.flush()
 
     def find_stuck_jobs(self, timeout_seconds: int) -> list[OcrJob]:
-        from datetime import timedelta
-
         cutoff = _now() - timedelta(seconds=timeout_seconds)
         stmt = select(OcrJob).where(
             OcrJob.status == OcrStatus.PROCESSING.value,
