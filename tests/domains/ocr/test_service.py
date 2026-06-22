@@ -68,6 +68,12 @@ def _glucose_result():
     )
 
 
+def _oversized_glucose_result():
+    result = _glucose_result()
+    result.fields[1].text = "1" * 51
+    return result
+
+
 def _make_service(db, client, storage=None):
     return OcrService(
         ocr_repo=OcrRepository(db),
@@ -172,6 +178,23 @@ async def test_raw_storage_failure_does_not_fail_processing(db_session):
     assert job.status == OcrStatus.COMPLETED.value
     assert job.raw_result_url is None
     assert len(record_repo.list_metrics(record.id)) == 1
+
+
+@pytest.mark.asyncio
+async def test_database_flush_failure_is_persisted_as_failed(db_session):
+    record_repo = RecordRepository(db_session)
+    record = record_repo.create_record(1, "UPLOAD", "s3://a.png", "h")
+    db_session.commit()
+    service = _make_service(db_session, FakeOcrClient(result=_oversized_glucose_result()))
+    job = await service.create_job(record.id, user_id=1)
+    db_session.commit()
+
+    await service.process_job(job)
+    db_session.commit()
+
+    assert job.status == OcrStatus.FAILED.value
+    assert record_repo.get_record(record.id).ocr_status == OcrStatus.FAILED.value
+    assert record_repo.list_metrics(record.id) == []
 
 
 @pytest.mark.asyncio

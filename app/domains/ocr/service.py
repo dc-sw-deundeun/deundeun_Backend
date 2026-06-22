@@ -1,6 +1,8 @@
 import json
 import logging
 
+from sqlalchemy.orm import object_session
+
 from app.domains.ocr.models import OcrJob
 from app.domains.ocr.repository import OcrRepository
 from app.domains.ocr.status import OcrStatus
@@ -64,8 +66,18 @@ class OcrService:
 
         raw_result_url = await self._store_raw(job, result)
         try:
-            parsed = self._parser.parse(result)
-            parsed_count = self._record_repo.upsert_ocr_metrics(job.record_id, parsed)
+            session = object_session(job)
+            if session is None:
+                raise RuntimeError("OCR job is detached from its session")
+            with session.begin_nested():
+                parsed = self._parser.parse(result)
+                parsed_count = self._record_repo.upsert_ocr_metrics(job.record_id, parsed)
+                self._ocr_repo.mark_completed(
+                    job,
+                    raw_result_url=raw_result_url,
+                    parsed_field_count=parsed_count,
+                )
+                self._record_repo.set_ocr_status(record, OcrStatus.COMPLETED.value)
         except ValueError:
             self._mark_deleted_record_failure(job, "record_deleted_during_upsert")
             return
@@ -73,12 +85,6 @@ class OcrService:
             self._mark_processing_failure(job, record, "processing_failed", exc)
             return
 
-        self._ocr_repo.mark_completed(
-            job,
-            raw_result_url=raw_result_url,
-            parsed_field_count=parsed_count,
-        )
-        self._record_repo.set_ocr_status(record, OcrStatus.COMPLETED.value)
         logger.info(
             "ocr_job_completed",
             extra={"job_id": job.id, "parsed_field_count": parsed_count},
