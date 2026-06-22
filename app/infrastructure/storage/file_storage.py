@@ -15,7 +15,7 @@ class StubFileStorage:
     """개발/테스트용 stub 구현입니다."""
 
     async def upload(self, file_path: str, content: bytes) -> str:
-        raise NotImplementedError
+        return f"s3://stub/{file_path}"
 
     async def delete(self, file_path: str) -> None:
-        raise NotImplementedError
+        return None
