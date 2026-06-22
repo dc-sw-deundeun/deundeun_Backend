@@ -8,6 +8,8 @@ class AnalysisService:
         self._record_repo = record_repo
 
     def ensure_verified(self, record_id: int) -> None:
+        if self._record_repo is None:
+            raise RuntimeError("AnalysisService에 record_repo가 주입되지 않았습니다.")
         record = self._record_repo.get_record(record_id)
         if record is None:
             raise NotFoundException(message="검진 기록을 찾을 수 없습니다.")

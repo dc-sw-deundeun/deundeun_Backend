@@ -10,8 +10,9 @@ def test_ensure_verified_blocks_unverified(db_session):
     record = repo.create_record(1, "UPLOAD", "s3://a.png", "h")
     db_session.commit()  # 기본 UNVERIFIED
     service = AnalysisService(record_repo=repo)
-    with pytest.raises(ConflictException):
+    with pytest.raises(ConflictException) as exc_info:
         service.ensure_verified(record.id)
+    assert exc_info.value.error_code == "NOT_VERIFIED"
 
 
 def test_ensure_verified_passes_when_verified(db_session):
