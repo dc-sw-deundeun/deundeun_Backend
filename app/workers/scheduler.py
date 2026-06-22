@@ -9,6 +9,7 @@ def start_scheduler() -> None:
     - 매일 오후 8시: 미션 미완료 알림
     - 매주 일요일: 주간 통계 생성
     - 주기적: 검진 등록 주기 알림
+    - 주기적(ocr_polling_interval_seconds): OCR pending/stuck 처리 (ocr_worker.run_ocr_batch)
     """
     raise NotImplementedError
 
