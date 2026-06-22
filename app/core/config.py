@@ -18,5 +18,13 @@ class Settings(BaseSettings):
     analysis_callback_secret: Optional[str] = None
     analysis_polling_interval_seconds: int = 60
 
+    clova_ocr_invoke_url: Optional[str] = None
+    clova_ocr_secret_key: Optional[str] = None
+    ocr_polling_interval_seconds: int = 30
+    ocr_min_confidence: float = 0.8
+    ocr_request_timeout_seconds: int = 30
+    ocr_max_retries: int = 2
+    ocr_stuck_timeout_seconds: int = 300
+
 
 settings = Settings()
