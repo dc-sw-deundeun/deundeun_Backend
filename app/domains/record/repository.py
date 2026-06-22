@@ -36,6 +36,14 @@ class RecordRepository:
     def get_record(self, record_id: int) -> CheckupRecord | None:
         return self._db.get(CheckupRecord, record_id)
 
+    def get_record_fresh(self, record_id: int) -> CheckupRecord | None:
+        stmt = (
+            select(CheckupRecord)
+            .where(CheckupRecord.id == record_id)
+            .execution_options(populate_existing=True)
+        )
+        return self._db.execute(stmt).scalar_one_or_none()
+
     def _lock_record(self, record_id: int) -> CheckupRecord:
         stmt = (
             select(CheckupRecord)

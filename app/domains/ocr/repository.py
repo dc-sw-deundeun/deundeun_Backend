@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, SessionTransaction
 
 from app.domains.ocr.models import OcrJob
 from app.domains.ocr.status import OcrStatus
@@ -29,6 +29,23 @@ class OcrRepository:
 
     def get_job(self, job_id: int) -> OcrJob | None:
         return self._db.get(OcrJob, job_id)
+
+    def get_job_fresh(self, job_id: int) -> OcrJob | None:
+        stmt = (
+            select(OcrJob)
+            .where(OcrJob.id == job_id)
+            .execution_options(populate_existing=True)
+        )
+        return self._db.execute(stmt).scalar_one_or_none()
+
+    def begin_nested(self) -> SessionTransaction:
+        return self._db.begin_nested()
+
+    def commit(self) -> None:
+        self._db.commit()
+
+    def rollback(self) -> None:
+        self._db.rollback()
 
     def claim_next_pending(self) -> OcrJob | None:
         # 단일 인스턴스 전제. 멀티 인스턴스 전환 시 with_for_update(skip_locked=True) 필요.

@@ -1,12 +1,9 @@
 import json
 import logging
 
-from sqlalchemy.orm import object_session
-
 from app.domains.ocr.models import OcrJob
 from app.domains.ocr.repository import OcrRepository
 from app.domains.ocr.status import OcrStatus
-from app.domains.record.models import CheckupRecord
 from app.domains.record.repository import RecordRepository
 from app.infrastructure.ocr.ocr_client import OcrClient
 from app.infrastructure.ocr.ocr_dto import OcrResultDTO
@@ -42,13 +39,27 @@ class OcrService:
 
     async def process_pending(self) -> int:
         processed = 0
-        while job := self._ocr_repo.claim_next_pending():
-            await self.process_job(job)
+        while True:
+            job = self._ocr_repo.claim_next_pending()
+            if job is None:
+                self._ocr_repo.rollback()
+                break
+            job_id = job.id
+            self._ocr_repo.commit()
+            try:
+                await self.process_job(job)
+                self._ocr_repo.commit()
+            except Exception as exc:  # noqa: BLE001
+                self._ocr_repo.rollback()
+                logger.warning(
+                    "ocr_batch_job_unhandled_failure",
+                    extra={"job_id": job_id, "error_type": type(exc).__name__},
+                )
             processed += 1
         return processed
 
     async def process_job(self, job: OcrJob) -> None:
-        record = self._record_repo.get_record(job.record_id)
+        record = self._record_repo.get_record_fresh(job.record_id)
         if record is None:
             self._mark_deleted_record_failure(job, "record_missing")
             return
@@ -56,20 +67,17 @@ class OcrService:
         try:
             result = await self._recognize_with_retry(record.file_url)
         except Exception as exc:  # noqa: BLE001
-            self._mark_processing_failure(job, record, "recognize_failed", exc)
+            self._mark_processing_failure(job, "recognize_failed", exc)
             return
 
-        record = self._record_repo.get_record(job.record_id)
+        record = self._record_repo.get_record_fresh(job.record_id)
         if record is None:
             self._mark_deleted_record_failure(job, "record_deleted")
             return
 
         raw_result_url = await self._store_raw(job, result)
         try:
-            session = object_session(job)
-            if session is None:
-                raise RuntimeError("OCR job is detached from its session")
-            with session.begin_nested():
+            with self._ocr_repo.begin_nested():
                 parsed = self._parser.parse(result)
                 parsed_count = self._record_repo.upsert_ocr_metrics(job.record_id, parsed)
                 self._ocr_repo.mark_completed(
@@ -79,10 +87,12 @@ class OcrService:
                 )
                 self._record_repo.set_ocr_status(record, OcrStatus.COMPLETED.value)
         except ValueError:
+            await self._discard_raw(job, raw_result_url)
             self._mark_deleted_record_failure(job, "record_deleted_during_upsert")
             return
         except Exception as exc:  # noqa: BLE001
-            self._mark_processing_failure(job, record, "processing_failed", exc)
+            await self._discard_raw(job, raw_result_url)
+            self._mark_processing_failure(job, "processing_failed", exc)
             return
 
         logger.info(
@@ -112,20 +122,36 @@ class OcrService:
             )
             return None
 
+    async def _discard_raw(self, job: OcrJob, raw_result_url: str | None) -> None:
+        if raw_result_url is None:
+            return
+        try:
+            await self._file_storage.delete(raw_result_url)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "ocr_raw_compensation_failed",
+                extra={"job_id": job.id, "error_type": type(exc).__name__},
+            )
+
     def _mark_processing_failure(
         self,
         job: OcrJob,
-        record: CheckupRecord,
         event: str,
         error: Exception,
     ) -> None:
-        self._ocr_repo.mark_failed(job, event)
-        self._record_repo.set_ocr_status(record, OcrStatus.FAILED.value)
+        current_job = self._ocr_repo.get_job_fresh(job.id)
+        current_record = self._record_repo.get_record_fresh(job.record_id)
+        if current_job is not None:
+            self._ocr_repo.mark_failed(current_job, event)
+        if current_record is not None:
+            self._record_repo.set_ocr_status(current_record, OcrStatus.FAILED.value)
         logger.warning(
             event,
             extra={"job_id": job.id, "error_type": type(error).__name__},
         )
 
     def _mark_deleted_record_failure(self, job: OcrJob, event: str) -> None:
-        self._ocr_repo.mark_failed(job, event)
+        current_job = self._ocr_repo.get_job_fresh(job.id)
+        if current_job is not None:
+            self._ocr_repo.mark_failed(current_job, event)
         logger.warning(event, extra={"job_id": job.id})
