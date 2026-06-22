@@ -129,3 +129,12 @@ Thumbs.db
 # =========================
 .cursorignore
 .cursorindexingignore
+
+# =========================
+# Docs
+# =========================
+docs/superpowers
+
+.claude
+.superpowers
+.venv_py311
