@@ -12,6 +12,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.core.config import settings
+from app.core.exceptions import ConflictException
 from app.domains.analysis.service import AnalysisService
 from app.domains.ocr.repository import OcrRepository
 from app.domains.ocr.service import OcrService
@@ -19,7 +20,6 @@ from app.domains.record.repository import RecordRepository
 from app.infrastructure.ocr.ocr_dto import OcrFieldDTO, OcrResultDTO
 from app.infrastructure.ocr.parser import OcrParser
 from app.infrastructure.storage.file_storage import StubFileStorage
-from app.core.exceptions import ConflictException
 
 
 class FakeClovaClient:

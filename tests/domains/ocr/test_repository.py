@@ -1,6 +1,5 @@
 from datetime import datetime, timedelta, timezone
 
-from app.domains.ocr.models import OcrJob
 from app.domains.ocr.repository import OcrRepository
 from app.domains.ocr.status import OcrStatus
 

@@ -5,9 +5,9 @@ import pytest
 from app.domains.ocr.repository import OcrRepository
 from app.domains.ocr.service import OcrService
 from app.domains.ocr.status import OcrStatus
+from app.domains.record.repository import RecordRepository
 from app.infrastructure.ocr.ocr_dto import OcrFieldDTO, OcrResultDTO
 from app.infrastructure.ocr.parser import OcrParser
-from app.domains.record.repository import RecordRepository
 from app.workers.ocr_worker import recover_stuck, run_ocr_batch
 
 
