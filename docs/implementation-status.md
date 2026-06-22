@@ -113,6 +113,8 @@ FastAPI는 분석 모델을 직접 보유하지 않습니다.
 
 ## 5. 환경 설정 체크리스트
 
+- [x] `alembic init` → 첫 migration (ocr/checkup 스키마)
+- [ ] `DATABASE_URL` 운영값 설정 (PostgreSQL)
 - [ ] `DATABASE_URL`
 - [ ] `JWT_SECRET_KEY`
 - [ ] `DOCKERHUB_USERNAME` / `DOCKERHUB_TOKEN` (CI/CD)
