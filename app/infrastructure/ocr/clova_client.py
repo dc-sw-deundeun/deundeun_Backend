@@ -47,11 +47,14 @@ class ClovaOcrClient:
         images = body.get("images") or []
         for image in images:
             for raw in image.get("fields") or []:
+                vertices = (raw.get("boundingPoly") or {}).get("vertices")
+                if not vertices:
+                    continue
                 fields.append(
                     OcrFieldDTO.from_vertices(
                         text=raw.get("inferText", ""),
                         confidence=raw.get("inferConfidence", 0.0),
-                        vertices=raw["boundingPoly"]["vertices"],
+                        vertices=vertices,
                     )
                 )
         return OcrResultDTO(fields=fields)

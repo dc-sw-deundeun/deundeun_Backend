@@ -67,3 +67,42 @@ async def test_recognize_raises_on_http_error():
         client = ClovaOcrClient("https://clova.test/ocr", "s", http_client=http)
         with pytest.raises(httpx.HTTPStatusError):
             await client.recognize("https://files.test/checkup.png")
+
+
+@pytest.mark.asyncio
+async def test_recognize_skips_fields_without_bounding_poly():
+    response_body = {
+        "images": [
+            {
+                "fields": [
+                    {
+                        "inferText": "유효한필드",
+                        "inferConfidence": 0.99,
+                        "boundingPoly": {
+                            "vertices": [
+                                {"x": 10, "y": 100}, {"x": 60, "y": 100},
+                                {"x": 60, "y": 130}, {"x": 10, "y": 130},
+                            ]
+                        },
+                    },
+                    {
+                        "inferText": "boundingPoly없음",
+                        "inferConfidence": 0.42,
+                    },
+                ]
+            }
+        ]
+    }
+
+    transport = httpx.MockTransport(lambda req: httpx.Response(200, json=response_body))
+    async with httpx.AsyncClient(transport=transport) as http:
+        client = ClovaOcrClient(
+            invoke_url="https://clova.test/ocr",
+            secret_key="secret-123",
+            http_client=http,
+        )
+        result = await client.recognize("https://files.test/checkup.png")
+
+    assert len(result.fields) == 1
+    assert result.fields[0].text == "유효한필드"
+    assert result.fields[0].confidence == 0.99
