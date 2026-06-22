@@ -36,6 +36,17 @@ class RecordRepository:
     def get_record(self, record_id: int) -> CheckupRecord | None:
         return self._db.get(CheckupRecord, record_id)
 
+    def _lock_record(self, record_id: int) -> CheckupRecord:
+        stmt = (
+            select(CheckupRecord)
+            .where(CheckupRecord.id == record_id)
+            .with_for_update()
+        )
+        record = self._db.execute(stmt).scalar_one_or_none()
+        if record is None:
+            raise ValueError(f"Record not found: {record_id}")
+        return record
+
     def find_by_user_and_hash(
         self, user_id: int, file_hash: str
     ) -> CheckupRecord | None:
@@ -76,6 +87,7 @@ class RecordRepository:
     def upsert_ocr_metrics(
         self, record_id: int, parsed: list[ParsedMetric]
     ) -> int:
+        self._lock_record(record_id)
         existing = self.list_metrics(record_id)
         manual_codes = {
             metric.metric_code
@@ -83,7 +95,7 @@ class RecordRepository:
             if metric.is_edited or metric.source == MetricSource.MANUAL.value
         }
         for metric in existing:
-            if metric.metric_code not in manual_codes:
+            if not metric.is_edited and metric.source == MetricSource.OCR.value:
                 self._db.delete(metric)
         self._db.flush()
 
@@ -120,6 +132,7 @@ class RecordRepository:
         self._db.flush()
 
     def delete_record_cascade(self, record: CheckupRecord) -> list[str]:
+        record = self._lock_record(record.id)
         file_urls: list[str] = []
         if record.file_url:
             file_urls.append(record.file_url)
