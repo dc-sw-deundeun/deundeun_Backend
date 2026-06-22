@@ -55,6 +55,7 @@ Service → Infrastructure Client (app/infrastructure/)
 /api/v1/missions/*       — 오늘의 미션·완료·캘린더
 /api/v1/records/*        — 검진 결과지 업로드·기록·항목별 수치
 /api/v1/analysis/*       — 분석 요청·상태·결과·callback
+/api/v1/ocr/*            — OCR job 상태·재처리
 /api/v1/characters/*     — 게임 캐릭터·성장
 /api/v1/my/*             — 내 정보·알림 설정·탈퇴
 /api/v1/notifications/*  — 알림 조회·설정

@@ -119,3 +119,5 @@ FastAPI는 분석 모델을 직접 보유하지 않습니다.
 - [ ] `ANALYSIS_SERVER_BASE_URL` (Phase 3)
 - [ ] `ANALYSIS_SERVER_API_KEY` (Phase 3)
 - [ ] `ANALYSIS_CALLBACK_SECRET` (Phase 3)
+- [ ] `CLOVA_OCR_INVOKE_URL` (Phase 3)
+- [ ] `CLOVA_OCR_SECRET_KEY` (Phase 3)
