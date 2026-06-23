@@ -10,7 +10,9 @@ class AppException(Exception):
 
 
 class AuthException(AppException):
-    def __init__(self, message: str = "인증이 필요합니다.", error_code: str = "AUTH_REQUIRED") -> None:
+    def __init__(
+        self, message: str = "인증이 필요합니다.", error_code: str = "AUTH_REQUIRED"
+    ) -> None:
         super().__init__(status_code=401, message=message, error_code=error_code)
 
 
@@ -20,7 +22,9 @@ class ForbiddenException(AppException):
 
 
 class NotFoundException(AppException):
-    def __init__(self, message: str = "데이터를 찾을 수 없습니다.", error_code: str = "NOT_FOUND") -> None:
+    def __init__(
+        self, message: str = "데이터를 찾을 수 없습니다.", error_code: str = "NOT_FOUND"
+    ) -> None:
         super().__init__(status_code=404, message=message, error_code=error_code)
 
 
@@ -30,7 +34,9 @@ class ConflictException(AppException):
 
 
 class BadRequestException(AppException):
-    def __init__(self, message: str = "잘못된 요청입니다.", error_code: str = "BAD_REQUEST") -> None:
+    def __init__(
+        self, message: str = "잘못된 요청입니다.", error_code: str = "BAD_REQUEST"
+    ) -> None:
         super().__init__(status_code=400, message=message, error_code=error_code)
 
 

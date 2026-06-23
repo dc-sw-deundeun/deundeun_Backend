@@ -1,32 +1,42 @@
-from datetime import datetime, timedelta, timezone
-from typing import Optional
+from datetime import UTC, datetime, timedelta
+
+from jose import JWTError, jwt
+from passlib.context import CryptContext
+
+from app.core.config import settings
+from app.domains.auth.exceptions import InvalidTokenException
+
+_pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def hash_password(password: str) -> str:
-    """비밀번호를 해싱합니다."""
-    raise NotImplementedError
+    return _pwd_context.hash(password)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """비밀번호를 검증합니다."""
-    raise NotImplementedError
+    return _pwd_context.verify(plain_password, hashed_password)
 
 
-def create_access_token(subject: str, expires_delta: Optional[timedelta] = None) -> str:
-    """JWT Access Token을 생성합니다."""
-    raise NotImplementedError
+def create_access_token(subject: str | int, expires_delta: timedelta | None = None) -> str:
+    expire = datetime.now(UTC) + (
+        expires_delta
+        if expires_delta
+        else timedelta(minutes=settings.jwt_access_token_expire_minutes)
+    )
+    payload = {"sub": str(subject), "exp": expire, "type": "access"}
+    return jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
 
 
-def create_refresh_token(subject: str) -> str:
-    """JWT Refresh Token을 생성합니다."""
-    raise NotImplementedError
+def create_refresh_token(subject: str | int) -> str:
+    expire = datetime.now(UTC) + timedelta(days=settings.jwt_refresh_expire_days)
+    payload = {"sub": str(subject), "exp": expire, "type": "refresh"}
+    return jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
 
 
 def decode_token(token: str) -> dict:
-    """JWT Token을 검증하고 payload를 반환합니다."""
-    raise NotImplementedError
-
-
-def _make_expire(expires_delta: Optional[timedelta], default_minutes: int) -> datetime:
-    now = datetime.now(timezone.utc)
-    return now + (expires_delta if expires_delta else timedelta(minutes=default_minutes))
+    """서명·만료를 검증하고 payload를 반환합니다."""
+    try:
+        payload = jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
+    except JWTError:
+        raise InvalidTokenException()
+    return payload

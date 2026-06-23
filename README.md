@@ -44,7 +44,6 @@ Service → Infrastructure Client (app/infrastructure/)
 | `app/infrastructure/` | 외부 서비스 연동 (external_analysis, storage, email, push, wearable) |
 | `app/workers/` | 자동 실행 백그라운드 작업 (analysis_result, wearable_sync 등) |
 | `tests/` | pytest 기반 테스트 |
-| `docs/` | 구현 현황 문서 |
 
 ### API 엔드포인트 구조
 
@@ -59,12 +58,6 @@ Service → Infrastructure Client (app/infrastructure/)
 /api/v1/my/*             — 내 정보·알림 설정·탈퇴
 /api/v1/notifications/*  — 알림 조회·설정
 ```
-
-### 구현 현황
-
-상세 구현 현황은 [docs/implementation-status.md](docs/implementation-status.md)를 참고하세요.
-
----
 
 ## DB 후보 비교
 
@@ -221,6 +214,7 @@ docker build -t deundeun/backend:local .
 # 컨테이너 실행
 docker run -p 8000:8000 deundeun/backend:local
 
-# docker-compose (VM 환경)
-IMAGE_TAG=deundeun/backend:latest docker compose -f docker/docker-compose.vm.yml up -d
+# docker-compose (단일 파일, VM/API 배포 profile)
+IMAGE_TAG=deundeun/backend:latest ENV_FILE=/opt/deundeun/.env \
+  docker compose -f docker/docker-compose.yml --profile deploy up -d api
 ```
