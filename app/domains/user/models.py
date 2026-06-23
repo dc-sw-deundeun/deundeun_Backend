@@ -1,10 +1,14 @@
 import enum
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, Enum, String, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base
+
+if TYPE_CHECKING:
+    from app.domains.auth.models import ConsentHistory, RefreshToken
 
 
 class UserStatus(str, enum.Enum):
@@ -49,4 +53,11 @@ class User(Base):
         server_default=func.now(),
         onupdate=lambda: datetime.now(UTC),
         nullable=False,
+    )
+
+    refresh_tokens: Mapped[list["RefreshToken"]] = relationship(
+        "RefreshToken", back_populates="user", cascade="all, delete-orphan"
+    )
+    consent_histories: Mapped[list["ConsentHistory"]] = relationship(
+        "ConsentHistory", back_populates="user", cascade="all, delete-orphan"
     )
