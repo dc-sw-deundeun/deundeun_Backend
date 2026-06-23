@@ -1,4 +1,3 @@
-import json
 import logging
 
 from app.domains.ocr.models import OcrJob
@@ -78,36 +77,26 @@ class OcrService:
             self._mark_deleted_record_failure(job, "record_deleted")
             return
 
-        raw_result_url = await self._store_raw(job, result)
         try:
             with self._ocr_repo.begin_nested():
                 parsed = self._parser.parse(result)
                 parsed_count = self._record_repo.upsert_ocr_metrics(job.record_id, parsed)
-                self._ocr_repo.mark_completed(
-                    job,
-                    raw_result_url=raw_result_url,
-                    parsed_field_count=parsed_count,
-                )
+                self._ocr_repo.mark_completed(job, parsed_count)
                 self._record_repo.set_ocr_status(record, OcrStatus.COMPLETED.value)
-            # raw 저장(외부)과 DB 결과를 한 단위로 확정한다. 여기서 커밋이
-            # 실패하면 아래 except에서 raw를 보상 삭제해 고아를 방지한다.
             self._ocr_repo.commit()
         except ValueError:
-            # savepoint 내부 실패(레코드 동시 삭제)만 해당하며 외부 커밋과 무관하므로
-            # 세션은 이미 정상이다. 추가 rollback은 식별맵 인스턴스 갱신과 충돌한다.
-            await self._discard_raw(job, raw_result_url)
             self._mark_deleted_record_failure(job, "record_deleted_during_upsert")
             return
         except Exception as exc:  # noqa: BLE001
             self._ocr_repo.rollback()
-            await self._discard_raw(job, raw_result_url)
             self._mark_processing_failure(job, "processing_failed", exc)
             return
-
-        logger.info(
-            "ocr_job_completed",
-            extra={"job_id": job.id, "parsed_field_count": parsed_count},
-        )
+        # 커밋 성공 이후에만 원본 이미지를 best-effort 삭제한다.
+        try:
+            await self._file_storage.delete(record.file_url)
+        except Exception:  # noqa: BLE001
+            pass
+        logger.info("ocr_job_completed", extra={"job_id": job.id, "parsed_field_count": parsed_count})
 
     async def _recognize_with_retry(self, image: bytes, image_format: str) -> OcrResultDTO:
         last_error: Exception | None = None
@@ -120,26 +109,19 @@ class OcrService:
             raise RuntimeError("OCR recognition was not attempted")
         raise last_error
 
-    async def _store_raw(self, job: OcrJob, result: OcrResultDTO) -> str | None:
-        try:
-            content = json.dumps(result.model_dump(), ensure_ascii=False).encode("utf-8")
-            return await self._file_storage.upload(f"ocr/raw/{job.id}.json", content)
-        except Exception as exc:  # noqa: BLE001
-            logger.warning(
-                "ocr_raw_storage_failed",
-                extra={"job_id": job.id, "error_type": type(exc).__name__},
-            )
-            return None
-
-    async def _discard_raw(self, job: OcrJob, raw_result_url: str | None) -> None:
-        if raw_result_url is None:
+    async def process_single(self, job_id: int) -> None:
+        job = self._ocr_repo.claim_job(job_id)
+        if job is None:
+            self._ocr_repo.rollback()
             return
+        self._ocr_repo.commit()
         try:
-            await self._file_storage.delete(raw_result_url)
+            await self.process_job(job)
         except Exception as exc:  # noqa: BLE001
+            self._ocr_repo.rollback()
             logger.warning(
-                "ocr_raw_compensation_failed",
-                extra={"job_id": job.id, "error_type": type(exc).__name__},
+                "ocr_single_job_unhandled_failure",
+                extra={"job_id": job_id, "error_type": type(exc).__name__},
             )
 
     def _mark_processing_failure(

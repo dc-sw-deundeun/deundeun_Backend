@@ -65,11 +65,22 @@ class OcrRepository:
         self._db.flush()
         return job
 
-    def mark_completed(
-        self, job: OcrJob, raw_result_url: str | None, parsed_field_count: int
-    ) -> None:
+    def claim_job(self, job_id: int) -> OcrJob | None:
+        stmt = (
+            select(OcrJob)
+            .where(OcrJob.id == job_id, OcrJob.status == OcrStatus.PENDING.value)
+            .limit(1)
+        )
+        job = self._db.execute(stmt).scalar_one_or_none()
+        if job is None:
+            return None
+        job.status = OcrStatus.PROCESSING.value
+        job.requested_at = _now()
+        self._db.flush()
+        return job
+
+    def mark_completed(self, job: OcrJob, parsed_field_count: int) -> None:
         job.status = OcrStatus.COMPLETED.value
-        job.raw_result_url = raw_result_url
         job.parsed_field_count = parsed_field_count
         job.completed_at = _now()
         self._db.flush()

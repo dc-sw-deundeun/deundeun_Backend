@@ -31,7 +31,7 @@ def test_mark_completed(db_session):
     repo = OcrRepository(db_session)
     job = repo.create_job(record_id=1, user_id=1)
     db_session.commit()
-    repo.mark_completed(job, raw_result_url="s3://raw.json", parsed_field_count=9)
+    repo.mark_completed(job, parsed_field_count=9)
     db_session.commit()
     assert job.status == OcrStatus.COMPLETED.value
     assert job.parsed_field_count == 9

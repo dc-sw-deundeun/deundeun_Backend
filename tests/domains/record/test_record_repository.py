@@ -118,6 +118,6 @@ def test_delete_record_cascade_returns_file_urls(db_session):
     urls = repo.delete_record_cascade(record)
     db_session.commit()
     assert "s3://a.png" in urls
-    assert "s3://raw.json" in urls
+    assert "s3://raw.json" not in urls  # raw_result_url no longer collected
     assert repo.get_record(record.id) is None
     assert repo.list_metrics(record.id) == []

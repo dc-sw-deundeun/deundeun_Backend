@@ -132,7 +132,7 @@ def _make_service(db, client, storage=None, parser=None):
 
 
 @pytest.mark.asyncio
-async def test_process_job_success_persists_metrics_and_raw_result(db_session):
+async def test_process_job_success_persists_metrics_and_deletes_image(db_session):
     record_repo = RecordRepository(db_session)
     record = record_repo.create_record(1, "UPLOAD", "s3://a.png", "h")
     db_session.commit()
@@ -145,12 +145,11 @@ async def test_process_job_success_persists_metrics_and_raw_result(db_session):
     db_session.commit()
 
     assert job.status == OcrStatus.COMPLETED.value
-    assert job.raw_result_url == f"s3://ocr/raw/{job.id}.json"
-    assert storage.uploads[0][0] == f"ocr/raw/{job.id}.json"
-    assert b'"fields"' in storage.uploads[0][1]
+    assert storage.uploads == []
     metrics = {m.metric_code: m for m in record_repo.list_metrics(record.id)}
     assert metrics["fasting_glucose"].value == "109"
     assert record_repo.get_record(record.id).ocr_status == OcrStatus.COMPLETED.value
+    assert "s3://a.png" in storage.deletes
 
 
 @pytest.mark.asyncio
@@ -236,53 +235,6 @@ async def test_concurrent_delete_during_ocr_is_idempotent(db_session):
 
 
 @pytest.mark.asyncio
-async def test_concurrent_delete_after_raw_upload_compensates_file(db_session):
-    record_repo = RecordRepository(db_session)
-    record = record_repo.create_record(1, "UPLOAD", "s3://a.png", "h")
-    db_session.commit()
-    job = OcrRepository(db_session).create_job(record.id, user_id=1)
-    db_session.commit()
-    record_id = record.id
-    job_id = job.id
-    storage = FakeFileStorage()
-    parser = ConcurrentDeletingParser(db_session.bind, record_id)
-    service = _make_service(
-        db_session,
-        FakeOcrClient(result=_glucose_result()),
-        storage,
-        parser,
-    )
-
-    await service.process_job(job)
-    db_session.commit()
-
-    raw_url = f"s3://ocr/raw/{job_id}.json"
-    assert storage.uploads[0][0] == f"ocr/raw/{job_id}.json"
-    assert storage.deletes == [raw_url]
-    with Session(db_session.bind) as observer:
-        assert observer.get(type(record), record_id) is None
-        assert observer.get(type(job), job_id) is None
-
-
-@pytest.mark.asyncio
-async def test_raw_storage_failure_does_not_fail_processing(db_session):
-    record_repo = RecordRepository(db_session)
-    record = record_repo.create_record(1, "UPLOAD", "s3://a.png", "h")
-    db_session.commit()
-    storage = FakeFileStorage(error=RuntimeError("storage unavailable"))
-    service = _make_service(db_session, FakeOcrClient(result=_glucose_result()), storage)
-    job = await service.create_job(record.id, user_id=1)
-    db_session.commit()
-
-    await service.process_job(job)
-    db_session.commit()
-
-    assert job.status == OcrStatus.COMPLETED.value
-    assert job.raw_result_url is None
-    assert len(record_repo.list_metrics(record.id)) == 1
-
-
-@pytest.mark.asyncio
 async def test_database_flush_failure_is_persisted_as_failed(db_session):
     record_repo = RecordRepository(db_session)
     record = record_repo.create_record(1, "UPLOAD", "s3://a.png", "h")
@@ -302,7 +254,7 @@ async def test_database_flush_failure_is_persisted_as_failed(db_session):
     assert job.status == OcrStatus.FAILED.value
     assert record_repo.get_record(record.id).ocr_status == OcrStatus.FAILED.value
     assert record_repo.list_metrics(record.id) == []
-    assert storage.deletes == [f"s3://ocr/raw/{job.id}.json"]
+    assert storage.deletes == []  # failure path: image preserved, not deleted
 
 
 @pytest.mark.asyncio
@@ -343,3 +295,34 @@ async def test_process_pending_commits_each_job_independently(db_session):
     with Session(db_session.bind) as observer:
         assert observer.get(type(first_job), first_job.id).status == OcrStatus.COMPLETED
         assert observer.get(type(second_job), second_job.id).status == OcrStatus.FAILED
+
+
+@pytest.mark.asyncio
+async def test_process_single_claims_and_deletes_image_on_success(db_session):
+    record_repo = RecordRepository(db_session)
+    record = record_repo.create_record(1, "UPLOAD", "checkups/1/h.png", "h")
+    db_session.commit()
+    storage = FakeFileStorage()  # read는 유효 PNG 바이트 반환하도록
+    service = _make_service(db_session, FakeOcrClient(result=_glucose_result()), storage)
+    job = await service.create_job(record.id, user_id=1)
+    db_session.commit()
+
+    await service.process_single(job.id)
+
+    assert service.get_job(job.id).status == OcrStatus.COMPLETED.value
+    assert "checkups/1/h.png" in storage.deletes  # 성공 시 이미지 삭제
+
+
+@pytest.mark.asyncio
+async def test_process_single_skips_when_not_pending(db_session):
+    record_repo = RecordRepository(db_session)
+    record = record_repo.create_record(1, "UPLOAD", "checkups/1/h.png", "h")
+    db_session.commit()
+    service = _make_service(db_session, FakeOcrClient(result=_glucose_result()))
+    job = await service.create_job(record.id, user_id=1)
+    job.status = OcrStatus.COMPLETED.value  # 이미 완료된 잡
+    db_session.commit()
+
+    await service.process_single(job.id)  # 예외 없이 skip
+
+    assert service.get_job(job.id).status == OcrStatus.COMPLETED.value

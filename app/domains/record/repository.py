@@ -149,8 +149,6 @@ class RecordRepository:
             select(OcrJob).where(OcrJob.record_id == record.id)
         ).scalars().all()
         for job in jobs:
-            if job.raw_result_url:
-                file_urls.append(job.raw_result_url)
             self._db.delete(job)
 
         for metric in self.list_metrics(record.id):
