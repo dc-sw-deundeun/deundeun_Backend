@@ -1,5 +1,7 @@
 """security.py 단위 테스트 — DB 불필요."""
 
+from datetime import timedelta
+
 import pytest
 
 from app.core.security import (
@@ -36,3 +38,9 @@ def test_refresh_token_encode_decode() -> None:
 def test_decode_invalid_token_raises() -> None:
     with pytest.raises(InvalidTokenException):
         decode_token("garbage.token.here")
+
+
+def test_decode_expired_token_raises() -> None:
+    token = create_access_token(subject=1, expires_delta=timedelta(seconds=-1))
+    with pytest.raises(InvalidTokenException):
+        decode_token(token)
