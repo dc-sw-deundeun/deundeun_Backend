@@ -3,7 +3,12 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from app.core.config import settings
 from app.core.exceptions import register_exception_handlers
+from app.core.openapi import _OPENAPI_TAGS, configure_openapi
+
+if settings.app_env == "development":
+    logging.basicConfig(level=logging.INFO)
 
 logger = logging.getLogger(__name__)
 
@@ -32,9 +37,21 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="deundeun API",
     version="0.1.0",
+    description="든든 건강미션 앱 백엔드 API",
     lifespan=lifespan,
+    openapi_tags=_OPENAPI_TAGS,
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json",
+    swagger_ui_parameters={
+        "persistAuthorization": True,
+        "docExpansion": "list",
+        "filter": True,
+        "tryItOutEnabled": True,
+    },
 )
 
+configure_openapi(app)
 register_exception_handlers(app)
 
 
