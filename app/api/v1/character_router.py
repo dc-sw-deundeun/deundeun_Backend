@@ -1,20 +1,20 @@
 from fastapi import APIRouter
 
-from app.core.response import success_response
+from app.core.response import not_implemented_response
 
 router = APIRouter()
 
 
 @router.get("/me")
 async def get_my_character():
-    return success_response(message="Not implemented"), 501
+    return not_implemented_response()
 
 
 @router.post("/me/experience")
 async def add_experience():
-    return success_response(message="Not implemented"), 501
+    return not_implemented_response()
 
 
 @router.patch("/me/stage")
 async def update_stage():
-    return success_response(message="Not implemented"), 501
+    return not_implemented_response()
