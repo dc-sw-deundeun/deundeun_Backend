@@ -3,11 +3,35 @@ from collections.abc import Generator
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import Engine
+from sqlalchemy import Engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from alembic import command
 from alembic.config import Config
+
+_AUTH_TABLES = (
+    "access_token_blacklist",
+    "refresh_tokens",
+    "email_verifications",
+    "consent_histories",
+    "users",
+)
+
+
+class CapturingEmailClient:
+    """테스트용 이메일 클라이언트 — 발송된 인증 코드를 메모리에 보관한다."""
+
+    def __init__(self) -> None:
+        self.codes: dict[str, str] = {}
+
+    async def send_verification_email(self, to: str, code: str) -> None:
+        self.codes[to] = code
+
+    async def send_password_reset_email(self, to: str, code: str) -> None:
+        self.codes[to] = code
+
+    async def send_email(self, to: str, subject: str, body_html: str) -> None:
+        pass
 
 
 def _upgrade_alembic(url: str) -> None:
@@ -48,10 +72,33 @@ def db_engine(db_url: str) -> Generator[Engine, None, None]:
     engine.dispose()
 
 
+def _truncate_auth_tables(engine: Engine) -> None:
+    with engine.begin() as conn:
+        conn.execute(text(f"TRUNCATE {', '.join(_AUTH_TABLES)} RESTART IDENTITY CASCADE"))
+
+
 @pytest.fixture
-def client(db_engine: Engine) -> Generator[TestClient, None, None]:
+def email_client() -> CapturingEmailClient:
+    return CapturingEmailClient()
+
+
+@pytest.fixture
+def db_session(db_engine: Engine) -> Generator[Session, None, None]:
+    """테스트에서 DB를 직접 조작하기 위한 세션 (예: 인증 코드 만료 시뮬레이션)."""
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=db_engine)
+    session = SessionLocal()
+    try:
+        yield session
+    finally:
+        session.close()
+
+
+@pytest.fixture
+def client(
+    db_engine: Engine, email_client: CapturingEmailClient
+) -> Generator[TestClient, None, None]:
     import app.database.session as session_module
-    from app.core.dependencies import get_db
+    from app.core.dependencies import get_db, get_email_client_dep
     from app.main import app
 
     _orig_engine = session_module._engine
@@ -69,6 +116,7 @@ def client(db_engine: Engine) -> Generator[TestClient, None, None]:
             db.close()
 
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_email_client_dep] = lambda: email_client
 
     with TestClient(app) as c:
         yield c
@@ -76,3 +124,4 @@ def client(db_engine: Engine) -> Generator[TestClient, None, None]:
     app.dependency_overrides.clear()
     session_module._engine = _orig_engine
     session_module._SessionLocal = _orig_session
+    _truncate_auth_tables(db_engine)
