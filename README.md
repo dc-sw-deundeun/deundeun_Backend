@@ -221,6 +221,7 @@ docker build -t deundeun/backend:local .
 # 컨테이너 실행
 docker run -p 8000:8000 deundeun/backend:local
 
-# docker-compose (VM 환경)
-IMAGE_TAG=deundeun/backend:latest docker compose -f docker/docker-compose.vm.yml up -d
+# docker-compose (단일 파일, VM/API 배포 profile)
+IMAGE_TAG=deundeun/backend:latest ENV_FILE=/opt/deundeun/.env \
+  docker compose -f docker/docker-compose.yml --profile deploy up -d api
 ```

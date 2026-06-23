@@ -1,0 +1,50 @@
+# deundeun Docker Compose (단일 파일)
+#
+# 로컬 Postgres만:
+#   docker compose -f docker/docker-compose.yml up -d postgres
+#
+# VM API 배포 (외부 DB — DATABASE_URL은 env_file에 설정):
+#   IMAGE_TAG=deundeun/backend:sha-abc1234 ENV_FILE=/opt/deundeun/.env \
+#     docker compose -f docker/docker-compose.yml --profile deploy up -d api
+#
+# 로컬 API + Postgres (이미지 빌드 후):
+#   IMAGE_TAG=deundeun/backend:local docker compose -f docker/docker-compose.yml --profile deploy up -d
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: deundeun-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: deundeun
+      POSTGRES_PASSWORD: deundeun
+      POSTGRES_DB: deundeun
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U deundeun"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  api:
+    profiles: ["deploy"]
+    image: ${IMAGE_TAG:-deundeun/backend:latest}
+    container_name: deundeun-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - ${ENV_FILE:-../.env}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  pgdata:

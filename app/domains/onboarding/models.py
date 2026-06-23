@@ -15,10 +15,3 @@ class WearableDeviceConnection(Base):
 
     id = Column(Integer, primary_key=True)
     # user_id, device_type, device_token, connected_at — Phase 2에서 확정
-
-
-class OnboardingProgress(Base):
-    __tablename__ = "onboarding_progress"
-
-    id = Column(Integer, primary_key=True)
-    # user_id, initial_checkup_completed, wearable_connected, completed_at — Phase 2에서 확정
