@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     ocr_request_timeout_seconds: int = 30
     ocr_max_retries: int = 2
     ocr_stuck_timeout_seconds: int = 300
+    local_storage_dir: str = "var/ocr_tmp"
 
 
 settings = Settings()
