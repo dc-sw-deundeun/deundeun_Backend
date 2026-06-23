@@ -1,4 +1,4 @@
-from app.core.config import settings
+from app.core.config import Settings, settings
 
 
 def test_ocr_settings_defaults():
@@ -7,6 +7,13 @@ def test_ocr_settings_defaults():
     assert settings.ocr_request_timeout_seconds == 30
     assert settings.ocr_max_retries == 2
     assert settings.ocr_stuck_timeout_seconds == 300
-    # 시크릿류는 기본 None
-    assert settings.clova_ocr_invoke_url is None
-    assert settings.clova_ocr_secret_key is None
+
+
+def test_clova_secrets_default_to_none(monkeypatch):
+    # 시크릿류는 코드 기본값이 None인지 검증한다.
+    # .env/실제 환경변수의 영향을 받지 않도록 격리한다.
+    monkeypatch.delenv("CLOVA_OCR_INVOKE_URL", raising=False)
+    monkeypatch.delenv("CLOVA_OCR_SECRET_KEY", raising=False)
+    isolated = Settings(_env_file=None)
+    assert isolated.clova_ocr_invoke_url is None
+    assert isolated.clova_ocr_secret_key is None

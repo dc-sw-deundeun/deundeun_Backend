@@ -11,6 +11,9 @@ def recover_stuck(ocr_repo: OcrRepository, stuck_timeout_seconds: int) -> int:
     for job in stuck:
         ocr_repo.mark_failed(job, "stuck job recovered (timeout)")
         logger.warning("OCR job %s recovered from stuck state", job.id)
+    # 회수 결과를 즉시 확정한다. 그렇지 않으면 pending 큐가 비어 있을 때
+    # process_pending()의 rollback()이 stuck 회수까지 되돌린다.
+    ocr_repo.commit()
     return len(stuck)
 
 

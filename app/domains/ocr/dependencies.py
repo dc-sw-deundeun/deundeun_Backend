@@ -10,7 +10,11 @@ from app.domains.record.service import RecordService
 from app.infrastructure.ocr.clova_client import ClovaOcrClient
 from app.infrastructure.ocr.ocr_client import StubOcrClient
 from app.infrastructure.ocr.parser import OcrParser
-from app.infrastructure.storage.file_storage import StubFileStorage
+from app.infrastructure.storage.file_storage import FileStorage, StubFileStorage
+
+
+def get_file_storage() -> FileStorage:
+    return StubFileStorage()
 
 
 def _build_ocr_client():

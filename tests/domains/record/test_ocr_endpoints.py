@@ -8,6 +8,7 @@ from app.database.session import get_db
 from app.domains.ocr.dependencies import get_ocr_service, get_record_service
 from app.domains.ocr.repository import OcrRepository
 from app.domains.ocr.service import OcrService
+from app.domains.ocr.status import OcrStatus
 from app.domains.record.repository import RecordRepository
 from app.domains.record.service import RecordService
 from app.infrastructure.ocr.ocr_client import StubOcrClient
@@ -51,6 +52,7 @@ def api(db_session):
 def _seed_record_with_metric(db):
     repo = RecordRepository(db)
     record = repo.create_record(1, "UPLOAD", "s3://a.png", "h")
+    repo.set_ocr_status(record, OcrStatus.COMPLETED.value)
     db.commit()
     repo.upsert_ocr_metrics(record.id, [
         ParsedMetric(metric_code="bmi", metric_name="체질량지수",

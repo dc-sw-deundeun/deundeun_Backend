@@ -8,7 +8,11 @@ from app.core.config import settings
 from app.core.dependencies import get_current_user
 from app.core.response import success_response
 from app.database.session import get_db
-from app.domains.ocr.dependencies import get_ocr_service, get_record_service
+from app.domains.ocr.dependencies import (
+    get_file_storage,
+    get_ocr_service,
+    get_record_service,
+)
 from app.domains.ocr.service import OcrService
 from app.domains.record.repository import RecordRepository
 from app.domains.record.schemas import (
@@ -19,6 +23,7 @@ from app.domains.record.schemas import (
     VerifyRequest,
 )
 from app.domains.record.service import RecordService
+from app.infrastructure.storage.file_storage import FileStorage
 
 router = APIRouter()
 
@@ -38,6 +43,7 @@ async def upload_checkup(
     user_id: int = Depends(get_current_user),
     db: Session = Depends(get_db),
     ocr_service: OcrService = Depends(get_ocr_service),
+    file_storage: FileStorage = Depends(get_file_storage),
 ):
     content = await file.read()
     file_hash = hashlib.sha256(content).hexdigest()
@@ -49,7 +55,7 @@ async def upload_checkup(
             message="이미 업로드된 검진 결과지입니다.",
             data=UploadResponse(record_id=existing.id, ocr_job_id=0).model_dump(),
         )
-    file_url = await ocr_service._file_storage.upload(
+    file_url = await file_storage.upload(
         f"checkups/{user_id}/{file_hash}.png", content
     )
     try:
@@ -60,6 +66,10 @@ async def upload_checkup(
     except IntegrityError:
         db.rollback()
         existing = record_repo.find_by_user_and_hash(user_id, file_hash)
+        if existing is None:
+            # dedup 제약이 아닌 다른 무결성 위반이거나 경쟁 트랜잭션이
+            # 아직 커밋 전인 경우. 모호한 AttributeError 대신 원인을 전파한다.
+            raise
         response.status_code = 200
         return success_response(
             message="이미 업로드된 검진 결과지입니다.",

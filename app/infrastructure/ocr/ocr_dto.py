@@ -12,8 +12,9 @@ class OcrFieldDTO(BaseModel):
     def from_vertices(
         cls, text: str, confidence: float, vertices: list[dict]
     ) -> "OcrFieldDTO":
-        xs = [v["x"] for v in vertices]
-        ys = [v["y"] for v in vertices]
+        # Clova V2는 좌표가 0일 때 x/y 키를 생략할 수 있어 .get으로 방어한다.
+        xs = [v.get("x", 0) for v in vertices]
+        ys = [v.get("y", 0) for v in vertices]
         return cls(
             text=text,
             confidence=confidence,

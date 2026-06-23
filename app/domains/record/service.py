@@ -1,4 +1,9 @@
-from app.core.exceptions import ForbiddenException, NotFoundException
+from app.core.exceptions import (
+    ConflictException,
+    ForbiddenException,
+    NotFoundException,
+)
+from app.domains.ocr.status import OcrStatus
 from app.domains.record.models import CheckupMetricResult, CheckupRecord
 from app.domains.record.repository import RecordRepository
 from app.domains.record.schemas import MetricUpdateItem
@@ -49,6 +54,11 @@ class RecordService:
         self, user_id: int, record_id: int, items: list[MetricUpdateItem] | None
     ) -> CheckupRecord:
         record = self._get_owned_record(user_id, record_id)
+        if record.ocr_status != OcrStatus.COMPLETED.value:
+            raise ConflictException(
+                message="OCR 처리가 완료되지 않은 기록은 검수할 수 없습니다.",
+                error_code="OCR_NOT_COMPLETED",
+            )
         if items:
             self.bulk_update_metrics(user_id, record_id, items)
         self._record_repo.set_verified(record)

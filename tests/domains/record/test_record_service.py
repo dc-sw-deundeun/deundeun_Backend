@@ -1,6 +1,11 @@
 import pytest
 
-from app.core.exceptions import ForbiddenException, NotFoundException
+from app.core.exceptions import (
+    ConflictException,
+    ForbiddenException,
+    NotFoundException,
+)
+from app.domains.ocr.status import OcrStatus
 from app.domains.record.repository import RecordRepository
 from app.domains.record.schemas import MetricUpdateItem
 from app.domains.record.service import RecordService
@@ -51,12 +56,22 @@ def test_update_metric_other_user_forbidden(db_session):
 
 def test_verify_with_edits_marks_verified(db_session):
     repo, record = _seed(db_session)
+    repo.set_ocr_status(record, OcrStatus.COMPLETED.value)
+    db_session.commit()
     service = RecordService(repo, FakeFileStorage())
     metric = repo.list_metrics(record.id)[0]
     result = service.verify(1, record.id, [MetricUpdateItem(metric_id=metric.id, value="26.0")])
     db_session.commit()
     assert result.verification_status == "VERIFIED"
     assert repo.list_metrics(record.id)[0].value == "26.0"
+
+
+def test_verify_rejected_when_ocr_not_completed(db_session):
+    repo, record = _seed(db_session)  # ocr_status 기본값 PENDING
+    service = RecordService(repo, FakeFileStorage())
+    with pytest.raises(ConflictException):
+        service.verify(1, record.id, None)
+    assert repo.get_record(record.id).verification_status == "UNVERIFIED"
 
 
 def test_get_metrics_missing_record_404(db_session):
