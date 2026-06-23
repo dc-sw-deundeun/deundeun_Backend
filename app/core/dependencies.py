@@ -1,18 +1,29 @@
-from collections.abc import Generator
-
 from fastapi import Depends
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+
+from app.core.exceptions import AuthException
+from app.core.security import decode_token
+from app.database.session import get_db  # noqa: F401 — re-export
+from app.domains.user.schemas import CurrentUser
+
+_bearer = HTTPBearer(auto_error=False)
 
 
-def get_db() -> Generator:
-    """DB 세션을 반환합니다. DB 확정 후 구현합니다."""
-    raise NotImplementedError
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+) -> CurrentUser:
+    """Bearer 토큰을 검증하고 CurrentUser를 반환합니다."""
+    if credentials is None:
+        raise AuthException()
 
+    payload = decode_token(credentials.credentials)
+    user_id_str: str | None = payload.get("sub")
+    if not user_id_str:
+        raise AuthException(message="토큰에 사용자 정보가 없습니다.", error_code="INVALID_TOKEN")
 
-def get_current_user(token: str = Depends(lambda: None)):
-    """현재 로그인한 사용자를 반환합니다. Auth 구현 후 활성화합니다."""
-    raise NotImplementedError
+    try:
+        user_id = int(user_id_str)
+    except ValueError:
+        raise AuthException(message="토큰에 사용자 정보가 없습니다.", error_code="INVALID_TOKEN")
 
-
-def get_current_admin(current_user=Depends(get_current_user)):
-    """관리자 권한을 확인합니다."""
-    raise NotImplementedError
+    return CurrentUser(id=user_id)
