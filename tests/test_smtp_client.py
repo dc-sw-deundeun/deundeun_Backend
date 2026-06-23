@@ -5,6 +5,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from app.infrastructure.email.email_client import StubEmailClient
+from app.infrastructure.email.factory import get_email_client
 from app.infrastructure.email.smtp_email_client import SmtpEmailClient
 
 
@@ -29,7 +31,7 @@ def test_smtp_send_verification_email(smtp_settings) -> None:
         client = SmtpEmailClient()
         asyncio.run(client.send_verification_email(to="user@example.com", code="654321"))
 
-    mock_smtp_class.assert_called_once_with("smtp.gmail.com", 587)
+    mock_smtp_class.assert_called_once_with("smtp.gmail.com", 587, timeout=10)
     mock_smtp_instance.starttls.assert_called_once()
     mock_smtp_instance.login.assert_called_once_with("test@gmail.com", "test-password")
     mock_smtp_instance.sendmail.assert_called_once()
@@ -42,3 +44,12 @@ def test_smtp_missing_settings_raises(monkeypatch) -> None:
 
     with pytest.raises(RuntimeError, match="SMTP 설정"):
         SmtpEmailClient()
+
+
+def test_email_factory_uses_stub_when_smtp_from_missing(monkeypatch) -> None:
+    monkeypatch.setattr("app.core.config.settings.smtp_host", "smtp.gmail.com")
+    monkeypatch.setattr("app.core.config.settings.smtp_username", "test@gmail.com")
+    monkeypatch.setattr("app.core.config.settings.smtp_password", "test-password")
+    monkeypatch.setattr("app.core.config.settings.smtp_from", None)
+
+    assert isinstance(get_email_client(), StubEmailClient)

@@ -1,3 +1,4 @@
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -16,13 +17,19 @@ class Settings(BaseSettings):
     smtp_port: int = 587
     smtp_username: str | None = None
     smtp_password: str | None = None
-    smtp_from: str = "deundeun.dcsw@gmail.com"
+    smtp_from: str | None = None
     smtp_use_tls: bool = True
 
     analysis_server_base_url: str | None = None
     analysis_server_api_key: str | None = None
     analysis_callback_secret: str | None = None
     analysis_polling_interval_seconds: int = 60
+
+    @model_validator(mode="after")
+    def validate_production_secrets(self) -> "Settings":
+        if self.app_env in ("production", "staging") and self.jwt_secret_key == "change-me":
+            raise ValueError("JWT_SECRET_KEY must be set to a secure value in production/staging")
+        return self
 
 
 settings = Settings()
