@@ -43,12 +43,16 @@ class BadRequestException(AppException):
 def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppException)
     async def app_exception_handler(request: Request, exc: AppException) -> JSONResponse:
+        data = None
+        retry_after_seconds = getattr(exc, "retry_after_seconds", None)
+        if retry_after_seconds is not None:
+            data = {"retry_after_seconds": retry_after_seconds}
         return JSONResponse(
             status_code=exc.status_code,
             content={
                 "success": False,
                 "message": exc.message,
-                "data": None,
+                "data": data,
                 "error_code": exc.error_code,
             },
         )

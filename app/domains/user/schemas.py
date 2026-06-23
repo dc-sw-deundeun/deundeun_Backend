@@ -1,4 +1,6 @@
-from pydantic import BaseModel
+from datetime import datetime
+
+from pydantic import BaseModel, ConfigDict, EmailStr
 
 
 class CurrentUser(BaseModel):
@@ -7,14 +9,30 @@ class CurrentUser(BaseModel):
     id: int
 
 
-class UserProfileResponse(BaseModel):
-    # user_id: int
-    # nickname: str
-    # profile_image_url: str | None
-    pass
+class UserSummaryResponse(BaseModel):
+    """로그인·회원가입 응답에 포함되는 사용자 요약."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    email: EmailStr
+    nickname: str
+    onboarding_step: str
+
+
+class MeResponse(BaseModel):
+    """GET /auth/me 전체 프로필."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    email: EmailStr
+    nickname: str
+    onboarding_step: str
+    timezone: str
+    status: str
+    created_at: datetime
 
 
 class UpdateProfileRequest(BaseModel):
-    # nickname: str | None
-    # profile_image_url: str | None
-    pass
+    nickname: str | None = None
