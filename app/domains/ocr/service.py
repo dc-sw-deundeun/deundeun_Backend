@@ -117,6 +117,7 @@ class OcrService:
         self._ocr_repo.commit()
         try:
             await self.process_job(job)
+            self._ocr_repo.commit()
         except Exception as exc:  # noqa: BLE001
             self._ocr_repo.rollback()
             logger.warning(

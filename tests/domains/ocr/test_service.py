@@ -326,3 +326,26 @@ async def test_process_single_skips_when_not_pending(db_session):
     await service.process_single(job.id)  # 예외 없이 skip
 
     assert service.get_job(job.id).status == OcrStatus.COMPLETED.value
+
+
+@pytest.mark.asyncio
+async def test_process_single_failure_persists_failed_status(db_session):
+    record_repo = RecordRepository(db_session)
+    record = record_repo.create_record(1, "UPLOAD", "checkups/1/h.png", "h")
+    db_session.commit()
+
+    class BoomClient:
+        async def recognize(self, image: bytes, image_format: str = "png") -> OcrResultDTO:
+            raise RuntimeError("ocr down")
+
+    service = _make_service(db_session, BoomClient())
+    job = await service.create_job(record.id, user_id=1)
+    db_session.commit()
+
+    await service.process_single(job.id)
+
+    # 별도 세션에서 커밋 여부 확인 — uncommitted flush라면 PROCESSING이 보인다
+    with Session(db_session.bind) as observer:
+        from app.domains.ocr.models import OcrJob
+
+        assert observer.get(OcrJob, job.id).status == OcrStatus.FAILED.value
