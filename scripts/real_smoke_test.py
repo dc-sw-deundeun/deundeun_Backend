@@ -25,7 +25,7 @@ from app.infrastructure.storage.file_storage import StubFileStorage
 class FakeClovaClient:
     """실제 검진표를 닮은 합성 Clova 결과를 반환(네트워크 없이 파이프라인 검증)."""
 
-    async def recognize(self, file_url: str) -> OcrResultDTO:
+    async def recognize(self, image: bytes, image_format: str) -> OcrResultDTO:
         def f(text, x, y, conf=0.95):
             return OcrFieldDTO(text=text, confidence=conf, x_min=x, x_max=x + 30, y_center=y)
 
