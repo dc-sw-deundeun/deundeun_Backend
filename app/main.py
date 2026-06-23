@@ -3,13 +3,14 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.core.exceptions import register_exception_handlers
+from app.workers.scheduler import start_scheduler, stop_scheduler
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # DB engine 초기화는 DB 확정 후 여기에 추가합니다.
+    start_scheduler()
     yield
-    # 종료 시 cleanup 로직을 여기에 추가합니다.
+    stop_scheduler()
 
 
 app = FastAPI(
