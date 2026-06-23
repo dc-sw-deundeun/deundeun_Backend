@@ -1,3 +1,4 @@
+import base64
 import time
 import uuid
 
@@ -21,12 +22,18 @@ class ClovaOcrClient:
         self._timeout = timeout
         self._http_client = http_client
 
-    async def recognize(self, file_url: str) -> OcrResultDTO:
+    async def recognize(self, image: bytes, image_format: str) -> OcrResultDTO:
         payload = {
             "version": "V2",
             "requestId": str(uuid.uuid4()),
             "timestamp": int(time.time() * 1000),
-            "images": [{"format": "png", "name": "checkup", "url": file_url}],
+            "images": [
+                {
+                    "format": image_format,
+                    "name": "checkup",
+                    "data": base64.b64encode(image).decode("ascii"),
+                }
+            ],
         }
         headers = {"X-OCR-SECRET": self._secret_key}
 

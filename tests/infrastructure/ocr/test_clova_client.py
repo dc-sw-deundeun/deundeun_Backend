@@ -1,3 +1,5 @@
+import base64
+
 import httpx
 import pytest
 
@@ -41,6 +43,7 @@ async def test_recognize_maps_response_to_dto():
 
     def handler(request: httpx.Request) -> httpx.Response:
         captured["secret"] = request.headers.get("X-OCR-SECRET")
+        captured["body"] = request.read()
         return httpx.Response(200, json=_clova_response())
 
     transport = httpx.MockTransport(handler)
@@ -50,9 +53,15 @@ async def test_recognize_maps_response_to_dto():
             secret_key="secret-123",
             http_client=http,
         )
-        result = await client.recognize("https://files.test/checkup.png")
+        result = await client.recognize(b"\x89PNG\r\n\x1a\n", image_format="png")
 
     assert captured["secret"] == "secret-123"
+    import json
+    sent_payload = json.loads(captured["body"])
+    sent = sent_payload["images"][0]
+    assert sent["format"] == "png"
+    assert "url" not in sent
+    assert base64.b64decode(sent["data"]) == b"\x89PNG\r\n\x1a\n"
     texts = {f.text for f in result.fields}
     assert texts == {"공복혈당", "109"}
     glucose = next(f for f in result.fields if f.text == "109")
@@ -66,7 +75,7 @@ async def test_recognize_raises_on_http_error():
     async with httpx.AsyncClient(transport=transport) as http:
         client = ClovaOcrClient("https://clova.test/ocr", "s", http_client=http)
         with pytest.raises(httpx.HTTPStatusError):
-            await client.recognize("https://files.test/checkup.png")
+            await client.recognize(b"\x89PNG\r\n\x1a\n", image_format="png")
 
 
 @pytest.mark.asyncio
@@ -101,7 +110,7 @@ async def test_recognize_skips_fields_without_bounding_poly():
             secret_key="secret-123",
             http_client=http,
         )
-        result = await client.recognize("https://files.test/checkup.png")
+        result = await client.recognize(b"\x89PNG\r\n\x1a\n", image_format="png")
 
     assert len(result.fields) == 1
     assert result.fields[0].text == "유효한필드"

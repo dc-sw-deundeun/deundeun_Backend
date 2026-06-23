@@ -12,7 +12,7 @@ from app.workers.ocr_worker import recover_stuck, run_ocr_batch
 
 
 class FakeClient:
-    async def recognize(self, file_url):
+    async def recognize(self, image, image_format="png"):
         return OcrResultDTO(fields=[
             OcrFieldDTO(text="공복혈당", confidence=0.9, x_min=10, x_max=40, y_center=10),
             OcrFieldDTO(text="109", confidence=0.9, x_min=120, x_max=150, y_center=10),
@@ -22,6 +22,12 @@ class FakeClient:
 class FakeStorage:
     async def upload(self, p, c):
         return f"s3://{p}"
+
+    async def read(self, p):
+        return b"\x89PNG\r\n\x1a\n"
+
+    async def exists(self, p):
+        return True
 
     async def delete(self, p):
         return None

@@ -5,6 +5,7 @@ from app.domains.ocr.models import OcrJob
 from app.domains.ocr.repository import OcrRepository
 from app.domains.ocr.status import OcrStatus
 from app.domains.record.repository import RecordRepository
+from app.infrastructure.ocr.format import detect_image_format
 from app.infrastructure.ocr.ocr_client import OcrClient
 from app.infrastructure.ocr.ocr_dto import OcrResultDTO
 from app.infrastructure.ocr.parser import OcrParser
@@ -65,7 +66,9 @@ class OcrService:
             return
 
         try:
-            result = await self._recognize_with_retry(record.file_url)
+            image = await self._file_storage.read(record.file_url)
+            image_format = detect_image_format(image) or "png"
+            result = await self._recognize_with_retry(image, image_format)
         except Exception as exc:  # noqa: BLE001
             self._mark_processing_failure(job, "recognize_failed", exc)
             return
@@ -106,11 +109,11 @@ class OcrService:
             extra={"job_id": job.id, "parsed_field_count": parsed_count},
         )
 
-    async def _recognize_with_retry(self, file_url: str) -> OcrResultDTO:
+    async def _recognize_with_retry(self, image: bytes, image_format: str) -> OcrResultDTO:
         last_error: Exception | None = None
         for _ in range(self._max_retries + 1):
             try:
-                return await self._ocr_client.recognize(file_url)
+                return await self._ocr_client.recognize(image, image_format)
             except Exception as exc:  # noqa: BLE001
                 last_error = exc
         if last_error is None:

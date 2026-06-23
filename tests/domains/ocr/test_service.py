@@ -15,7 +15,7 @@ class FakeOcrClient:
         self._error = error
         self.calls = 0
 
-    async def recognize(self, file_url: str) -> OcrResultDTO:
+    async def recognize(self, image: bytes, image_format: str = "png") -> OcrResultDTO:
         self.calls += 1
         if self._error is not None:
             raise self._error
@@ -28,7 +28,7 @@ class DeletingOcrClient:
         self._record = record
         self._result = result
 
-    async def recognize(self, file_url: str) -> OcrResultDTO:
+    async def recognize(self, image: bytes, image_format: str = "png") -> OcrResultDTO:
         self._record_repo.delete_record_cascade(self._record)
         return self._result
 
@@ -39,7 +39,7 @@ class ConcurrentDeletingOcrClient:
         self._record_id = record_id
         self._result = result
 
-    async def recognize(self, file_url: str) -> OcrResultDTO:
+    async def recognize(self, image: bytes, image_format: str = "png") -> OcrResultDTO:
         with Session(self._bind) as session:
             repo = RecordRepository(session)
             record = repo.get_record(self._record_id)
@@ -67,7 +67,7 @@ class SequenceOcrClient:
     def __init__(self, results):
         self._results = iter(results)
 
-    async def recognize(self, file_url: str) -> OcrResultDTO:
+    async def recognize(self, image: bytes, image_format: str = "png") -> OcrResultDTO:
         return next(self._results)
 
 
@@ -82,6 +82,12 @@ class FakeFileStorage:
             raise self._error
         self.uploads.append((file_path, content))
         return f"s3://{file_path}"
+
+    async def read(self, path: str) -> bytes:
+        return b"\x89PNG\r\n\x1a\n"
+
+    async def exists(self, path: str) -> bool:
+        return True
 
     async def delete(self, file_path: str) -> None:
         self.deletes.append(file_path)
