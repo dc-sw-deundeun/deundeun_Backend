@@ -86,7 +86,8 @@ async def test_delete_checkup_removes_files(db_session):
     repo, record = _seed(db_session)
     storage = FakeFileStorage()
     service = RecordService(repo, storage)
-    await service.delete_checkup(1, record.id)
+    file_urls = service.delete_checkup(1, record.id)
     db_session.commit()
+    await service.purge_files(file_urls)
     assert "s3://a.png" in storage.deleted
     assert repo.get_record(record.id) is None

@@ -28,6 +28,14 @@ from app.infrastructure.storage.file_storage import FileStorage
 router = APIRouter()
 
 
+async def _safe_delete(file_storage: FileStorage, file_url: str) -> None:
+    """업로드된 파일을 best-effort로 정리한다(보상 삭제)."""
+    try:
+        await file_storage.delete(file_url)
+    except Exception:  # noqa: BLE001
+        pass
+
+
 def _metric_list(service: RecordService, user_id: int, record_id: int) -> list[dict]:
     metrics = service.get_metrics(user_id, record_id)
     return [
@@ -68,13 +76,20 @@ async def upload_checkup(
         existing = record_repo.find_by_user_and_hash(user_id, file_hash)
         if existing is None:
             # dedup 제약이 아닌 다른 무결성 위반이거나 경쟁 트랜잭션이
-            # 아직 커밋 전인 경우. 모호한 AttributeError 대신 원인을 전파한다.
+            # 아직 커밋 전인 경우. 고아 파일을 정리하고 원인을 전파한다.
+            await _safe_delete(file_storage, file_url)
             raise
+        # 중복 업로드: file_hash가 같아 경로가 동일(멱등)하므로 파일은 보존한다.
         response.status_code = 200
         return success_response(
             message="이미 업로드된 검진 결과지입니다.",
             data=UploadResponse(record_id=existing.id, ocr_job_id=0).model_dump(),
         )
+    except Exception:
+        # 커밋 실패 등으로 record가 남지 않는 경우 업로드된 파일을 정리한다.
+        db.rollback()
+        await _safe_delete(file_storage, file_url)
+        raise
     return success_response(
         message="업로드 완료. OCR 처리를 시작합니다.",
         data=UploadResponse(record_id=record.id, ocr_job_id=job.id).model_dump(),
@@ -146,6 +161,8 @@ async def delete_checkup(
     db: Session = Depends(get_db),
     service: RecordService = Depends(get_record_service),
 ):
-    await service.delete_checkup(user_id, record_id)
+    file_urls = service.delete_checkup(user_id, record_id)
     db.commit()
+    # 커밋이 확정된 뒤에만 비가역 스토리지 삭제를 수행한다(best-effort).
+    await service.purge_files(file_urls)
     return success_response(message="검진 기록을 삭제했습니다.")

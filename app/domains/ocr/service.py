@@ -86,11 +86,17 @@ class OcrService:
                     parsed_field_count=parsed_count,
                 )
                 self._record_repo.set_ocr_status(record, OcrStatus.COMPLETED.value)
+            # raw 저장(외부)과 DB 결과를 한 단위로 확정한다. 여기서 커밋이
+            # 실패하면 아래 except에서 raw를 보상 삭제해 고아를 방지한다.
+            self._ocr_repo.commit()
         except ValueError:
+            # savepoint 내부 실패(레코드 동시 삭제)만 해당하며 외부 커밋과 무관하므로
+            # 세션은 이미 정상이다. 추가 rollback은 식별맵 인스턴스 갱신과 충돌한다.
             await self._discard_raw(job, raw_result_url)
             self._mark_deleted_record_failure(job, "record_deleted_during_upsert")
             return
         except Exception as exc:  # noqa: BLE001
+            self._ocr_repo.rollback()
             await self._discard_raw(job, raw_result_url)
             self._mark_processing_failure(job, "processing_failed", exc)
             return

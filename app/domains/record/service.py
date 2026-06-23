@@ -64,9 +64,17 @@ class RecordService:
         self._record_repo.set_verified(record)
         return record
 
-    async def delete_checkup(self, user_id: int, record_id: int) -> None:
+    def delete_checkup(self, user_id: int, record_id: int) -> list[str]:
+        """검진 기록과 연관 행을 삭제하고, 정리해야 할 파일 URL을 반환합니다.
+
+        실제 스토리지 삭제는 DB 커밋이 성공한 뒤 purge_files()로 수행해야 한다.
+        비가역 외부 삭제를 커밋 전에 실행하면 커밋 실패 시 DB는 복구되지만
+        파일은 사라져 정합성이 깨진다.
+        """
         record = self._get_owned_record(user_id, record_id)
-        file_urls = self._record_repo.delete_record_cascade(record)
+        return self._record_repo.delete_record_cascade(record)
+
+    async def purge_files(self, file_urls: list[str]) -> None:
         for url in file_urls:
             try:
                 await self._file_storage.delete(url)
