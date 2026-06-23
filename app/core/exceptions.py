@@ -34,6 +34,11 @@ class BadRequestException(AppException):
         super().__init__(status_code=400, message=message, error_code=error_code)
 
 
+class UnsupportedMediaTypeException(AppException):
+    def __init__(self, message: str = "지원하지 않는 파일 형식입니다.", error_code: str = "UNSUPPORTED_MEDIA_TYPE") -> None:
+        super().__init__(status_code=415, message=message, error_code=error_code)
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppException)
     async def app_exception_handler(request: Request, exc: AppException) -> JSONResponse:

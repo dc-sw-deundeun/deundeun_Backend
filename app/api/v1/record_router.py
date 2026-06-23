@@ -1,15 +1,18 @@
 import hashlib
+from collections.abc import Awaitable, Callable
 
-from fastapi import APIRouter, Depends, File, Response, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Response, UploadFile
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.dependencies import get_current_user
+from app.core.exceptions import UnsupportedMediaTypeException
 from app.core.response import success_response
 from app.database.session import get_db
 from app.domains.ocr.dependencies import (
     get_file_storage,
+    get_ocr_job_runner,
     get_ocr_service,
     get_record_service,
 )
@@ -23,6 +26,7 @@ from app.domains.record.schemas import (
     VerifyRequest,
 )
 from app.domains.record.service import RecordService
+from app.infrastructure.ocr.format import detect_image_format
 from app.infrastructure.storage.file_storage import FileStorage
 
 router = APIRouter()
@@ -47,13 +51,18 @@ def _metric_list(service: RecordService, user_id: int, record_id: int) -> list[d
 @router.post("/checkups/upload", status_code=202)
 async def upload_checkup(
     response: Response,
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     user_id: int = Depends(get_current_user),
     db: Session = Depends(get_db),
     ocr_service: OcrService = Depends(get_ocr_service),
     file_storage: FileStorage = Depends(get_file_storage),
+    runner: Callable[[int], Awaitable[None]] = Depends(get_ocr_job_runner),
 ):
     content = await file.read()
+    image_format = detect_image_format(content)
+    if image_format is None:
+        raise UnsupportedMediaTypeException()
     file_hash = hashlib.sha256(content).hexdigest()
     record_repo = RecordRepository(db)
     existing = record_repo.find_by_user_and_hash(user_id, file_hash)
@@ -63,9 +72,8 @@ async def upload_checkup(
             message="이미 업로드된 검진 결과지입니다.",
             data=UploadResponse(record_id=existing.id, ocr_job_id=0).model_dump(),
         )
-    file_url = await file_storage.upload(
-        f"checkups/{user_id}/{file_hash}.png", content
-    )
+    key = f"checkups/{user_id}/{file_hash}.{image_format}"
+    file_url = await file_storage.upload(key, content)
     try:
         record = record_repo.create_record(user_id, "UPLOAD", file_url, file_hash)
         db.flush()
@@ -90,6 +98,7 @@ async def upload_checkup(
         db.rollback()
         await _safe_delete(file_storage, file_url)
         raise
+    background_tasks.add_task(runner, job.id)
     return success_response(
         message="업로드 완료. OCR 처리를 시작합니다.",
         data=UploadResponse(record_id=record.id, ocr_job_id=job.id).model_dump(),

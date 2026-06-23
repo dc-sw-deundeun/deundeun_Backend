@@ -5,7 +5,12 @@ from fastapi.testclient import TestClient
 
 from app.core.dependencies import get_current_user
 from app.database.session import get_db
-from app.domains.ocr.dependencies import get_ocr_service, get_record_service
+from app.domains.ocr.dependencies import (
+    build_ocr_service,
+    get_ocr_job_runner,
+    get_ocr_service,
+    get_record_service,
+)
 from app.domains.ocr.repository import OcrRepository
 from app.domains.ocr.service import OcrService
 from app.domains.ocr.status import OcrStatus
@@ -15,6 +20,8 @@ from app.infrastructure.ocr.ocr_client import StubOcrClient
 from app.infrastructure.ocr.parser import OcrParser, ParsedMetric
 from app.infrastructure.storage.file_storage import StubFileStorage
 from app.main import app
+
+_PNG_HEADER = b"\x89PNG\r\n\x1a\n" + b"0" * 32
 
 
 class MemoryStorage:
@@ -41,10 +48,15 @@ def api(db_session):
         file_storage=StubFileStorage(),
         parser=OcrParser(),
     )
+
+    async def _runner(job_id: int):
+        await build_ocr_service(db_session).process_single(job_id)
+
     app.dependency_overrides[get_db] = _db
     app.dependency_overrides[get_current_user] = _user
     app.dependency_overrides[get_record_service] = lambda: record_service
     app.dependency_overrides[get_ocr_service] = lambda: ocr_service
+    app.dependency_overrides[get_ocr_job_runner] = lambda: _runner
     yield TestClient(app), db_session
     app.dependency_overrides.clear()
 
@@ -66,7 +78,7 @@ def test_upload_creates_record_and_job(api):
     client, db = api
     resp = client.post(
         "/api/v1/records/checkups/upload",
-        files={"file": ("checkup.png", io.BytesIO(b"img-bytes"), "image/png")},
+        files={"file": ("checkup.png", io.BytesIO(_PNG_HEADER), "image/png")},
     )
     assert resp.status_code == 202
     data = resp.json()["data"]
@@ -75,11 +87,35 @@ def test_upload_creates_record_and_job(api):
 
 def test_upload_dedup_same_hash(api):
     client, db = api
-    files = {"file": ("a.png", io.BytesIO(b"same-bytes"), "image/png")}
+    png = _PNG_HEADER
+    files = {"file": ("a.png", io.BytesIO(png), "image/png")}
     first = client.post("/api/v1/records/checkups/upload", files=files).json()["data"]
-    files = {"file": ("a.png", io.BytesIO(b"same-bytes"), "image/png")}
+    files = {"file": ("a.png", io.BytesIO(png), "image/png")}
     second = client.post("/api/v1/records/checkups/upload", files=files).json()["data"]
     assert first["record_id"] == second["record_id"]
+
+
+def test_upload_rejects_unsupported_format(api):
+    client, db = api
+    resp = client.post(
+        "/api/v1/records/checkups/upload",
+        files={"file": ("a.gif", io.BytesIO(b"GIF89a..."), "image/gif")},
+    )
+    assert resp.status_code == 415
+
+
+def test_upload_png_triggers_background_ocr(api):
+    client, db = api
+    png = _PNG_HEADER
+    resp = client.post(
+        "/api/v1/records/checkups/upload",
+        files={"file": ("a.png", io.BytesIO(png), "image/png")},
+    )
+    assert resp.status_code == 202
+    # 백그라운드 러너(override)가 동기 실행되어 잡 상태가 진전됨
+    from app.domains.ocr.repository import OcrRepository
+    job = OcrRepository(db).get_job(resp.json()["data"]["ocr_job_id"])
+    assert job.status in ("COMPLETED", "FAILED", "PROCESSING")
 
 
 def test_get_metrics_returns_flags(api):
