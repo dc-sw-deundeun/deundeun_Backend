@@ -86,6 +86,25 @@ class RefreshToken(Base):
     user: Mapped["User"] = relationship("User", back_populates="refresh_tokens")
 
 
+class AccessTokenBlacklist(Base):
+    """로그아웃된 access token의 jti 블랙리스트.
+
+    access token은 만료가 짧지만, 로그아웃 즉시 무효화하기 위해 jti를 기록한다.
+    expires_at 이후의 행은 조회 시 무시되며 주기적으로 정리할 수 있다.
+    """
+
+    __tablename__ = "access_token_blacklist"
+    __table_args__ = (Index("ix_access_token_blacklist_expires_at", "expires_at"),)
+
+    jti: Mapped[str] = mapped_column(String(64), primary_key=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+
 class ConsentHistory(Base):
     """약관·민감 건강정보 동의 이력 (버전별 보존)."""
 
