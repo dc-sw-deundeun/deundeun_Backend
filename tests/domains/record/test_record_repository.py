@@ -101,7 +101,6 @@ def test_delete_record_cascade_returns_file_urls(db_session):
             user_id=1,
             provider="CLOVA_GENERAL",
             status="COMPLETED",
-            raw_result_url="s3://raw.json",
         )
     )
     db_session.add(

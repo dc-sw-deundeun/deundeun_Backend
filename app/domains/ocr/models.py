@@ -17,7 +17,6 @@ class OcrJob(Base):
     user_id = Column(Integer, nullable=False, index=True)    # 논리 참조, FK 없음
     provider = Column(String(50), nullable=False, default="CLOVA_GENERAL")
     status = Column(String(20), nullable=False)
-    raw_result_url = Column(String(500), nullable=True)
     parsed_field_count = Column(Integer, nullable=True)
     error_message = Column(Text, nullable=True)
     requested_at = Column(DateTime, nullable=True)
