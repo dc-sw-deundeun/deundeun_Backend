@@ -24,9 +24,34 @@ jobs:
       - name: Run ruff
         run: ruff check .
 
+      - name: Check formatting
+        run: ruff format --check .
+
+      - name: Run mypy
+        run: mypy app tests
+
   test:
     name: Test (pytest)
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: deundeun
+          POSTGRES_PASSWORD: deundeun
+          POSTGRES_DB: deundeun
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U deundeun"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql+psycopg2://deundeun:deundeun@localhost:5432/deundeun
+
     steps:
       - uses: actions/checkout@v4
 
@@ -37,6 +62,9 @@ jobs:
 
       - name: Install dev dependencies
         run: pip install -r requirements-dev.txt
+
+      - name: Run alembic migrations
+        run: alembic upgrade head
 
       - name: Run pytest
         run: pytest tests/
