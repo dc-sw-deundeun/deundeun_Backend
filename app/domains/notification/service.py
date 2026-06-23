@@ -8,7 +8,9 @@ class NotificationService:
     def update_settings(self, user_id: int, request) -> None:
         raise NotImplementedError
 
-    def create_log(self, user_id: int, notification_type: str, channel: str, title: str, content: str) -> None:
+    def create_log(
+        self, user_id: int, notification_type: str, channel: str, title: str, content: str
+    ) -> None:
         raise NotImplementedError
 
     def send_test_notification(self, user_id: int) -> None:
