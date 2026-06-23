@@ -3,7 +3,7 @@ from collections.abc import Generator
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import Engine, create_engine
+from sqlalchemy import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from alembic import command
@@ -29,7 +29,7 @@ def db_url() -> Generator[str, None, None]:
         pytest.skip("testcontainers 미설치 — pip install -r requirements-dev.txt")
 
     with PostgresContainer("postgres:16-alpine") as pg:
-        yield pg.get_connection_url().replace("psycopg2", "psycopg2")
+        yield pg.get_connection_url()
 
 
 @pytest.fixture(scope="session")
@@ -40,7 +40,9 @@ def db_engine(db_url: str) -> Generator[Engine, None, None]:
     config_module.settings.database_url = db_url
     session_module.init_db(db_url)
 
-    engine = create_engine(db_url, pool_pre_ping=True)
+    engine = session_module.get_engine()
+    if engine is None:
+        raise RuntimeError("Failed to initialize database engine")
     _upgrade_alembic(db_url)
     yield engine
     engine.dispose()
