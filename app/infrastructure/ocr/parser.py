@@ -27,9 +27,7 @@ def _is_reference(text: str) -> bool:
 
 
 class OcrParser:
-    def parse(
-        self, result: OcrResultDTO, row_tolerance: float = 20.0
-    ) -> list[ParsedMetric]:
+    def parse(self, result: OcrResultDTO, row_tolerance: float = 20.0) -> list[ParsedMetric]:
         rows = self._cluster_rows(result.fields, row_tolerance)
         metrics: list[ParsedMetric] = []
         seen: set[str] = set()
@@ -48,9 +46,7 @@ class OcrParser:
                 break  # 한 행은 하나의 라벨만 처리
         return metrics
 
-    def _cluster_rows(
-        self, fields: list[OcrFieldDTO], tolerance: float
-    ) -> list[list[OcrFieldDTO]]:
+    def _cluster_rows(self, fields: list[OcrFieldDTO], tolerance: float) -> list[list[OcrFieldDTO]]:
         ordered = sorted(fields, key=lambda f: f.y_center)
         rows: list[list[OcrFieldDTO]] = []
         for fld in ordered:
@@ -62,18 +58,14 @@ class OcrParser:
             row.sort(key=lambda f: f.x_min)
         return rows
 
-    def _extract(
-        self, spec: MetricSpec, right: list[OcrFieldDTO]
-    ) -> list[ParsedMetric]:
+    def _extract(self, spec: MetricSpec, right: list[OcrFieldDTO]) -> list[ParsedMetric]:
         if spec.kind == "bp_pair":
             return self._extract_bp(right)
         if spec.kind == "categorical":
             return self._extract_categorical(spec, right)
         return self._extract_numeric(spec, right)
 
-    def _extract_numeric(
-        self, spec: MetricSpec, right: list[OcrFieldDTO]
-    ) -> list[ParsedMetric]:
+    def _extract_numeric(self, spec: MetricSpec, right: list[OcrFieldDTO]) -> list[ParsedMetric]:
         for fld in right:
             if _is_number(fld.text):
                 return [
@@ -95,14 +87,20 @@ class OcrParser:
         sys_f, dia_f = numbers[0], numbers[1]
         return [
             ParsedMetric(
-                metric_code="systolic_bp", metric_name="수축기혈압",
-                value=sys_f.text.strip(), unit="mmHg",
-                confidence=sys_f.confidence, raw_text=sys_f.text,
+                metric_code="systolic_bp",
+                metric_name="수축기혈압",
+                value=sys_f.text.strip(),
+                unit="mmHg",
+                confidence=sys_f.confidence,
+                raw_text=sys_f.text,
             ),
             ParsedMetric(
-                metric_code="diastolic_bp", metric_name="이완기혈압",
-                value=dia_f.text.strip(), unit="mmHg",
-                confidence=dia_f.confidence, raw_text=dia_f.text,
+                metric_code="diastolic_bp",
+                metric_name="이완기혈압",
+                value=dia_f.text.strip(),
+                unit="mmHg",
+                confidence=dia_f.confidence,
+                raw_text=dia_f.text,
             ),
         ]
 
@@ -114,9 +112,12 @@ class OcrParser:
                 if cat in fld.text:
                     return [
                         ParsedMetric(
-                            metric_code=spec.code, metric_name=spec.name,
-                            value=cat, unit=spec.unit,
-                            confidence=fld.confidence, raw_text=fld.text,
+                            metric_code=spec.code,
+                            metric_name=spec.name,
+                            value=cat,
+                            unit=spec.unit,
+                            confidence=fld.confidence,
+                            raw_text=fld.text,
                         )
                     ]
         return []

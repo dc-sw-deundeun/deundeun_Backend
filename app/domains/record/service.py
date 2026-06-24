@@ -27,9 +27,7 @@ class RecordService:
         self._get_owned_record(user_id, record_id)
         return self._record_repo.list_metrics(record_id)
 
-    def _apply_metric_updates(
-        self, record_id: int, items: list[MetricUpdateItem]
-    ) -> None:
+    def _apply_metric_updates(self, record_id: int, items: list[MetricUpdateItem]) -> None:
         """락 획득 → 전체 존재 검증 → 일괄 갱신(커밋은 호출자가 담당)."""
         # OCR upsert와 동일한 record 락 경계로 직렬화해 수정값 유실을 막는다.
         self._record_repo.lock_record(record_id)
@@ -38,9 +36,7 @@ class RecordService:
         for item in items:
             metric = self._record_repo.get_metric(record_id, item.metric_id)
             if metric is None:
-                raise NotFoundException(
-                    message=f"수치(id={item.metric_id})를 찾을 수 없습니다."
-                )
+                raise NotFoundException(message=f"수치(id={item.metric_id})를 찾을 수 없습니다.")
             pairs.append((metric, item))
         for metric, item in pairs:
             self._record_repo.update_metric_value(metric, item.value, item.unit)

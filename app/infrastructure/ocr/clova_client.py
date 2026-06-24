@@ -43,9 +43,7 @@ class ClovaOcrClient:
             )
         else:
             async with httpx.AsyncClient(timeout=self._timeout) as http:
-                response = await http.post(
-                    self._invoke_url, json=payload, headers=headers
-                )
+                response = await http.post(self._invoke_url, json=payload, headers=headers)
         response.raise_for_status()
         return self._to_dto(response.json())
 

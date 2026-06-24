@@ -97,7 +97,8 @@ class OcrService:
             raise NotFoundException(message="검진 기록을 찾을 수 없습니다.")
         if record.user_id != user_id:
             raise ForbiddenException(message="해당 기록에 대한 권한이 없습니다.")
-        if not record.file_url or not await self._file_storage.exists(record.file_url):
+        file_url = record.file_url
+        if not file_url or not await self._file_storage.exists(file_url):
             # OCR 성공 시 원본을 삭제하므로(프라이버시/스토리지) 완료된 레코드는
             # 재처리 대상이 아니다. reprocess는 사실상 '실패 잡 재시도' 용도다.
             if record.ocr_status == OcrStatus.COMPLETED.value:
@@ -141,9 +142,13 @@ class OcrService:
         if record is None:
             self._mark_deleted_record_failure(job, "record_missing")
             return
+        file_url = record.file_url
+        if not file_url:
+            self._mark_processing_failure(job, "missing_file_url", ValueError("missing_file_url"))
+            return
 
         try:
-            image = await self._file_storage.read(record.file_url)
+            image = await self._file_storage.read(file_url)
             image_format = detect_image_format(image)
             if image_format is None:
                 # 미지원/손상 이미지는 재시도 대상이 아니므로 즉시 실패 처리한다.
@@ -178,10 +183,12 @@ class OcrService:
         # 커밋 성공 이후에만 원본 이미지를 best-effort 삭제한다.
         # 주의: 이로 인해 COMPLETED 레코드는 reprocess가 불가하다(설계상 의도).
         try:
-            await self._file_storage.delete(record.file_url)
+            await self._file_storage.delete(file_url)
         except Exception:  # noqa: BLE001
             pass
-        logger.info("ocr_job_completed", extra={"job_id": job.id, "parsed_field_count": parsed_count})
+        logger.info(
+            "ocr_job_completed", extra={"job_id": job.id, "parsed_field_count": parsed_count}
+        )
 
     async def _recognize_with_retry(self, image: bytes, image_format: str) -> OcrResultDTO:
         last_error: Exception | None = None

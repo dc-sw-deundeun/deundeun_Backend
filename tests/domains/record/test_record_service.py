@@ -27,10 +27,19 @@ def _seed(db, user_id=1):
     repo = RecordRepository(db)
     record = repo.create_record(user_id, "UPLOAD", "s3://a.png", "h")
     db.commit()
-    repo.upsert_ocr_metrics(record.id, [
-        ParsedMetric(metric_code="bmi", metric_name="체질량지수",
-                     value="24.1", unit="kg/m2", confidence=0.5, raw_text="24.1"),
-    ])
+    repo.upsert_ocr_metrics(
+        record.id,
+        [
+            ParsedMetric(
+                metric_code="bmi",
+                metric_name="체질량지수",
+                value="24.1",
+                unit="kg/m2",
+                confidence=0.5,
+                raw_text="24.1",
+            ),
+        ],
+    )
     db.commit()
     return repo, record
 

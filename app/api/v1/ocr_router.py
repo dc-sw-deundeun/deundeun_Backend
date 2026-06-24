@@ -23,8 +23,11 @@ def get_job_status(
     if job is None or job.user_id != current_user.id:
         raise NotFoundException(message="OCR 작업을 찾을 수 없습니다.")
     data = OcrJobResponse(
-        job_id=job.id, record_id=job.record_id, status=job.status,
-        parsed_field_count=job.parsed_field_count, error_message=job.error_message,
+        job_id=job.id,
+        record_id=job.record_id,
+        status=job.status,
+        parsed_field_count=job.parsed_field_count,
+        error_message=job.error_message,
     )
     return success_response(data=data.model_dump())
 

@@ -16,8 +16,10 @@ def _clova_response():
                         "inferConfidence": 0.98,
                         "boundingPoly": {
                             "vertices": [
-                                {"x": 10, "y": 100}, {"x": 60, "y": 100},
-                                {"x": 60, "y": 130}, {"x": 10, "y": 130},
+                                {"x": 10, "y": 100},
+                                {"x": 60, "y": 100},
+                                {"x": 60, "y": 130},
+                                {"x": 10, "y": 130},
                             ]
                         },
                     },
@@ -26,8 +28,10 @@ def _clova_response():
                         "inferConfidence": 0.95,
                         "boundingPoly": {
                             "vertices": [
-                                {"x": 120, "y": 100}, {"x": 160, "y": 100},
-                                {"x": 160, "y": 130}, {"x": 120, "y": 130},
+                                {"x": 120, "y": 100},
+                                {"x": 160, "y": 100},
+                                {"x": 160, "y": 130},
+                                {"x": 120, "y": 130},
                             ]
                         },
                     },
@@ -57,6 +61,7 @@ async def test_recognize_maps_response_to_dto():
 
     assert captured["secret"] == "secret-123"
     import json
+
     sent_payload = json.loads(captured["body"])
     sent = sent_payload["images"][0]
     assert sent["format"] == "png"
@@ -89,8 +94,10 @@ async def test_recognize_skips_fields_without_bounding_poly():
                         "inferConfidence": 0.99,
                         "boundingPoly": {
                             "vertices": [
-                                {"x": 10, "y": 100}, {"x": 60, "y": 100},
-                                {"x": 60, "y": 130}, {"x": 10, "y": 130},
+                                {"x": 10, "y": 100},
+                                {"x": 60, "y": 100},
+                                {"x": 60, "y": 130},
+                                {"x": 10, "y": 130},
                             ]
                         },
                     },

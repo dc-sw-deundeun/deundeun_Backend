@@ -2,7 +2,7 @@
 
 import logging
 
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.schedulers.asyncio import AsyncIOScheduler  # type: ignore[import-untyped]
 
 from app.core.config import settings
 from app.database.session import session_scope

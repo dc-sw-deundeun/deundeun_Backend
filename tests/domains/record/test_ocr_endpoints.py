@@ -67,10 +67,19 @@ def _seed_record_with_metric(db):
     record = repo.create_record(1, "UPLOAD", "s3://a.png", "h")
     repo.set_ocr_status(record, OcrStatus.COMPLETED.value)
     db.commit()
-    repo.upsert_ocr_metrics(record.id, [
-        ParsedMetric(metric_code="bmi", metric_name="체질량지수",
-                     value="24.1", unit="kg/m2", confidence=0.5, raw_text="24.1"),
-    ])
+    repo.upsert_ocr_metrics(
+        record.id,
+        [
+            ParsedMetric(
+                metric_code="bmi",
+                metric_name="체질량지수",
+                value="24.1",
+                unit="kg/m2",
+                confidence=0.5,
+                raw_text="24.1",
+            ),
+        ],
+    )
     db.commit()
     return record, repo.list_metrics(record.id)[0]
 
@@ -128,6 +137,7 @@ def test_upload_png_triggers_background_ocr(api):
     assert resp.status_code == 202
     # 백그라운드 러너(override)가 동기 실행되어 잡 상태가 진전됨
     from app.domains.ocr.repository import OcrRepository
+
     job = OcrRepository(db).get_job(resp.json()["data"]["ocr_job_id"])
     assert job.status in ("COMPLETED", "FAILED", "PROCESSING")
 

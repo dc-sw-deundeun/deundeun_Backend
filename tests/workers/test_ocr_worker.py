@@ -13,10 +13,12 @@ from app.workers.ocr_worker import recover_stuck, run_ocr_batch
 
 class FakeClient:
     async def recognize(self, image, image_format="png"):
-        return OcrResultDTO(fields=[
-            OcrFieldDTO(text="공복혈당", confidence=0.9, x_min=10, x_max=40, y_center=10),
-            OcrFieldDTO(text="109", confidence=0.9, x_min=120, x_max=150, y_center=10),
-        ])
+        return OcrResultDTO(
+            fields=[
+                OcrFieldDTO(text="공복혈당", confidence=0.9, x_min=10, x_max=40, y_center=10),
+                OcrFieldDTO(text="109", confidence=0.9, x_min=120, x_max=150, y_center=10),
+            ]
+        )
 
 
 class FakeStorage:
@@ -56,14 +58,15 @@ async def test_run_ocr_batch_processes_pending(db_session):
     db_session.commit()
     ocr_repo = OcrRepository(db_session)
     service = OcrService(
-        ocr_repo=ocr_repo, record_repo=record_repo, ocr_client=FakeClient(),
-        file_storage=FakeStorage(), parser=OcrParser(),
+        ocr_repo=ocr_repo,
+        record_repo=record_repo,
+        ocr_client=FakeClient(),
+        file_storage=FakeStorage(),
+        parser=OcrParser(),
     )
     ocr_repo.create_job(record.id, 1)
     db_session.commit()
-    processed = await run_ocr_batch(
-        service, ocr_repo, record_repo, stuck_timeout_seconds=300
-    )
+    processed = await run_ocr_batch(service, ocr_repo, record_repo, stuck_timeout_seconds=300)
     db_session.commit()
     assert processed == 1
     metrics = {m.metric_code for m in record_repo.list_metrics(record.id)}

@@ -31,11 +31,7 @@ class OcrRepository:
         return self._db.get(OcrJob, job_id)
 
     def get_job_fresh(self, job_id: int) -> OcrJob | None:
-        stmt = (
-            select(OcrJob)
-            .where(OcrJob.id == job_id)
-            .execution_options(populate_existing=True)
-        )
+        stmt = select(OcrJob).where(OcrJob.id == job_id).execution_options(populate_existing=True)
         return self._db.execute(stmt).scalar_one_or_none()
 
     def begin_nested(self) -> SessionTransaction:

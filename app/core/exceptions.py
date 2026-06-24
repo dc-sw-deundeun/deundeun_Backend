@@ -41,12 +41,20 @@ class BadRequestException(AppException):
 
 
 class UnsupportedMediaTypeException(AppException):
-    def __init__(self, message: str = "지원하지 않는 파일 형식입니다.", error_code: str = "UNSUPPORTED_MEDIA_TYPE") -> None:
+    def __init__(
+        self,
+        message: str = "지원하지 않는 파일 형식입니다.",
+        error_code: str = "UNSUPPORTED_MEDIA_TYPE",
+    ) -> None:
         super().__init__(status_code=415, message=message, error_code=error_code)
 
 
 class PayloadTooLargeException(AppException):
-    def __init__(self, message: str = "업로드 가능한 파일 크기를 초과했습니다.", error_code: str = "PAYLOAD_TOO_LARGE") -> None:
+    def __init__(
+        self,
+        message: str = "업로드 가능한 파일 크기를 초과했습니다.",
+        error_code: str = "PAYLOAD_TOO_LARGE",
+    ) -> None:
         super().__init__(status_code=413, message=message, error_code=error_code)
 
 

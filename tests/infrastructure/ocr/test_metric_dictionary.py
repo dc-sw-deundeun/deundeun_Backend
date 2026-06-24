@@ -8,10 +8,24 @@ from app.infrastructure.ocr.metric_dictionary import (
 def test_covers_core_metrics():
     codes = {s.code for s in METRIC_SPECS}
     for required in {
-        "bmi", "systolic_bp", "diastolic_bp", "fasting_glucose",
-        "hemoglobin", "ast", "alt", "gamma_gtp", "creatinine", "egfr",
-        "urine_protein", "total_cholesterol", "hdl", "ldl", "triglyceride",
-        "height", "weight", "waist",
+        "bmi",
+        "systolic_bp",
+        "diastolic_bp",
+        "fasting_glucose",
+        "hemoglobin",
+        "ast",
+        "alt",
+        "gamma_gtp",
+        "creatinine",
+        "egfr",
+        "urine_protein",
+        "total_cholesterol",
+        "hdl",
+        "ldl",
+        "triglyceride",
+        "height",
+        "weight",
+        "waist",
     }:
         assert required in codes
 

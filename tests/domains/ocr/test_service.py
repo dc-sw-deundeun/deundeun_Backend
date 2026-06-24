@@ -43,6 +43,7 @@ class ConcurrentDeletingOcrClient:
         with Session(self._bind) as session:
             repo = RecordRepository(session)
             record = repo.get_record(self._record_id)
+            assert record is not None
             repo.delete_record_cascade(record)
             session.commit()
         return self._result
@@ -58,6 +59,7 @@ class ConcurrentDeletingParser:
         with Session(self._bind) as session:
             repo = RecordRepository(session)
             record = repo.get_record(self._record_id)
+            assert record is not None
             repo.delete_record_cascade(record)
             session.commit()
         return self._parser.parse(result)

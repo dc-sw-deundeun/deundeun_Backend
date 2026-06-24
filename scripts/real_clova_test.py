@@ -44,11 +44,13 @@ def to_result(body: dict) -> OcrResultDTO:
             vertices = (raw.get("boundingPoly") or {}).get("vertices")
             if not vertices:
                 continue
-            fields.append(OcrFieldDTO.from_vertices(
-                text=raw.get("inferText", ""),
-                confidence=raw.get("inferConfidence", 0.0),
-                vertices=vertices,
-            ))
+            fields.append(
+                OcrFieldDTO.from_vertices(
+                    text=raw.get("inferText", ""),
+                    confidence=raw.get("inferConfidence", 0.0),
+                    vertices=vertices,
+                )
+            )
     return OcrResultDTO(fields=fields)
 
 
@@ -61,7 +63,9 @@ def main():
     body = call_clova(image_path)
     result = to_result(body)
     print(f"\n[RAW]  Clova 인식 토큰 {len(result.fields)}개 (원문):")
-    line = " ".join(f.text for f in sorted(result.fields, key=lambda f: (round(f.y_center / 18), f.x_min)))
+    line = " ".join(
+        f.text for f in sorted(result.fields, key=lambda f: (round(f.y_center / 18), f.x_min))
+    )
     print("  " + line)
 
     metrics = OcrParser().parse(result)
@@ -69,7 +73,9 @@ def main():
     print(f"  {'metric_code':18} {'value':10} {'unit':8} {'conf':6}")
     print("  " + "-" * 46)
     for m in sorted(metrics, key=lambda m: m.metric_code):
-        print(f"  {m.metric_code:18} {m.value:10} {m.unit or '':8} {m.confidence:.2f}  (raw={m.raw_text!r})")
+        print(
+            f"  {m.metric_code:18} {m.value:10} {m.unit or '':8} {m.confidence:.2f}  (raw={m.raw_text!r})"
+        )
 
     print("\n[NOTE] 위 metric이 checkup_metric_results에 source=OCR/미검수로 저장되고,")
     print("       사용자가 검수(verify) 후에야 분석(해석) 단계로 진입합니다.")

@@ -32,10 +32,7 @@ router = APIRouter()
 
 def _metric_list(service: RecordService, user_id: int, record_id: int) -> list[dict]:
     metrics = service.get_metrics(user_id, record_id)
-    return [
-        MetricResponse.from_model(m, settings.ocr_min_confidence).model_dump()
-        for m in metrics
-    ]
+    return [MetricResponse.from_model(m, settings.ocr_min_confidence).model_dump() for m in metrics]
 
 
 @router.post("/checkups/upload", status_code=202)
@@ -55,21 +52,19 @@ async def upload_checkup(
         raise UnsupportedMediaTypeException()
     file_hash = hashlib.sha256(content).hexdigest()
 
-    result = await ocr_service.upload_checkup(
-        current_user.id, content, image_format, file_hash
-    )
+    result = await ocr_service.upload_checkup(current_user.id, content, image_format, file_hash)
     if result.is_duplicate:
         response.status_code = 200
         return success_response(
             message="이미 업로드된 검진 결과지입니다.",
             data=UploadResponse(record_id=result.record_id, ocr_job_id=None).model_dump(),
         )
+    # is_duplicate가 False면 새 잡이 생성되어 job_id가 보장된다.
+    assert result.job_id is not None
     background_tasks.add_task(runner, result.job_id)
     return success_response(
         message="업로드 완료. OCR 처리를 시작합니다.",
-        data=UploadResponse(
-            record_id=result.record_id, ocr_job_id=result.job_id
-        ).model_dump(),
+        data=UploadResponse(record_id=result.record_id, ocr_job_id=result.job_id).model_dump(),
     )
 
 
@@ -79,9 +74,7 @@ async def list_checkups(current_user: CurrentUser = Depends(get_current_user)):
 
 
 @router.get("/checkups/{record_id}")
-async def get_checkup(
-    record_id: int, current_user: CurrentUser = Depends(get_current_user)
-):
+async def get_checkup(record_id: int, current_user: CurrentUser = Depends(get_current_user)):
     return not_implemented_response()
 
 
@@ -102,9 +95,7 @@ def update_metric(
     current_user: CurrentUser = Depends(get_current_user),
     service: RecordService = Depends(get_record_service),
 ):
-    metric = service.update_metric(
-        current_user.id, record_id, metric_id, body.value, body.unit
-    )
+    metric = service.update_metric(current_user.id, record_id, metric_id, body.value, body.unit)
     return success_response(
         message="수치를 수정했습니다.",
         data=MetricResponse.from_model(metric, settings.ocr_min_confidence).model_dump(),

@@ -21,9 +21,7 @@ class MetricResponse(BaseModel):
 
     @classmethod
     def from_model(cls, metric, min_confidence: float) -> "MetricResponse":
-        low_confidence = (
-            metric.confidence is not None and metric.confidence < min_confidence
-        )
+        low_confidence = metric.confidence is not None and metric.confidence < min_confidence
         return cls(
             metric_id=metric.id,
             metric_code=metric.metric_code,

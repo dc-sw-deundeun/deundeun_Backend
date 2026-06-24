@@ -5,6 +5,7 @@ Revises: 97a644712a37
 Create Date: 2026-06-23 22:11:01.029397
 
 """
+
 from collections.abc import Sequence
 from typing import Union
 
@@ -13,8 +14,8 @@ import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = '983204074d73'
-down_revision: Union[str, None] = '97a644712a37'
+revision: str = "983204074d73"
+down_revision: Union[str, None] = "97a644712a37"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

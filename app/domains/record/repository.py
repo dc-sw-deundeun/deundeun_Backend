@@ -48,11 +48,7 @@ class RecordRepository:
         return self._db.execute(stmt).scalar_one_or_none()
 
     def _lock_record(self, record_id: int) -> CheckupRecord:
-        stmt = (
-            select(CheckupRecord)
-            .where(CheckupRecord.id == record_id)
-            .with_for_update()
-        )
+        stmt = select(CheckupRecord).where(CheckupRecord.id == record_id).with_for_update()
         record = self._db.execute(stmt).scalar_one_or_none()
         if record is None:
             raise ValueError(f"Record not found: {record_id}")
@@ -62,9 +58,7 @@ class RecordRepository:
         """수동 수정/검수 경로가 OCR upsert와 같은 락 경계를 공유하도록 노출한다."""
         return self._lock_record(record_id)
 
-    def find_by_user_and_hash(
-        self, user_id: int, file_hash: str
-    ) -> CheckupRecord | None:
+    def find_by_user_and_hash(self, user_id: int, file_hash: str) -> CheckupRecord | None:
         stmt = select(CheckupRecord).where(
             CheckupRecord.user_id == user_id,
             CheckupRecord.file_hash == file_hash,
@@ -86,22 +80,16 @@ class RecordRepository:
         self._db.flush()
 
     def list_metrics(self, record_id: int) -> list[CheckupMetricResult]:
-        stmt = select(CheckupMetricResult).where(
-            CheckupMetricResult.record_id == record_id
-        )
+        stmt = select(CheckupMetricResult).where(CheckupMetricResult.record_id == record_id)
         return list(self._db.execute(stmt).scalars().all())
 
-    def get_metric(
-        self, record_id: int, metric_id: int
-    ) -> CheckupMetricResult | None:
+    def get_metric(self, record_id: int, metric_id: int) -> CheckupMetricResult | None:
         metric = self._db.get(CheckupMetricResult, metric_id)
         if metric is None or metric.record_id != record_id:
             return None
         return metric
 
-    def upsert_ocr_metrics(
-        self, record_id: int, parsed: list[ParsedMetric]
-    ) -> int:
+    def upsert_ocr_metrics(self, record_id: int, parsed: list[ParsedMetric]) -> int:
         self._lock_record(record_id)
         existing = self.list_metrics(record_id)
         manual_codes = {
@@ -152,9 +140,7 @@ class RecordRepository:
         if record.file_url:
             file_urls.append(record.file_url)
 
-        jobs = self._db.execute(
-            select(OcrJob).where(OcrJob.record_id == record.id)
-        ).scalars().all()
+        jobs = self._db.execute(select(OcrJob).where(OcrJob.record_id == record.id)).scalars().all()
         for job in jobs:
             self._db.delete(job)
 

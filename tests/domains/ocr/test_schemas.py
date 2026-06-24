@@ -64,9 +64,7 @@ def test_metric_response_manual_not_low_confidence():
 
 def test_record_request_schemas_parse_nested_metric_updates():
     update = MetricUpdateRequest(value="24.1")
-    bulk = MetricBulkUpdateRequest(
-        metrics=[{"metric_id": 3, "value": "24.1", "unit": "kg/m2"}]
-    )
+    bulk = MetricBulkUpdateRequest(metrics=[{"metric_id": 3, "value": "24.1", "unit": "kg/m2"}])
     verify = VerifyRequest()
     upload = UploadResponse(record_id=2, ocr_job_id=1)
 
