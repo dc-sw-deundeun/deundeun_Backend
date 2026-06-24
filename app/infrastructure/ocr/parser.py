@@ -16,6 +16,7 @@ class ParsedMetric(BaseModel):
     unit: str
     confidence: float
     raw_text: str
+    page_index: int = 0
 
 
 def _is_number(text: str) -> bool:

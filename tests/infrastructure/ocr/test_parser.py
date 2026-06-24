@@ -64,3 +64,17 @@ def test_confidence_is_carried():
     )
     metrics = {m.metric_code: m for m in OcrParser().parse(result)}
     assert metrics["hemoglobin"].confidence == 0.8  # 값 토큰 신뢰도
+
+
+def test_parsed_metric_has_page_index():
+    from app.infrastructure.ocr.parser import ParsedMetric
+    m = ParsedMetric(
+        metric_code="X", metric_name="X", value="1", unit="", confidence=0.9, raw_text="1"
+    )
+    assert m.page_index == 0  # default
+
+    m2 = ParsedMetric(
+        metric_code="X", metric_name="X", value="1", unit="", confidence=0.9,
+        raw_text="1", page_index=3,
+    )
+    assert m2.page_index == 3
