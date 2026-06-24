@@ -12,12 +12,15 @@ from app.core.exceptions import (
 )
 from app.core.response import not_implemented_response, success_response
 from app.domains.ocr.dependencies import get_ocr_service, get_record_service
-from app.domains.ocr.service import OcrService
+from app.domains.ocr.service import FinalMetric, OcrService
 from app.domains.record.schemas import (
+    CommitCheckupRequest,
+    CommitCheckupResponse,
     MetricBulkUpdateRequest,
     MetricResponse,
     MetricUpdateRequest,
     MultiImageUploadRequest,
+    PreviewMetricResponse,
     UploadResponse,
     VerifyRequest,
 )
@@ -35,6 +38,15 @@ def _metric_list(service: RecordService, user_id: int, record_id: int) -> list[d
 
 @router.post("/checkups/upload", status_code=200)
 async def upload_checkup(
+    body: MultiImageUploadRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+    ocr_service: OcrService = Depends(get_ocr_service),
+):
+    return await preview_checkup_ocr(body, current_user, ocr_service)
+
+
+@router.post("/checkups/ocr-preview", status_code=200)
+async def preview_checkup_ocr(
     body: MultiImageUploadRequest,
     current_user: CurrentUser = Depends(get_current_user),
     ocr_service: OcrService = Depends(get_ocr_service),
@@ -65,7 +77,8 @@ async def upload_checkup(
     outcome = await ocr_service.process_upload(current_user.id, images)
 
     metrics = [
-        MetricResponse.from_model(metric, settings.ocr_min_confidence) for metric in outcome.metrics
+        PreviewMetricResponse.from_parsed(metric, settings.ocr_min_confidence)
+        for metric in outcome.metrics
     ]
     message = (
         "OCR 처리가 완료되었습니다."
@@ -75,11 +88,47 @@ async def upload_checkup(
     return success_response(
         message=message,
         data=UploadResponse(
-            record_id=outcome.record_id,
             page_count=outcome.page_count,
             failed_pages=outcome.failed_pages,
             ocr_status=outcome.ocr_status,
             metrics=metrics,
+        ).model_dump(),
+    )
+
+
+@router.post("/checkups", status_code=200)
+def commit_checkup(
+    body: CommitCheckupRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+    ocr_service: OcrService = Depends(get_ocr_service),
+):
+    outcome = ocr_service.commit_upload(
+        current_user.id,
+        ocr_status=body.ocr_status,
+        failed_pages=body.failed_pages,
+        metrics=[
+            FinalMetric(
+                metric_code=metric.metric_code,
+                metric_name=metric.metric_name,
+                value=metric.value,
+                unit=metric.unit,
+                confidence=metric.confidence,
+                raw_text=metric.raw_text,
+                page_index=metric.page_index,
+                is_edited=metric.is_edited,
+            )
+            for metric in body.metrics
+        ],
+    )
+    return success_response(
+        message="검진 기록을 저장했습니다.",
+        data=CommitCheckupResponse(
+            record_id=outcome.record_id,
+            verification_status=outcome.verification_status,
+            metrics=[
+                MetricResponse.from_model(metric, settings.ocr_min_confidence)
+                for metric in outcome.metrics
+            ],
         ).model_dump(),
     )
 

@@ -117,6 +117,18 @@ class RecordRepository:
         self._db.flush()
         return inserted
 
+    def insert_committed_metrics(
+        self,
+        record_id: int,
+        metrics: list[CheckupMetricResult],
+    ) -> int:
+        self._lock_record(record_id)
+        for metric in metrics:
+            metric.record_id = record_id
+            self._db.add(metric)
+        self._db.flush()
+        return len(metrics)
+
     def update_metric_value(
         self, metric: CheckupMetricResult, value: str, unit: str | None
     ) -> None:

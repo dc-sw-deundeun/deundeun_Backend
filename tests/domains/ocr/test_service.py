@@ -6,12 +6,12 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.core.exceptions import OcrFailedException
 from app.domains.ocr.models import OcrJob
 from app.domains.ocr.repository import OcrRepository
-from app.domains.ocr.service import OcrService, UploadOutcome
+from app.domains.ocr.service import FinalMetric, OcrService, UploadOutcome
 from app.domains.ocr.status import OcrStatus
 from app.domains.record.models import CheckupRecord
 from app.domains.record.repository import RecordRepository
 from app.infrastructure.ocr.ocr_dto import OcrFieldDTO, OcrResultDTO
-from app.infrastructure.ocr.parser import OcrParser, ParsedMetric
+from app.infrastructure.ocr.parser import OcrParser
 
 
 def _glucose_result(confidence: float = 0.95) -> OcrResultDTO:
@@ -87,7 +87,7 @@ _PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 32
 
 
 @pytest.mark.asyncio
-async def test_process_upload_single_image_success(db_session):
+async def test_process_upload_single_image_preview_success_without_db_write(db_session):
     service = _make_service(db_session, _SyncClient(result=_glucose_result()))
     outcome = await service.process_upload(user_id=1, images=[_PNG])
 
@@ -95,34 +95,27 @@ async def test_process_upload_single_image_success(db_session):
     assert outcome.page_count == 1
     assert outcome.failed_pages == []
     assert outcome.ocr_status == OcrStatus.COMPLETED.value
-
-    record_repo = RecordRepository(db_session)
-    metrics = record_repo.list_metrics(outcome.record_id)
-    assert any(metric.metric_code == "fasting_glucose" for metric in metrics)
-    glucose = next(metric for metric in metrics if metric.metric_code == "fasting_glucose")
+    glucose = next(metric for metric in outcome.metrics if metric.metric_code == "fasting_glucose")
     assert glucose.page_index == 0
     assert glucose.value == "109"
-
-    record = record_repo.get_record(outcome.record_id)
-    assert record is not None
-    assert record.file_url is None
-    assert record.file_hash is None
+    assert db_session.query(CheckupRecord).all() == []
+    assert db_session.query(OcrJob).all() == []
 
 
 @pytest.mark.asyncio
-async def test_process_upload_ten_images_creates_merged_metrics(db_session):
+async def test_process_upload_ten_images_creates_merged_preview_metrics(db_session):
     service = _make_service(db_session, _SyncClient(result=_glucose_result()))
     outcome = await service.process_upload(user_id=1, images=[_PNG] * 10)
 
     assert outcome.page_count == 10
     assert outcome.failed_pages == []
-    metrics = RecordRepository(db_session).list_metrics(outcome.record_id)
-    glucose_rows = [metric for metric in metrics if metric.metric_code == "fasting_glucose"]
+    glucose_rows = [metric for metric in outcome.metrics if metric.metric_code == "fasting_glucose"]
     assert len(glucose_rows) == 1
+    assert db_session.query(CheckupRecord).all() == []
 
 
 @pytest.mark.asyncio
-async def test_process_upload_partial_failure(db_session):
+async def test_process_upload_partial_failure_preview(db_session):
     client = _PerPageClient([_glucose_result(), RuntimeError("clova timeout"), _bmi_result()])
     service = _make_service(db_session, client)
     outcome = await service.process_upload(user_id=1, images=[_PNG, _PNG, _PNG])
@@ -130,24 +123,21 @@ async def test_process_upload_partial_failure(db_session):
     assert outcome.page_count == 3
     assert outcome.failed_pages == [1]
     assert outcome.ocr_status == OcrStatus.PARTIAL.value
-
-    codes = {
-        metric.metric_code
-        for metric in RecordRepository(db_session).list_metrics(outcome.record_id)
-    }
+    codes = {metric.metric_code for metric in outcome.metrics}
     assert "fasting_glucose" in codes
     assert "bmi" in codes
+    assert db_session.query(CheckupRecord).all() == []
 
 
 @pytest.mark.asyncio
-async def test_process_upload_all_fail_raises_ocr_failed(db_session):
+async def test_process_upload_all_fail_raises_ocr_failed_without_db_write(db_session):
     service = _make_service(db_session, _SyncClient(error=RuntimeError("clova down")))
 
     with pytest.raises(OcrFailedException):
         await service.process_upload(user_id=1, images=[_PNG, _PNG])
 
-    records = db_session.query(CheckupRecord).filter(CheckupRecord.user_id == 1).all()
-    assert records == []
+    assert db_session.query(CheckupRecord).filter(CheckupRecord.user_id == 1).all() == []
+    assert db_session.query(OcrJob).all() == []
 
 
 @pytest.mark.asyncio
@@ -171,8 +161,7 @@ async def test_merge_higher_confidence_wins(db_session):
     service = _make_service(db_session, client)
     outcome = await service.process_upload(user_id=1, images=[_PNG, _PNG])
 
-    metrics = RecordRepository(db_session).list_metrics(outcome.record_id)
-    glucose = next(metric for metric in metrics if metric.metric_code == "fasting_glucose")
+    glucose = next(metric for metric in outcome.metrics if metric.metric_code == "fasting_glucose")
     assert glucose.value == "109"
     assert glucose.page_index == 1
 
@@ -198,34 +187,41 @@ async def test_merge_tie_first_page_wins(db_session):
     service = _make_service(db_session, client)
     outcome = await service.process_upload(user_id=1, images=[_PNG, _PNG])
 
-    metrics = RecordRepository(db_session).list_metrics(outcome.record_id)
-    glucose = next(metric for metric in metrics if metric.metric_code == "fasting_glucose")
+    glucose = next(metric for metric in outcome.metrics if metric.metric_code == "fasting_glucose")
     assert glucose.value == "80"
     assert glucose.page_index == 0
 
 
-@pytest.mark.asyncio
-async def test_audit_job_row_written(db_session):
+def test_commit_upload_writes_record_metrics_and_audit_job(db_session):
     service = _make_service(db_session, _SyncClient(result=_glucose_result()))
-    outcome = await service.process_upload(user_id=1, images=[_PNG])
+    outcome = service.commit_upload(
+        user_id=1,
+        ocr_status=OcrStatus.PARTIAL.value,
+        failed_pages=[1],
+        metrics=[
+            FinalMetric(
+                metric_code="fasting_glucose",
+                metric_name="공복혈당",
+                value="105",
+                unit="mg/dL",
+                confidence=0.91,
+                raw_text="109",
+                page_index=0,
+                is_edited=True,
+            )
+        ],
+    )
 
     jobs = db_session.query(OcrJob).filter(OcrJob.record_id == outcome.record_id).all()
     assert len(jobs) == 1
-    assert jobs[0].status == OcrStatus.COMPLETED.value
+    assert jobs[0].status == OcrStatus.PARTIAL.value
+    assert jobs[0].error_message == "pages [1] failed"
     assert jobs[0].completed_at is not None
-
-
-@pytest.mark.asyncio
-async def test_partial_audit_job_error_message(db_session):
-    client = _PerPageClient([_glucose_result(), RuntimeError("timeout")])
-    service = _make_service(db_session, client)
-    outcome = await service.process_upload(user_id=1, images=[_PNG, _PNG])
-
-    job = db_session.query(OcrJob).filter(OcrJob.record_id == outcome.record_id).first()
-    assert job is not None
-    assert job.status == OcrStatus.PARTIAL.value
-    assert job.error_message is not None
-    assert "1" in job.error_message
+    record = db_session.get(CheckupRecord, outcome.record_id)
+    assert record is not None
+    assert record.verification_status == "VERIFIED"
+    assert outcome.metrics[0].value == "105"
+    assert outcome.metrics[0].is_edited is True
 
 
 @pytest.mark.asyncio
@@ -257,31 +253,27 @@ async def test_process_upload_respects_concurrency_limit(db_session):
     assert client.max_in_flight == 2
 
 
-@pytest.mark.asyncio
-async def test_process_upload_rolls_back_when_metric_insert_fails(db_session):
-    class _InvalidParser(OcrParser):
-        def parse(self, result: OcrResultDTO, row_tolerance: float = 12.0) -> list[ParsedMetric]:
-            return [
-                ParsedMetric(
+def test_commit_upload_rolls_back_when_metric_insert_fails(db_session):
+    service = _make_service(db_session, _SyncClient(result=_glucose_result()))
+
+    with pytest.raises(SQLAlchemyError):
+        service.commit_upload(
+            user_id=1,
+            ocr_status=OcrStatus.COMPLETED.value,
+            failed_pages=[],
+            metrics=[
+                FinalMetric(
                     metric_code="invalid_metric",
                     metric_name="x" * 101,
                     value="1",
                     unit="",
                     confidence=0.9,
                     raw_text="1",
+                    page_index=0,
                 )
-            ]
-
-    service = OcrService(
-        ocr_repo=OcrRepository(db_session),
-        record_repo=RecordRepository(db_session),
-        ocr_client=_SyncClient(result=_glucose_result()),
-        parser=_InvalidParser(),
-        max_retries=0,
-    )
-
-    with pytest.raises(SQLAlchemyError):
-        await service.process_upload(user_id=1, images=[_PNG])
+            ],
+        )
 
     db_session.rollback()
     assert db_session.query(CheckupRecord).filter(CheckupRecord.user_id == 1).all() == []
+    assert db_session.query(OcrJob).all() == []

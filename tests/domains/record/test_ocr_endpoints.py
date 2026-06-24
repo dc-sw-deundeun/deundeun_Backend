@@ -6,11 +6,12 @@ from fastapi.testclient import TestClient
 from app.core.dependencies import get_current_user
 from app.database.session import get_db
 from app.domains.ocr.dependencies import get_ocr_service
+from app.domains.ocr.models import OcrJob
 from app.domains.ocr.repository import OcrRepository
 from app.domains.ocr.service import OcrService
 from app.domains.ocr.status import OcrStatus
+from app.domains.record.models import CheckupRecord
 from app.domains.record.repository import RecordRepository
-from app.domains.record.schemas import MetricUpdateItem
 from app.domains.user.schemas import CurrentUser
 from app.infrastructure.ocr.ocr_dto import OcrFieldDTO, OcrResultDTO
 from app.infrastructure.ocr.parser import OcrParser
@@ -66,6 +67,7 @@ def test_upload_single_image_success(api):
     assert data["failed_pages"] == []
     assert data["ocr_status"] == OcrStatus.COMPLETED.value
     assert isinstance(data["metrics"], list)
+    assert "record_id" not in data
 
 
 def test_upload_zero_images_rejected(api):
@@ -180,52 +182,83 @@ def test_upload_all_fail_returns_502(api):
     assert resp.json()["error_code"] == "OCR_FAILED"
 
 
-def test_no_file_url_stored(api):
+def test_ocr_preview_does_not_persist_db_rows(api):
     client, db = api
-    resp = client.post("/api/v1/records/checkups/upload", json={"images": [_PNG_B64]})
-    record_id = resp.json()["data"]["record_id"]
-    record = RecordRepository(db).get_record(record_id)
+    resp = client.post("/api/v1/records/checkups/ocr-preview", json={"images": [_PNG_B64]})
+
+    assert resp.status_code == 200
+    assert resp.json()["data"]["page_count"] == 1
+    assert db.query(CheckupRecord).all() == []
+    assert db.query(OcrJob).all() == []
+
+
+def test_commit_checkup_persists_record_metrics_and_audit_job(api):
+    client, db = api
+
+    resp = client.post(
+        "/api/v1/records/checkups",
+        json={
+            "ocr_status": "PARTIAL",
+            "failed_pages": [1],
+            "metrics": [
+                {
+                    "metric_code": "fasting_glucose",
+                    "metric_name": "공복혈당",
+                    "value": "105",
+                    "unit": "mg/dL",
+                    "confidence": 0.91,
+                    "raw_text": "109",
+                    "page_index": 0,
+                    "is_edited": True,
+                }
+            ],
+        },
+    )
+
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["record_id"] is not None
+    assert data["verification_status"] == "VERIFIED"
+    assert len(data["metrics"]) == 1
+
+    record = db.get(CheckupRecord, data["record_id"])
     assert record is not None
     assert record.file_url is None
     assert record.file_hash is None
+    assert record.ocr_status == "PARTIAL"
+    assert record.verification_status == "VERIFIED"
+    metric = RecordRepository(db).list_metrics(record.id)[0]
+    assert metric.value == "105"
+    assert metric.is_edited is True
+    job = db.query(OcrJob).filter(OcrJob.record_id == record.id).one()
+    assert job.status == "PARTIAL"
+    assert job.error_message == "pages [1] failed"
 
 
-def test_partial_record_can_be_verified(api):
-    client, db = api
-    call_count = 0
+def test_commit_checkup_rolls_back_on_invalid_metric(api):
+    _, db = api
+    client = TestClient(app, raise_server_exceptions=False)
 
-    class _PartialClient:
-        async def recognize(self, image, image_format="png"):
-            nonlocal call_count
-            call_count += 1
-            if call_count == 2:
-                raise RuntimeError("clova timeout")
-            return OcrResultDTO(
-                fields=[
-                    OcrFieldDTO(text="공복혈당", confidence=0.9, x_min=10, x_max=40, y_center=100),
-                    OcrFieldDTO(text="109", confidence=0.9, x_min=120, x_max=150, y_center=100),
-                ]
-            )
-
-    service = OcrService(
-        ocr_repo=OcrRepository(db),
-        record_repo=RecordRepository(db),
-        ocr_client=_PartialClient(),
-        parser=OcrParser(),
-        max_retries=0,
+    resp = client.post(
+        "/api/v1/records/checkups",
+        json={
+            "ocr_status": "X" * 21,
+            "failed_pages": [],
+            "metrics": [
+                {
+                    "metric_code": "fasting_glucose",
+                    "metric_name": "공복혈당",
+                    "value": "1",
+                    "unit": "",
+                    "confidence": 0.9,
+                    "raw_text": "1",
+                    "page_index": 0,
+                }
+            ],
+        },
     )
-    app.dependency_overrides[get_ocr_service] = lambda: service
 
-    upload_resp = client.post(
-        "/api/v1/records/checkups/upload",
-        json={"images": [_PNG_B64, _PNG_B64]},
-    )
-    record_id = upload_resp.json()["data"]["record_id"]
-    metric = RecordRepository(db).list_metrics(record_id)[0]
-
-    verify_resp = client.post(
-        f"/api/v1/records/checkups/{record_id}/verify",
-        json={"metrics": [MetricUpdateItem(metric_id=metric.id, value="109").model_dump()]},
-    )
-    assert verify_resp.status_code == 200
-    assert verify_resp.json()["data"]["verification_status"] == "VERIFIED"
+    assert resp.status_code >= 500
+    db.rollback()
+    assert db.query(CheckupRecord).all() == []
+    assert db.query(OcrJob).all() == []

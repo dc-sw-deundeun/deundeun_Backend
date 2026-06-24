@@ -4,6 +4,8 @@ from pydantic import ValidationError
 from app.domains.ocr.schemas import OcrJobResponse
 from app.domains.record.models import CheckupMetricResult
 from app.domains.record.schemas import (
+    CommitCheckupRequest,
+    CommitCheckupResponse,
     MetricBulkUpdateRequest,
     MetricResponse,
     MetricUpdateItem,
@@ -69,10 +71,25 @@ def test_record_request_schemas_parse_nested_metric_updates():
     verify = VerifyRequest()
     multi_upload = MultiImageUploadRequest(images=["abc"])
     upload = UploadResponse(
-        record_id=2,
         page_count=1,
         failed_pages=[],
         ocr_status="COMPLETED",
+        metrics=[],
+    )
+    commit_request = CommitCheckupRequest(
+        ocr_status="COMPLETED",
+        failed_pages=[],
+        metrics=[
+            {
+                "metric_code": "bmi",
+                "metric_name": "체질량지수",
+                "value": "24.1",
+            }
+        ],
+    )
+    commit_response = CommitCheckupResponse(
+        record_id=2,
+        verification_status="VERIFIED",
         metrics=[],
     )
 
@@ -81,6 +98,8 @@ def test_record_request_schemas_parse_nested_metric_updates():
     assert verify.metrics is None
     assert multi_upload.images == ["abc"]
     assert upload.page_count == 1
+    assert commit_request.metrics[0].metric_code == "bmi"
+    assert commit_response.record_id == 2
 
 
 @pytest.mark.parametrize(

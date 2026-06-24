@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from app.core.exceptions import OcrFailedException
 from app.domains.ocr.models import OcrJob
 from app.domains.ocr.repository import OcrRepository
-from app.domains.ocr.status import OcrStatus
+from app.domains.ocr.status import MetricSource, OcrStatus, VerificationStatus
 from app.domains.record.models import CheckupMetricResult
 from app.domains.record.repository import RecordRepository
 from app.infrastructure.ocr.format import detect_image_format
@@ -18,11 +18,29 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class UploadOutcome:
-    record_id: int
     page_count: int
     failed_pages: list[int]
-    metrics: list[CheckupMetricResult]
+    metrics: list[ParsedMetric]
     ocr_status: str
+
+
+@dataclass(frozen=True)
+class FinalMetric:
+    metric_code: str
+    metric_name: str
+    value: str | None
+    unit: str | None
+    confidence: float | None
+    raw_text: str | None
+    page_index: int | None
+    is_edited: bool = False
+
+
+@dataclass(frozen=True)
+class CommitOutcome:
+    record_id: int
+    metrics: list[CheckupMetricResult]
+    verification_status: str
 
 
 class OcrService:
@@ -86,36 +104,79 @@ class OcrService:
 
         merged = self._merge_metrics(parsed)
         ocr_status = OcrStatus.PARTIAL.value if failed_pages else OcrStatus.COMPLETED.value
-        error_message = f"pages {sorted(failed_pages)} failed" if failed_pages else None
 
-        record = self._record_repo.create_record(user_id, "UPLOAD", ocr_status=ocr_status)
-        parsed_count = self._record_repo.upsert_ocr_metrics(record.id, merged)
-        self._ocr_repo.create_job(
-            record.id,
-            user_id,
-            status=ocr_status,
-            parsed_field_count=parsed_count,
-            error_message=error_message,
-        )
-        self._ocr_repo.commit()
-
-        metrics = self._record_repo.list_metrics(record.id)
         logger.info(
-            "ocr_upload_completed",
+            "ocr_preview_completed",
+            extra={
+                "user_id": user_id,
+                "page_count": len(images),
+                "failed_pages": failed_pages,
+                "parsed_count": len(merged),
+            },
+        )
+        return UploadOutcome(
+            page_count=len(images),
+            failed_pages=failed_pages,
+            metrics=merged,
+            ocr_status=ocr_status,
+        )
+
+    def commit_upload(
+        self,
+        user_id: int,
+        *,
+        ocr_status: str,
+        failed_pages: list[int],
+        metrics: list[FinalMetric],
+    ) -> CommitOutcome:
+        try:
+            record = self._record_repo.create_record(user_id, "UPLOAD", ocr_status=ocr_status)
+            rows = [
+                CheckupMetricResult(
+                    record_id=record.id,
+                    metric_code=metric.metric_code,
+                    metric_name=metric.metric_name,
+                    value=metric.value,
+                    unit=metric.unit,
+                    source=MetricSource.MANUAL.value
+                    if metric.is_edited
+                    else MetricSource.OCR.value,
+                    confidence=metric.confidence,
+                    raw_text=metric.raw_text,
+                    page_index=metric.page_index,
+                    is_edited=metric.is_edited,
+                )
+                for metric in metrics
+            ]
+            parsed_count = self._record_repo.insert_committed_metrics(record.id, rows)
+            error_message = f"pages {sorted(failed_pages)} failed" if failed_pages else None
+            self._ocr_repo.create_job(
+                record.id,
+                user_id,
+                status=ocr_status,
+                parsed_field_count=parsed_count,
+                error_message=error_message,
+            )
+            self._record_repo.set_verified(record)
+            self._ocr_repo.commit()
+        except Exception:
+            self._ocr_repo.rollback()
+            raise
+
+        persisted_metrics = self._record_repo.list_metrics(record.id)
+        logger.info(
+            "ocr_upload_committed",
             extra={
                 "user_id": user_id,
                 "record_id": record.id,
-                "page_count": len(images),
                 "failed_pages": failed_pages,
                 "parsed_count": parsed_count,
             },
         )
-        return UploadOutcome(
+        return CommitOutcome(
             record_id=record.id,
-            page_count=len(images),
-            failed_pages=failed_pages,
-            metrics=metrics,
-            ocr_status=ocr_status,
+            metrics=persisted_metrics,
+            verification_status=record.verification_status or VerificationStatus.VERIFIED.value,
         )
 
     async def _call_one(
