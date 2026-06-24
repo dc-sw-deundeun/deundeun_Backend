@@ -60,6 +60,7 @@ class CheckupMetricResult(Base):
     source: Mapped[str] = mapped_column(String(20), nullable=False, default="OCR")
     confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
     raw_text: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    page_index: Mapped[int | None] = mapped_column(Integer, nullable=True)
     is_edited: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=_now)
     updated_at: Mapped[datetime] = mapped_column(
