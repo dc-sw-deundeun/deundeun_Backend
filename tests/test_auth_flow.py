@@ -188,6 +188,18 @@ def test_tc018_password_reset_revokes_sessions(
     assert login_user(client, email="pr@example.com", password="NewPass1!").status_code == 200
 
 
+def test_password_reset_request_for_unknown_email_is_enumeration_safe(
+    client: TestClient, email_client: CapturingEmailClient
+) -> None:
+    res = client.post(
+        f"{BASE}/password/reset/request",
+        json={"email": "missing@example.com"},
+    )
+
+    assert res.status_code == 200
+    assert "missing@example.com" not in email_client.codes
+
+
 # --- 로그아웃 access token 블랙리스트 ---
 def test_logout_blacklists_access_token(
     client: TestClient, email_client: CapturingEmailClient

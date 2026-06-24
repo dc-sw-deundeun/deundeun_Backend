@@ -63,12 +63,18 @@ class AuthService:
             expires_at=now + timedelta(minutes=policy.VERIFICATION_CODE_EXPIRE_MINUTES),
         )
         self.repo.create_email_verification(verification)
-        self.repo.db.commit()
 
-        if purpose == VerificationPurpose.SIGNUP:
-            await self.email_client.send_verification_email(to=email, code=code)
-        else:
-            await self.email_client.send_password_reset_email(to=email, code=code)
+        # 메일 발송이 실패하면 인증 레코드(쿨다운 상태)를 남기지 않는다.
+        try:
+            if purpose == VerificationPurpose.SIGNUP:
+                await self.email_client.send_verification_email(to=email, code=code)
+            else:
+                await self.email_client.send_password_reset_email(to=email, code=code)
+        except Exception:
+            self.repo.db.rollback()
+            raise
+
+        self.repo.db.commit()
 
     def confirm_email_verification(
         self, email: str, code: str, purpose: VerificationPurpose
@@ -121,6 +127,10 @@ class AuthService:
             raise AccountLockedException(
                 retry_after_seconds=int((user.locked_until - now).total_seconds())
             )
+
+        # 잠금이 만료된 경우 실패 카운터를 초기화한 뒤 새 시도를 집계한다 (즉시 재잠금 방지).
+        if user.locked_until is not None:
+            self.repo.reset_failed_login(user)
 
         if not verify_password(request.password, user.password_hash):
             self.repo.increment_failed_login(user)

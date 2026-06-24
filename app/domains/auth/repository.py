@@ -1,6 +1,7 @@
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.domains.auth.models import (
@@ -111,10 +112,23 @@ class AuthRepository:
 
     # --- AccessTokenBlacklist ---
     def blacklist_access_token(self, jti: str, expires_at: datetime) -> None:
-        if self.db.get(AccessTokenBlacklist, jti) is not None:
+        """jti를 멱등하게 블랙리스트에 추가한다 (동시 로그아웃 경합 안전)."""
+        if self.is_access_token_blacklisted(jti):
             return
-        self.db.add(AccessTokenBlacklist(jti=jti, expires_at=expires_at))
-        self.db.flush()
+        try:
+            with self.db.begin_nested():
+                self.db.add(AccessTokenBlacklist(jti=jti, expires_at=expires_at))
+                self.db.flush()
+        except IntegrityError:
+            # 동시 요청이 먼저 삽입한 경우 — 멱등 처리
+            pass
 
     def is_access_token_blacklisted(self, jti: str) -> bool:
         return self.db.get(AccessTokenBlacklist, jti) is not None
+
+    def delete_expired_access_tokens(self, now: datetime) -> int:
+        """만료된 블랙리스트 행을 정리한다 (주기 배치에서 호출)."""
+        result = self.db.execute(
+            delete(AccessTokenBlacklist).where(AccessTokenBlacklist.expires_at < now)
+        )
+        return result.rowcount or 0
