@@ -30,6 +30,29 @@ services:
       retries: 5
       start_period: 10s
 
+  neo4j:
+    # 개발/적재용 — 빈 DB로 기동 후 kg/scripts/05_load_neo4j.py로 적재한다.
+    # 배포용(dump 자동 로드) 이미지는 Phase 6에서 docker/neo4j로 전환.
+    image: neo4j:5.26-community
+    container_name: deundeun-neo4j
+    restart: unless-stopped
+    environment:
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:-change-me}
+      NEO4J_server_memory_heap_initial__size: 1G
+      NEO4J_server_memory_heap_max__size: 2G
+      NEO4J_server_memory_pagecache_size: 1G
+    ports:
+      - "${NEO4J_HTTP_PORT:-7474}:7474"
+      - "${NEO4J_BOLT_PORT:-7687}:7687"
+    volumes:
+      - neo4j_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:7474 >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
   api:
     profiles: ["deploy"]
     image: ${IMAGE_TAG:-deundeun/backend:latest}
@@ -48,3 +71,4 @@ services:
 
 volumes:
   pgdata:
+  neo4j_data:
