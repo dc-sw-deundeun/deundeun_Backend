@@ -5,9 +5,8 @@ from app.core.dependencies import (
     bearer_scheme,
     get_auth_service,
     get_current_user,
-    get_user_repository,
+    get_current_user_model,
 )
-from app.core.exceptions import NotFoundException
 from app.core.response import not_implemented_response, success_response
 from app.domains.auth.schemas import (
     EmailVerifyConfirmRequest,
@@ -20,7 +19,7 @@ from app.domains.auth.schemas import (
     TokenRefreshRequest,
 )
 from app.domains.auth.service import AuthService
-from app.domains.user.repository import UserRepository
+from app.domains.user.models import User
 from app.domains.user.schemas import CurrentUser, MeResponse
 
 router = APIRouter()
@@ -44,7 +43,7 @@ async def request_email_verification(
     summary="이메일 인증 코드 확인",
     description="인증 성공 시 signup에 사용할 `verification_token`을 반환합니다.",
 )
-async def confirm_email_verification(
+def confirm_email_verification(
     body: EmailVerifyConfirmRequest,
     service: AuthService = Depends(get_auth_service),
 ):
@@ -53,7 +52,7 @@ async def confirm_email_verification(
 
 
 @router.post("/signup", summary="회원가입", description="이메일 인증 완료 후 계정을 생성합니다.")
-async def signup(
+def signup(
     body: SignupRequest,
     service: AuthService = Depends(get_auth_service),
 ):
@@ -66,7 +65,7 @@ async def signup(
     summary="로그인",
     description="access_token과 refresh_token을 발급합니다. Swagger 테스트 시 access_token을 Authorize에 등록하세요.",
 )
-async def login(
+def login(
     body: LoginRequest,
     service: AuthService = Depends(get_auth_service),
 ):
@@ -79,7 +78,7 @@ async def login(
     summary="토큰 재발급",
     description="refresh_token으로 새 access·refresh token을 발급합니다.",
 )
-async def refresh_token(
+def refresh_token(
     body: TokenRefreshRequest,
     service: AuthService = Depends(get_auth_service),
 ):
@@ -93,7 +92,7 @@ async def refresh_token(
     description="현재 access token을 블랙리스트에 등록하고 refresh token을 폐기합니다. Authorization 헤더 필요.",
     dependencies=[Security(bearer_scheme)],
 )
-async def logout(
+def logout(
     body: LogoutRequest,
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
     current_user: CurrentUser = Depends(get_current_user),
@@ -118,7 +117,7 @@ async def request_password_reset(
     summary="비밀번호 재설정 완료",
     description="재설정 후 모든 refresh·access token이 무효화됩니다.",
 )
-async def confirm_password_reset(
+def confirm_password_reset(
     body: PasswordResetConfirmRequest,
     service: AuthService = Depends(get_auth_service),
 ):
@@ -137,11 +136,7 @@ async def agree_policies():
     description="인증된 사용자의 프로필을 반환합니다. Authorization 헤더 필요.",
     dependencies=[Security(bearer_scheme)],
 )
-async def get_me(
-    current_user: CurrentUser = Depends(get_current_user),
-    user_repository: UserRepository = Depends(get_user_repository),
+def get_me(
+    user: User = Depends(get_current_user_model),
 ):
-    user = user_repository.find_by_id(current_user.id)
-    if user is None:
-        raise NotFoundException(message="사용자를 찾을 수 없습니다.", error_code="USER_NOT_FOUND")
     return success_response(data=MeResponse.model_validate(user).model_dump(mode="json"))

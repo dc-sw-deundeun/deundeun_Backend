@@ -103,25 +103,35 @@ def client(
 
     _orig_engine = session_module._engine
     _orig_session = session_module._SessionLocal
+    _prev_get_db = app.dependency_overrides.get(get_db)
+    _prev_email_dep = app.dependency_overrides.get(get_email_client_dep)
 
-    session_module._engine = db_engine
-    _TestSession = sessionmaker(autocommit=False, autoflush=False, bind=db_engine)
-    session_module._SessionLocal = _TestSession
+    try:
+        session_module._engine = db_engine
+        _TestSession = sessionmaker(autocommit=False, autoflush=False, bind=db_engine)
+        session_module._SessionLocal = _TestSession
 
-    def override_get_db() -> Generator[Session, None, None]:
-        db = _TestSession()
-        try:
-            yield db
-        finally:
-            db.close()
+        def override_get_db() -> Generator[Session, None, None]:
+            db = _TestSession()
+            try:
+                yield db
+            finally:
+                db.close()
 
-    app.dependency_overrides[get_db] = override_get_db
-    app.dependency_overrides[get_email_client_dep] = lambda: email_client
+        app.dependency_overrides[get_db] = override_get_db
+        app.dependency_overrides[get_email_client_dep] = lambda: email_client
 
-    with TestClient(app) as c:
-        yield c
-
-    app.dependency_overrides.clear()
-    session_module._engine = _orig_engine
-    session_module._SessionLocal = _orig_session
-    _truncate_auth_tables(db_engine)
+        with TestClient(app) as c:
+            yield c
+    finally:
+        if _prev_get_db is None:
+            app.dependency_overrides.pop(get_db, None)
+        else:
+            app.dependency_overrides[get_db] = _prev_get_db
+        if _prev_email_dep is None:
+            app.dependency_overrides.pop(get_email_client_dep, None)
+        else:
+            app.dependency_overrides[get_email_client_dep] = _prev_email_dep
+        session_module._engine = _orig_engine
+        session_module._SessionLocal = _orig_session
+        _truncate_auth_tables(db_engine)
