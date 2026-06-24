@@ -64,7 +64,7 @@ async def upload_checkup(
         response.status_code = 200
         return success_response(
             message="이미 업로드된 검진 결과지입니다.",
-            data=UploadResponse(record_id=result.record_id, ocr_job_id=0).model_dump(),
+            data=UploadResponse(record_id=result.record_id, ocr_job_id=None).model_dump(),
         )
     background_tasks.add_task(runner, result.job_id)
     return success_response(

@@ -3,7 +3,8 @@ from pydantic import BaseModel, Field
 
 class UploadResponse(BaseModel):
     record_id: int
-    ocr_job_id: int
+    # 중복 업로드(멱등)로 새 잡이 생성되지 않은 경우 None.
+    ocr_job_id: int | None = None
 
 
 class MetricResponse(BaseModel):

@@ -10,6 +10,7 @@ from app.domains.ocr.dependencies import (
 )
 from app.domains.ocr.repository import OcrRepository
 from app.domains.ocr.service import OcrService
+from app.domains.ocr.status import OcrStatus
 from app.domains.record.repository import RecordRepository
 from app.domains.user.schemas import CurrentUser
 from app.infrastructure.ocr.ocr_client import StubOcrClient
@@ -115,6 +116,21 @@ def test_reprocess_rejects_when_image_missing(api_reprocess):
     resp = client.post(f"/api/v1/ocr/checkups/{record.id}/reprocess")
     assert resp.status_code == 409
     assert resp.json()["error_code"] == "IMAGE_UNAVAILABLE"
+
+
+def test_reprocess_completed_record_gives_clear_message(api_reprocess):
+    client, db, storage = api_reprocess
+    storage._exists_value = False  # 완료 후 원본이 삭제된 상태를 모사
+
+    repo = RecordRepository(db)
+    record = repo.create_record(1, "UPLOAD", "some/path/image.png", "completed-hash")
+    repo.set_ocr_status(record, OcrStatus.COMPLETED.value)
+    db.commit()
+
+    resp = client.post(f"/api/v1/ocr/checkups/{record.id}/reprocess")
+    assert resp.status_code == 409
+    assert resp.json()["error_code"] == "IMAGE_UNAVAILABLE"
+    assert "이미 처리 완료" in resp.json()["message"]
 
 
 def test_reprocess_triggers_when_image_exists(api_reprocess):
