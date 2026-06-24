@@ -34,15 +34,19 @@ class FakeStorage:
 
 
 def test_recover_stuck_marks_failed(db_session):
+    record_repo = RecordRepository(db_session)
+    record = record_repo.create_record(1, "UPLOAD", "s3://a.png", "stuck-hash")
     repo = OcrRepository(db_session)
-    job = repo.create_job(record_id=1, user_id=1)
+    job = repo.create_job(record_id=record.id, user_id=1)
     job.status = OcrStatus.PROCESSING.value
     job.requested_at = datetime.now(timezone.utc) - timedelta(seconds=600)
     db_session.commit()
-    count = recover_stuck(repo, stuck_timeout_seconds=300)
+    count = recover_stuck(repo, record_repo, stuck_timeout_seconds=300)
     db_session.commit()
     assert count == 1
     assert repo.get_job(job.id).status == OcrStatus.FAILED.value
+    # 회수 시 record 상태도 FAILED로 함께 전이되어야 한다.
+    assert record_repo.get_record(record.id).ocr_status == OcrStatus.FAILED.value
 
 
 @pytest.mark.asyncio
@@ -57,7 +61,9 @@ async def test_run_ocr_batch_processes_pending(db_session):
     )
     ocr_repo.create_job(record.id, 1)
     db_session.commit()
-    processed = await run_ocr_batch(service, ocr_repo, stuck_timeout_seconds=300)
+    processed = await run_ocr_batch(
+        service, ocr_repo, record_repo, stuck_timeout_seconds=300
+    )
     db_session.commit()
     assert processed == 1
     metrics = {m.metric_code for m in record_repo.list_metrics(record.id)}

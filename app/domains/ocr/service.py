@@ -1,5 +1,13 @@
 import logging
+from dataclasses import dataclass
 
+from sqlalchemy.exc import IntegrityError
+
+from app.core.exceptions import (
+    ConflictException,
+    ForbiddenException,
+    NotFoundException,
+)
 from app.domains.ocr.models import OcrJob
 from app.domains.ocr.repository import OcrRepository
 from app.domains.ocr.status import OcrStatus
@@ -11,6 +19,14 @@ from app.infrastructure.ocr.parser import OcrParser
 from app.infrastructure.storage.file_storage import FileStorage
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class UploadResult:
+    record_id: int
+    # 새로 생성된 잡 id. 중복 업로드(멱등)면 None이며 백그라운드 트리거를 건너뛴다.
+    job_id: int | None
+    is_duplicate: bool
 
 
 class OcrService:
@@ -36,6 +52,61 @@ class OcrService:
 
     def get_job(self, job_id: int) -> OcrJob | None:
         return self._ocr_repo.get_job(job_id)
+
+    async def _safe_delete(self, file_url: str) -> None:
+        """업로드된 파일을 best-effort로 정리한다(보상 삭제)."""
+        try:
+            await self._file_storage.delete(file_url)
+        except Exception:  # noqa: BLE001
+            pass
+
+    async def upload_checkup(
+        self, user_id: int, content: bytes, image_format: str, file_hash: str
+    ) -> UploadResult:
+        """결과지 업로드 트랜잭션 전체(중복 판정·저장·레코드/잡 생성·보상)를 담당한다."""
+        existing = self._record_repo.find_by_user_and_hash(user_id, file_hash)
+        if existing is not None:
+            return UploadResult(record_id=existing.id, job_id=None, is_duplicate=True)
+
+        key = f"checkups/{user_id}/{file_hash}.{image_format}"
+        file_url = await self._file_storage.upload(key, content)
+        try:
+            record = self._record_repo.create_record(user_id, "UPLOAD", file_url, file_hash)
+            job = await self.create_job(record.id, user_id)
+            self._ocr_repo.commit()
+        except IntegrityError:
+            self._ocr_repo.rollback()
+            existing = self._record_repo.find_by_user_and_hash(user_id, file_hash)
+            if existing is None:
+                # dedup 제약이 아닌 다른 무결성 위반. 고아 파일을 정리하고 전파한다.
+                await self._safe_delete(file_url)
+                raise
+            # 중복 업로드: file_hash가 같아 경로가 동일(멱등)하므로 파일은 보존한다.
+            return UploadResult(record_id=existing.id, job_id=None, is_duplicate=True)
+        except Exception:
+            # 커밋 실패 등으로 record가 남지 않는 경우 업로드된 파일을 정리한다.
+            self._ocr_repo.rollback()
+            await self._safe_delete(file_url)
+            raise
+        return UploadResult(record_id=record.id, job_id=job.id, is_duplicate=False)
+
+    async def reprocess(self, user_id: int, record_id: int) -> OcrJob:
+        """기존 기록의 원본 이미지로 OCR을 재요청한다."""
+        record = self._record_repo.get_record(record_id)
+        if record is None:
+            raise NotFoundException(message="검진 기록을 찾을 수 없습니다.")
+        if record.user_id != user_id:
+            raise ForbiddenException(message="해당 기록에 대한 권한이 없습니다.")
+        if not record.file_url or not await self._file_storage.exists(record.file_url):
+            raise ConflictException(
+                message="원본 이미지가 없어 재처리할 수 없습니다.",
+                error_code="IMAGE_UNAVAILABLE",
+            )
+        self._record_repo.reset_verification(record)
+        self._record_repo.set_ocr_status(record, OcrStatus.PENDING.value)
+        job = await self.create_job(record_id, user_id)
+        self._ocr_repo.commit()
+        return job
 
     async def process_pending(self) -> int:
         processed = 0
@@ -66,7 +137,13 @@ class OcrService:
 
         try:
             image = await self._file_storage.read(record.file_url)
-            image_format = detect_image_format(image) or "png"
+            image_format = detect_image_format(image)
+            if image_format is None:
+                # 미지원/손상 이미지는 재시도 대상이 아니므로 즉시 실패 처리한다.
+                self._mark_processing_failure(
+                    job, "unsupported_image_format", ValueError("unsupported_image_format")
+                )
+                return
             result = await self._recognize_with_retry(image, image_format)
         except Exception as exc:  # noqa: BLE001
             self._mark_processing_failure(job, "recognize_failed", exc)

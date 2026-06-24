@@ -8,6 +8,7 @@ from app.core.config import settings
 from app.database.session import session_scope
 from app.domains.ocr.dependencies import build_ocr_service
 from app.domains.ocr.repository import OcrRepository
+from app.domains.record.repository import RecordRepository
 from app.workers.ocr_worker import run_ocr_batch
 
 logger = logging.getLogger(__name__)
@@ -19,7 +20,10 @@ async def _ocr_batch_tick() -> int:
     with session_scope() as db:
         service = build_ocr_service(db)
         return await run_ocr_batch(
-            service, OcrRepository(db), settings.ocr_stuck_timeout_seconds
+            service,
+            OcrRepository(db),
+            RecordRepository(db),
+            settings.ocr_stuck_timeout_seconds,
         )
 
 

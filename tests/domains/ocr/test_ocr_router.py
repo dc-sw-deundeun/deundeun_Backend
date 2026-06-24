@@ -5,7 +5,6 @@ from app.core.dependencies import get_current_user
 from app.database.session import get_db
 from app.domains.ocr.dependencies import (
     build_ocr_service,
-    get_file_storage,
     get_ocr_job_runner,
     get_ocr_service,
 )
@@ -83,11 +82,13 @@ def api_reprocess(db_session):
     def _user():
         return 1
 
+    # 원본 이미지 존재 여부는 서비스가 보유한 storage가 결정하므로 stub을 주입한다.
+    storage = _FileStorageStub(exists_value=True)
     service = OcrService(
         ocr_repo=OcrRepository(db_session),
         record_repo=RecordRepository(db_session),
         ocr_client=StubOcrClient(),
-        file_storage=StubFileStorage(),
+        file_storage=storage,
         parser=OcrParser(),
     )
 
@@ -98,14 +99,13 @@ def api_reprocess(db_session):
     app.dependency_overrides[get_current_user] = _user
     app.dependency_overrides[get_ocr_service] = lambda: service
     app.dependency_overrides[get_ocr_job_runner] = lambda: _runner
-    yield TestClient(app), db_session
+    yield TestClient(app), db_session, storage
     app.dependency_overrides.clear()
 
 
 def test_reprocess_rejects_when_image_missing(api_reprocess):
-    client, db = api_reprocess
-    # Override file storage to return exists=False
-    app.dependency_overrides[get_file_storage] = lambda: _FileStorageStub(exists_value=False)
+    client, db, storage = api_reprocess
+    storage._exists_value = False
 
     repo = RecordRepository(db)
     record = repo.create_record(1, "UPLOAD", "some/path/image.png", "hashvalue")
@@ -117,9 +117,8 @@ def test_reprocess_rejects_when_image_missing(api_reprocess):
 
 
 def test_reprocess_triggers_when_image_exists(api_reprocess):
-    client, db = api_reprocess
-    # Override file storage to return exists=True
-    app.dependency_overrides[get_file_storage] = lambda: _FileStorageStub(exists_value=True)
+    client, db, storage = api_reprocess
+    storage._exists_value = True
 
     repo = RecordRepository(db)
     record = repo.create_record(1, "UPLOAD", "some/path/image.png", "hashvalue2")

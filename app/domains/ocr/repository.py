@@ -48,12 +48,13 @@ class OcrRepository:
         self._db.rollback()
 
     def claim_next_pending(self) -> OcrJob | None:
-        # 단일 인스턴스 전제. 멀티 인스턴스 전환 시 with_for_update(skip_locked=True) 필요.
+        # 행 잠금 + skip_locked로 다중 워커가 같은 job을 중복 claim하지 않도록 원자화한다.
         stmt = (
             select(OcrJob)
             .where(OcrJob.status == OcrStatus.PENDING.value)
             .order_by(OcrJob.id)
             .limit(1)
+            .with_for_update(skip_locked=True)
         )
         job = self._db.execute(stmt).scalar_one_or_none()
         if job is None:
@@ -70,6 +71,7 @@ class OcrRepository:
             select(OcrJob)
             .where(OcrJob.id == job_id, OcrJob.status == OcrStatus.PENDING.value)
             .limit(1)
+            .with_for_update(skip_locked=True)
         )
         job = self._db.execute(stmt).scalar_one_or_none()
         if job is None:

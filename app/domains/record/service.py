@@ -31,6 +31,8 @@ class RecordService:
         self, user_id: int, record_id: int, metric_id: int, value: str, unit: str | None
     ) -> CheckupMetricResult:
         self._get_owned_record(user_id, record_id)
+        # OCR upsert와 동일한 record 락 경계로 직렬화해 수정값 유실을 막는다.
+        self._record_repo.lock_record(record_id)
         metric = self._record_repo.get_metric(record_id, metric_id)
         if metric is None:
             raise NotFoundException(message="해당 수치를 찾을 수 없습니다.")
@@ -41,12 +43,18 @@ class RecordService:
         self, user_id: int, record_id: int, items: list[MetricUpdateItem]
     ) -> list[CheckupMetricResult]:
         self._get_owned_record(user_id, record_id)
+        # OCR upsert와 동일한 record 락 경계로 직렬화한다.
+        self._record_repo.lock_record(record_id)
+        # 부분 반영 방지: 먼저 모든 대상의 존재를 검증한 뒤 일괄 갱신한다.
+        metrics = []
         for item in items:
             metric = self._record_repo.get_metric(record_id, item.metric_id)
             if metric is None:
                 raise NotFoundException(
                     message=f"수치(id={item.metric_id})를 찾을 수 없습니다."
                 )
+            metrics.append((metric, item))
+        for metric, item in metrics:
             self._record_repo.update_metric_value(metric, item.value, item.unit)
         return self._record_repo.list_metrics(record_id)
 

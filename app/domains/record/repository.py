@@ -55,6 +55,10 @@ class RecordRepository:
             raise ValueError(f"Record not found: {record_id}")
         return record
 
+    def lock_record(self, record_id: int) -> CheckupRecord:
+        """수동 수정/검수 경로가 OCR upsert와 같은 락 경계를 공유하도록 노출한다."""
+        return self._lock_record(record_id)
+
     def find_by_user_and_hash(
         self, user_id: int, file_hash: str
     ) -> CheckupRecord | None:

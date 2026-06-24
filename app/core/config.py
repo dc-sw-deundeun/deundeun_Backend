@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     ocr_max_retries: int = 2
     ocr_stuck_timeout_seconds: int = 300
     local_storage_dir: str = "var/ocr_tmp"
+    max_upload_size_bytes: int = 10 * 1024 * 1024  # 업로드 결과지 최대 크기(기본 10MB)
 
 
 settings = Settings()

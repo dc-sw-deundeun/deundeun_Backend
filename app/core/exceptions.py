@@ -39,6 +39,11 @@ class UnsupportedMediaTypeException(AppException):
         super().__init__(status_code=415, message=message, error_code=error_code)
 
 
+class PayloadTooLargeException(AppException):
+    def __init__(self, message: str = "업로드 가능한 파일 크기를 초과했습니다.", error_code: str = "PAYLOAD_TOO_LARGE") -> None:
+        super().__init__(status_code=413, message=message, error_code=error_code)
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppException)
     async def app_exception_handler(request: Request, exc: AppException) -> JSONResponse:

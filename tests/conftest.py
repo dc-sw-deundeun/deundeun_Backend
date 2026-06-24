@@ -1,3 +1,5 @@
+from collections.abc import Generator
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -12,8 +14,10 @@ from app.main import app as fastapi_app
 
 
 @pytest.fixture
-def client() -> TestClient:
-    return TestClient(fastapi_app)
+def client() -> Generator[TestClient, None, None]:
+    # 컨텍스트 매니저로 진입해 lifespan 시작/종료가 테스트 경계에서 보장되도록 한다.
+    with TestClient(fastapi_app) as test_client:
+        yield test_client
 
 
 @pytest.fixture(scope="session")

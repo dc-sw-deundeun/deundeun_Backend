@@ -14,6 +14,14 @@ def test_from_vertices_computes_bbox():
     assert field.y_center == 115
 
 
+def test_from_vertices_handles_empty_vertices():
+    # vertices가 비어 와도 ValueError 없이 좌표 0으로 방어한다.
+    field = OcrFieldDTO.from_vertices(text="x", confidence=0.5, vertices=[])
+    assert field.x_min == 0
+    assert field.x_max == 0
+    assert field.y_center == 0
+
+
 def test_result_holds_fields():
     result = OcrResultDTO(fields=[])
     assert result.fields == []

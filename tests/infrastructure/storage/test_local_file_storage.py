@@ -31,3 +31,12 @@ async def test_read_missing_raises(tmp_path):
 async def test_delete_missing_is_ignored(tmp_path):
     storage = LocalFileStorage(str(tmp_path))
     await storage.delete("nope.png")  # 예외 없이 통과
+
+
+@pytest.mark.asyncio
+async def test_path_traversal_is_rejected(tmp_path):
+    storage = LocalFileStorage(str(tmp_path))
+    with pytest.raises(ValueError):
+        await storage.read("../escape.png")
+    with pytest.raises(ValueError):
+        await storage.upload("../escape.png", b"x")

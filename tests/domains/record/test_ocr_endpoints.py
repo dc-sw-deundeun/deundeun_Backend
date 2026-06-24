@@ -95,6 +95,19 @@ def test_upload_dedup_same_hash(api):
     assert first["record_id"] == second["record_id"]
 
 
+def test_upload_rejects_oversized_file(api, monkeypatch):
+    from app.core.config import settings
+
+    client, db = api
+    monkeypatch.setattr(settings, "max_upload_size_bytes", 4)
+    resp = client.post(
+        "/api/v1/records/checkups/upload",
+        files={"file": ("a.png", io.BytesIO(_PNG_HEADER), "image/png")},
+    )
+    assert resp.status_code == 413
+    assert resp.json()["error_code"] == "PAYLOAD_TOO_LARGE"
+
+
 def test_upload_rejects_unsupported_format(api):
     client, db = api
     resp = client.post(
