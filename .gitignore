@@ -131,10 +131,15 @@ Thumbs.db
 .cursorindexingignore
 
 # =========================
-# Docs
+# Local planning docs
 # =========================
-docs/superpowers
+docs/
+.github/ISSUE_TEMPLATE/config.yml
+.github/ISSUE_TEMPLATE/phase-*.yml
 
+# =========================
+# Tooling
+# =========================
 .claude
 .superpowers
 .venv_py311

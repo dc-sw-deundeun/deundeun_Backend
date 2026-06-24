@@ -24,4 +24,6 @@ api_router.include_router(ocr_router.router, prefix="/ocr", tags=["OCR"])
 api_router.include_router(analysis_router.router, prefix="/analysis", tags=["Analysis"])
 api_router.include_router(character_router.router, prefix="/characters", tags=["Character"])
 api_router.include_router(my_router.router, prefix="/my", tags=["My"])
-api_router.include_router(notification_router.router, prefix="/notifications", tags=["Notification"])
+api_router.include_router(
+    notification_router.router, prefix="/notifications", tags=["Notification"]
+)

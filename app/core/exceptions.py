@@ -10,7 +10,9 @@ class AppException(Exception):
 
 
 class AuthException(AppException):
-    def __init__(self, message: str = "인증이 필요합니다.", error_code: str = "AUTH_REQUIRED") -> None:
+    def __init__(
+        self, message: str = "인증이 필요합니다.", error_code: str = "AUTH_REQUIRED"
+    ) -> None:
         super().__init__(status_code=401, message=message, error_code=error_code)
 
 
@@ -20,7 +22,9 @@ class ForbiddenException(AppException):
 
 
 class NotFoundException(AppException):
-    def __init__(self, message: str = "데이터를 찾을 수 없습니다.", error_code: str = "NOT_FOUND") -> None:
+    def __init__(
+        self, message: str = "데이터를 찾을 수 없습니다.", error_code: str = "NOT_FOUND"
+    ) -> None:
         super().__init__(status_code=404, message=message, error_code=error_code)
 
 
@@ -30,7 +34,9 @@ class ConflictException(AppException):
 
 
 class BadRequestException(AppException):
-    def __init__(self, message: str = "잘못된 요청입니다.", error_code: str = "BAD_REQUEST") -> None:
+    def __init__(
+        self, message: str = "잘못된 요청입니다.", error_code: str = "BAD_REQUEST"
+    ) -> None:
         super().__init__(status_code=400, message=message, error_code=error_code)
 
 
@@ -47,12 +53,16 @@ class PayloadTooLargeException(AppException):
 def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppException)
     async def app_exception_handler(request: Request, exc: AppException) -> JSONResponse:
+        data = None
+        retry_after_seconds = getattr(exc, "retry_after_seconds", None)
+        if retry_after_seconds is not None:
+            data = {"retry_after_seconds": retry_after_seconds}
         return JSONResponse(
             status_code=exc.status_code,
             content={
                 "success": False,
                 "message": exc.message,
-                "data": None,
+                "data": data,
                 "error_code": exc.error_code,
             },
         )

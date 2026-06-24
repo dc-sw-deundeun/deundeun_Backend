@@ -14,7 +14,8 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = '97a644712a37'
-down_revision: Union[str, None] = None
+# 인증/인프라 마이그레이션(003) 이후에 OCR/검진 스키마를 적용해 단일 head를 유지한다.
+down_revision: Union[str, None] = '003'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

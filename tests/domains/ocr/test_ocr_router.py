@@ -11,6 +11,7 @@ from app.domains.ocr.dependencies import (
 from app.domains.ocr.repository import OcrRepository
 from app.domains.ocr.service import OcrService
 from app.domains.record.repository import RecordRepository
+from app.domains.user.schemas import CurrentUser
 from app.infrastructure.ocr.ocr_client import StubOcrClient
 from app.infrastructure.ocr.parser import OcrParser
 from app.infrastructure.storage.file_storage import StubFileStorage
@@ -40,7 +41,7 @@ def api_client(db_session):
         yield db_session
 
     def _override_user():
-        return 1
+        return CurrentUser(id=1)
 
     service = OcrService(
         ocr_repo=OcrRepository(db_session),
@@ -80,7 +81,7 @@ def api_reprocess(db_session):
         yield db_session
 
     def _user():
-        return 1
+        return CurrentUser(id=1)
 
     # 원본 이미지 존재 여부는 서비스가 보유한 storage가 결정하므로 stub을 주입한다.
     storage = _FileStorageStub(exists_value=True)

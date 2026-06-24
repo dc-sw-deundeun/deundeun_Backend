@@ -10,7 +10,7 @@ from app.core.exceptions import (
     PayloadTooLargeException,
     UnsupportedMediaTypeException,
 )
-from app.core.response import success_response
+from app.core.response import not_implemented_response, success_response
 from app.database.session import get_db
 from app.domains.ocr.dependencies import (
     get_ocr_job_runner,
@@ -26,6 +26,7 @@ from app.domains.record.schemas import (
     VerifyRequest,
 )
 from app.domains.record.service import RecordService
+from app.domains.user.schemas import CurrentUser
 from app.infrastructure.ocr.format import detect_image_format
 
 router = APIRouter()
@@ -44,7 +45,7 @@ async def upload_checkup(
     response: Response,
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
-    user_id: int = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
     ocr_service: OcrService = Depends(get_ocr_service),
     runner: Callable[[int], Awaitable[None]] = Depends(get_ocr_job_runner),
 ):
@@ -56,7 +57,9 @@ async def upload_checkup(
         raise UnsupportedMediaTypeException()
     file_hash = hashlib.sha256(content).hexdigest()
 
-    result = await ocr_service.upload_checkup(user_id, content, image_format, file_hash)
+    result = await ocr_service.upload_checkup(
+        current_user.id, content, image_format, file_hash
+    )
     if result.is_duplicate:
         response.status_code = 200
         return success_response(
@@ -72,13 +75,25 @@ async def upload_checkup(
     )
 
 
+@router.get("/checkups")
+async def list_checkups(current_user: CurrentUser = Depends(get_current_user)):
+    return not_implemented_response()
+
+
+@router.get("/checkups/{record_id}")
+async def get_checkup(
+    record_id: int, current_user: CurrentUser = Depends(get_current_user)
+):
+    return not_implemented_response()
+
+
 @router.get("/checkups/{record_id}/metrics")
 def get_checkup_metrics(
     record_id: int,
-    user_id: int = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
     service: RecordService = Depends(get_record_service),
 ):
-    return success_response(data=_metric_list(service, user_id, record_id))
+    return success_response(data=_metric_list(service, current_user.id, record_id))
 
 
 @router.patch("/checkups/{record_id}/metrics/{metric_id}")
@@ -86,11 +101,13 @@ def update_metric(
     record_id: int,
     metric_id: int,
     body: MetricUpdateRequest,
-    user_id: int = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
     db: Session = Depends(get_db),
     service: RecordService = Depends(get_record_service),
 ):
-    metric = service.update_metric(user_id, record_id, metric_id, body.value, body.unit)
+    metric = service.update_metric(
+        current_user.id, record_id, metric_id, body.value, body.unit
+    )
     db.commit()
     return success_response(
         message="수치를 수정했습니다.",
@@ -102,15 +119,15 @@ def update_metric(
 def bulk_update_metrics(
     record_id: int,
     body: MetricBulkUpdateRequest,
-    user_id: int = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
     db: Session = Depends(get_db),
     service: RecordService = Depends(get_record_service),
 ):
-    service.bulk_update_metrics(user_id, record_id, body.metrics)
+    service.bulk_update_metrics(current_user.id, record_id, body.metrics)
     db.commit()
     return success_response(
         message="수치를 일괄 수정했습니다.",
-        data=_metric_list(service, user_id, record_id),
+        data=_metric_list(service, current_user.id, record_id),
     )
 
 
@@ -118,11 +135,11 @@ def bulk_update_metrics(
 def verify_checkup(
     record_id: int,
     body: VerifyRequest,
-    user_id: int = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
     db: Session = Depends(get_db),
     service: RecordService = Depends(get_record_service),
 ):
-    record = service.verify(user_id, record_id, body.metrics)
+    record = service.verify(current_user.id, record_id, body.metrics)
     db.commit()
     return success_response(
         message="검수를 완료했습니다.",
@@ -133,12 +150,22 @@ def verify_checkup(
 @router.delete("/checkups/{record_id}")
 async def delete_checkup(
     record_id: int,
-    user_id: int = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
     db: Session = Depends(get_db),
     service: RecordService = Depends(get_record_service),
 ):
-    file_urls = service.delete_checkup(user_id, record_id)
+    file_urls = service.delete_checkup(current_user.id, record_id)
     db.commit()
     # 커밋이 확정된 뒤에만 비가역 스토리지 삭제를 수행한다(best-effort).
     await service.purge_files(file_urls)
     return success_response(message="검진 기록을 삭제했습니다.")
+
+
+@router.post("/meals")
+async def create_meal_record(current_user: CurrentUser = Depends(get_current_user)):
+    return not_implemented_response()
+
+
+@router.get("/meals")
+async def list_meal_records(current_user: CurrentUser = Depends(get_current_user)):
+    return not_implemented_response()

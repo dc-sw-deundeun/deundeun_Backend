@@ -8,6 +8,7 @@ from app.core.response import success_response
 from app.domains.ocr.dependencies import get_ocr_job_runner, get_ocr_service
 from app.domains.ocr.schemas import OcrJobResponse
 from app.domains.ocr.service import OcrService
+from app.domains.user.schemas import CurrentUser
 
 router = APIRouter()
 
@@ -15,11 +16,11 @@ router = APIRouter()
 @router.get("/jobs/{job_id}")
 def get_job_status(
     job_id: int,
-    user_id: int = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
     service: OcrService = Depends(get_ocr_service),
 ):
     job = service.get_job(job_id)
-    if job is None or job.user_id != user_id:
+    if job is None or job.user_id != current_user.id:
         raise NotFoundException(message="OCR 작업을 찾을 수 없습니다.")
     data = OcrJobResponse(
         job_id=job.id, record_id=job.record_id, status=job.status,
@@ -32,11 +33,11 @@ def get_job_status(
 async def reprocess(
     record_id: int,
     background_tasks: BackgroundTasks,
-    user_id: int = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
     service: OcrService = Depends(get_ocr_service),
     runner: Callable[[int], Awaitable[None]] = Depends(get_ocr_job_runner),
 ):
-    job = await service.reprocess(user_id, record_id)
+    job = await service.reprocess(current_user.id, record_id)
     background_tasks.add_task(runner, job.id)
     return success_response(
         message="OCR 재처리를 요청했습니다.",

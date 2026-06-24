@@ -44,7 +44,6 @@ Service → Infrastructure Client (app/infrastructure/)
 | `app/infrastructure/` | 외부 서비스 연동 (external_analysis, storage, email, push, wearable) |
 | `app/workers/` | 자동 실행 백그라운드 작업 (analysis_result, wearable_sync 등) |
 | `tests/` | pytest 기반 테스트 |
-| `docs/` | 구현 현황 문서 |
 
 ### API 엔드포인트 구조
 
@@ -60,12 +59,6 @@ Service → Infrastructure Client (app/infrastructure/)
 /api/v1/my/*             — 내 정보·알림 설정·탈퇴
 /api/v1/notifications/*  — 알림 조회·설정
 ```
-
-### 구현 현황
-
-상세 구현 현황은 [docs/implementation-status.md](docs/implementation-status.md)를 참고하세요.
-
----
 
 ## DB 후보 비교
 
@@ -85,18 +78,26 @@ DB 확정 후 할 일:
 ## 로컬 실행
 
 ```bash
-# 의존성 설치
+# 1. 의존성 설치
 pip install -r requirements-dev.txt
 
-# 환경변수 설정
+# 2. 환경변수 설정
 cp .env.example .env
-# .env 파일에서 필요한 값 수정
+# DATABASE_URL 포트 확인 — Compose 기본은 55432 (5432 아님)
+# 로컬 Swagger 테스트 시 SMTP 비우면 StubEmailClient → 인증 코드가 서버 로그에 출력됨
 
-# 서버 실행
-uvicorn app.main:app --reload
+# 3. PostgreSQL 기동 (Docker)
+docker compose -f docker/docker-compose.yml up -d postgres
 
-# API 문서 확인
+# 4. 마이그레이션
+alembic upgrade head
+
+# 5. 서버 실행
+uvicorn app.main:app --reload --port 8000
+
+# 6. API 문서 (Swagger UI)
 open http://localhost:8000/docs
+# ReDoc: http://localhost:8000/redoc
 
 # 테스트
 pytest tests/
@@ -104,6 +105,16 @@ pytest tests/
 # 린트
 ruff check .
 ```
+
+### Swagger로 Auth 테스트하기
+
+1. `POST /api/v1/auth/email/verify/request` — 이메일·purpose=`SIGNUP` 입력
+2. SMTP 미설정 시 **터미널 로그**에서 `인증 코드 (123456)` 확인
+3. `POST /api/v1/auth/email/verify/confirm` — email + code 입력 → `verification_token` 복사
+4. `POST /api/v1/auth/signup` — email, password(`Passw0rd!` 형식), nickname, verification_token
+5. `POST /api/v1/auth/login` → 응답의 `access_token` 복사
+6. Swagger 우측 상단 **Authorize** → `access_token` 붙여넣기 (Bearer 제외)
+7. `GET /api/v1/auth/me` 실행
 
 ---
 
@@ -222,6 +233,7 @@ docker build -t deundeun/backend:local .
 # 컨테이너 실행
 docker run -p 8000:8000 deundeun/backend:local
 
-# docker-compose (VM 환경)
-IMAGE_TAG=deundeun/backend:latest docker compose -f docker/docker-compose.vm.yml up -d
+# docker-compose (단일 파일, VM/API 배포 profile)
+IMAGE_TAG=deundeun/backend:latest ENV_FILE=/opt/deundeun/.env \
+  docker compose -f docker/docker-compose.yml --profile deploy up -d api
 ```

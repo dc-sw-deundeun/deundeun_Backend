@@ -16,6 +16,7 @@ from app.domains.ocr.service import OcrService
 from app.domains.ocr.status import OcrStatus
 from app.domains.record.repository import RecordRepository
 from app.domains.record.service import RecordService
+from app.domains.user.schemas import CurrentUser
 from app.infrastructure.ocr.ocr_client import StubOcrClient
 from app.infrastructure.ocr.parser import OcrParser, ParsedMetric
 from app.infrastructure.storage.file_storage import StubFileStorage
@@ -38,7 +39,7 @@ def api(db_session):
         yield db_session
 
     def _user():
-        return 1
+        return CurrentUser(id=1)
 
     record_service = RecordService(RecordRepository(db_session), MemoryStorage())
     ocr_service = OcrService(
