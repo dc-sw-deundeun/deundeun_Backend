@@ -1,0 +1,31 @@
+{
+  "_note": "한국 일반건강검진 finding → MONDO ID 매핑. mondo_id는 01_inspect_diseases.py 출력에서 직접 확인·확정한다 (추정값 금지). null = 미확정. keywords는 kg.csv disease 노드 부분일치 검색용.",
+  "mappings": [
+    { "finding_ko": "고혈압", "finding_en": "hypertension", "category": "대사·심혈관", "keywords": ["hypertension"], "mondo_id": null },
+    { "finding_ko": "2형 당뇨", "finding_en": "type 2 diabetes mellitus", "category": "대사·심혈관", "keywords": ["type 2 diabetes", "diabetes mellitus, type 2"], "mondo_id": null },
+    { "finding_ko": "공복혈당장애", "finding_en": "impaired fasting glucose", "category": "대사·심혈관", "keywords": ["impaired fasting glucose", "prediabetes"], "mondo_id": null },
+    { "finding_ko": "이상지질혈증", "finding_en": "dyslipidemia", "category": "대사·심혈관", "keywords": ["dyslipidemia"], "mondo_id": null },
+    { "finding_ko": "고콜레스테롤혈증", "finding_en": "hypercholesterolemia", "category": "대사·심혈관", "keywords": ["hypercholesterolemia"], "mondo_id": null },
+    { "finding_ko": "고중성지방혈증", "finding_en": "hypertriglyceridemia", "category": "대사·심혈관", "keywords": ["hypertriglyceridemia"], "mondo_id": null },
+    { "finding_ko": "비만", "finding_en": "obesity", "category": "대사·심혈관", "keywords": ["obesity"], "mondo_id": null },
+    { "finding_ko": "복부비만", "finding_en": "abdominal (central) obesity", "category": "대사·심혈관", "keywords": ["abdominal obesity", "central obesity"], "mondo_id": null },
+    { "finding_ko": "대사증후군", "finding_en": "metabolic syndrome", "category": "대사·심혈관", "keywords": ["metabolic syndrome"], "mondo_id": null },
+    { "finding_ko": "만성신장질환", "finding_en": "chronic kidney disease", "category": "대사·심혈관", "keywords": ["chronic kidney disease"], "mondo_id": null },
+    { "finding_ko": "단백뇨", "finding_en": "proteinuria", "category": "대사·심혈관", "keywords": ["proteinuria"], "mondo_id": null },
+    { "finding_ko": "심혈관질환", "finding_en": "cardiovascular disease", "category": "대사·심혈관", "keywords": ["cardiovascular disease"], "mondo_id": null },
+    { "finding_ko": "관상동맥질환", "finding_en": "coronary artery disease", "category": "대사·심혈관", "keywords": ["coronary artery disease", "coronary heart disease"], "mondo_id": null },
+
+    { "finding_ko": "빈혈", "finding_en": "anemia", "category": "검사기반", "keywords": ["anemia"], "mondo_id": null },
+    { "finding_ko": "간질환", "finding_en": "liver disease", "category": "검사기반", "keywords": ["liver disease"], "mondo_id": null },
+    { "finding_ko": "지방간(NAFLD)", "finding_en": "non-alcoholic fatty liver disease", "category": "검사기반", "keywords": ["fatty liver", "non-alcoholic fatty liver"], "mondo_id": null },
+    { "finding_ko": "B형간염", "finding_en": "hepatitis B", "category": "검사기반", "keywords": ["hepatitis b"], "mondo_id": null },
+    { "finding_ko": "C형간염", "finding_en": "hepatitis C", "category": "검사기반", "keywords": ["hepatitis c"], "mondo_id": null },
+    { "finding_ko": "폐결핵", "finding_en": "pulmonary tuberculosis", "category": "검사기반", "keywords": ["tuberculosis"], "mondo_id": null },
+    { "finding_ko": "골다공증", "finding_en": "osteoporosis", "category": "검사기반", "keywords": ["osteoporosis"], "mondo_id": null },
+    { "finding_ko": "골감소증", "finding_en": "osteopenia", "category": "검사기반", "keywords": ["osteopenia"], "mondo_id": null },
+    { "finding_ko": "고요산혈증", "finding_en": "hyperuricemia", "category": "검사기반", "keywords": ["hyperuricemia"], "mondo_id": null },
+    { "finding_ko": "통풍", "finding_en": "gout", "category": "검사기반", "keywords": ["gout"], "mondo_id": null },
+    { "finding_ko": "갑상선기능저하증", "finding_en": "hypothyroidism", "category": "검사기반", "keywords": ["hypothyroidism"], "mondo_id": null },
+    { "finding_ko": "갑상선기능항진증", "finding_en": "hyperthyroidism", "category": "검사기반", "keywords": ["hyperthyroidism"], "mondo_id": null }
+  ]
+}
