@@ -1,18 +1,20 @@
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.domains.user.models import User
+
+
 class UserRepository:
-    def find_by_id(self, user_id: int):
-        raise NotImplementedError
+    """사용자 도메인 영속성 계층 (SQLAlchemy)."""
 
-    def find_by_email(self, email: str):
-        raise NotImplementedError
+    def __init__(self, db: Session) -> None:
+        self.db = db
 
-    def save(self, user) -> None:
-        raise NotImplementedError
+    def find_by_id(self, user_id: int) -> User | None:
+        return self.db.get(User, user_id)
 
-    def update(self, user) -> None:
-        raise NotImplementedError
-
-    def delete(self, user_id: int) -> None:
-        raise NotImplementedError
+    def find_by_email(self, email: str) -> User | None:
+        return self.db.scalar(select(User).where(User.email == email))
 
     def exists_by_email(self, email: str) -> bool:
-        raise NotImplementedError
+        return self.db.scalar(select(User.id).where(User.email == email)) is not None
