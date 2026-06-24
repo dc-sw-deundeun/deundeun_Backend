@@ -12,7 +12,7 @@ class EmailVerifyRequest(BaseModel):
 
 class EmailVerifyConfirmRequest(BaseModel):
     email: EmailStr
-    code: str = Field(min_length=6, max_length=6)
+    code: str = Field(pattern=r"^\d{6}$")
     purpose: VerificationPurpose = VerificationPurpose.SIGNUP
 
 
@@ -39,7 +39,6 @@ class SignupResponse(BaseModel):
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
-    remember_me: bool = True
 
 
 class TokenResponse(BaseModel):
@@ -71,7 +70,7 @@ class PasswordResetRequest(BaseModel):
 
 class PasswordResetConfirmRequest(BaseModel):
     email: EmailStr
-    code: str = Field(min_length=6, max_length=6)
+    code: str = Field(pattern=r"^\d{6}$")
     new_password: str
 
     @field_validator("new_password")

@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 class CurrentUser(BaseModel):
@@ -35,4 +35,4 @@ class MeResponse(BaseModel):
 
 
 class UpdateProfileRequest(BaseModel):
-    nickname: str | None = None
+    nickname: str | None = Field(default=None, min_length=1, max_length=50)
