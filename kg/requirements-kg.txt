@@ -1,0 +1,7 @@
+# 외부 의학 KG 구축(ETL) 전용 의존성 — FastAPI 앱 이미지에는 포함하지 않는다.
+# 사용: python -m venv .venv-kg && source .venv-kg/bin/activate && pip install -r kg/requirements-kg.txt
+pandas==2.2.3
+neo4j==5.26.0
+requests==2.32.3
+python-dotenv==1.0.1
+tqdm==4.67.1

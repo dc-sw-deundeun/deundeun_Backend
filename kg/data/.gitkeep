@@ -1,0 +1,2 @@
+# 이 디렉토리의 데이터 산출물(kg.csv, *_clinical.csv, dumps/*.dump 등)은 Git에서 제외됩니다.
+# 원본/대용량 산출물은 Google Drive로 관리합니다. (.gitignore 참고)

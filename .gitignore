@@ -136,3 +136,11 @@ Thumbs.db
 docs/
 .github/ISSUE_TEMPLATE/config.yml
 .github/ISSUE_TEMPLATE/phase-*.yml
+
+# =========================
+# Medical KG (ETL 데이터 산출물 — 코드만 커밋, 데이터는 Google Drive)
+# =========================
+kg/data/*
+!kg/data/.gitkeep
+*.dump
+kg/.venv-kg/
