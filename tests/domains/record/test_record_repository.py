@@ -123,24 +123,29 @@ def test_delete_record_cascade_returns_file_urls(db_session):
 
 
 def test_metric_page_index_stored(db_session):
+    from app.domains.record.models import CheckupMetricResult
+    from app.domains.record.repository import RecordRepository
+
     repo = RecordRepository(db_session)
     record = repo.create_record(1, "UPLOAD", "s3://a.png", "h")
-    db_session.commit()
-    metrics = [
-        ParsedMetric(
+    db_session.flush()
+
+    db_session.add(
+        CheckupMetricResult(
+            record_id=record.id,
             metric_code="fasting_glucose",
             metric_name="공복혈당",
             value="98",
             unit="mg/dL",
+            source="OCR",
             confidence=0.95,
             raw_text="98",
             page_index=2,
+            is_edited=False,
         )
-    ]
-    repo.upsert_ocr_metrics(record.id, metrics)
+    )
     db_session.commit()
 
     rows = repo.list_metrics(record.id)
-    # page_index field exists and is None because upsert_ocr_metrics doesn't write it yet (Task 4)
-    assert hasattr(rows[0], "page_index")
-    assert rows[0].page_index is None
+    assert len(rows) == 1
+    assert rows[0].page_index == 2
