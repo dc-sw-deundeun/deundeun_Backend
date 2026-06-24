@@ -42,9 +42,23 @@ cp .env.example .env   # 이미 있으면 NEO4J_* 항목만 추가
 | 4 | `python kg/scripts/03_drugbank_atc.py` | `kg/data/drugbank_atc.csv` |
 | 5 | `python kg/scripts/04_hira_atc.py` | `kg/data/hira_atc.csv` |
 | 6 | `docker compose -f docker/docker-compose.yml up -d neo4j` → `python kg/scripts/05_load_neo4j.py` | Neo4j 적재 |
-| 7 | `python kg/scripts/06_dur_enrichment.py` | DUR 금기 엣지/프로퍼티 |
-| 8 | `bash kg/scripts/08_export_dump.sh` | `kg/data/dumps/medical_kg.dump` |
-| 9 | `cypher/verify.cypher` 실행 | 검증 카운트/멀티홉 |
+| 7 | `python kg/scripts/06_dur_enrichment.py` / `07_food_interaction.py` | DUR 금기·약물식품 엣지 |
+| 8 | `bash kg/scripts/08_export_dump.sh` | `kg/data/dumps/neo4j.dump` |
+| 9 | `python kg/scripts/09_verify.py` (또는 `cypher/verify.cypher`) | 검증 카운트/멀티홉 |
+
+## 배포 (Docker 패키징)
+
+`docker/neo4j` 커스텀 이미지는 `/dumps/neo4j.dump`가 있으면 **최초 1회 자동 로드** 후 기동한다.
+
+```bash
+# 1) Google Drive에서 받은 dump를 배치
+cp <다운로드>/neo4j.dump kg/data/dumps/neo4j.dump
+# 2) 기동 (최초 1회 자동 로드, 이후 재기동 시 스킵)
+docker compose -f docker/docker-compose.yml up -d --build neo4j
+```
+
+- 개발/적재 시엔 dump 없이 빈 DB로 떠서 `05_load_neo4j.py`로 적재한다(같은 서비스).
+- dump를 다시 로드하려면 `neo4j_data` 볼륨 또는 `/data/.kg_loaded` 마커를 제거한다.
 
 ## 그래프 스키마
 

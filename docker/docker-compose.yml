@@ -31,9 +31,12 @@ services:
       start_period: 10s
 
   neo4j:
-    # 개발/적재용 — 빈 DB로 기동 후 kg/scripts/05_load_neo4j.py로 적재한다.
-    # 배포용(dump 자동 로드) 이미지는 Phase 6에서 docker/neo4j로 전환.
-    image: neo4j:5.26-community
+    # docker/neo4j 커스텀 이미지: /dumps/neo4j.dump 있으면 최초 1회 자동 로드.
+    # 개발/적재: dump 없이 빈 DB로 기동 → kg/scripts/05_load_neo4j.py로 적재.
+    # 배포: kg/data/dumps/neo4j.dump 배치 후 기동하면 자동 로드.
+    build:
+      context: ./neo4j
+    image: deundeun/medical-kg-neo4j:local
     container_name: deundeun-neo4j
     restart: unless-stopped
     environment:
@@ -46,6 +49,7 @@ services:
       - "${NEO4J_BOLT_PORT:-7687}:7687"
     volumes:
       - neo4j_data:/data
+      - ../kg/data/dumps:/dumps:ro
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:7474 >/dev/null 2>&1 || exit 1"]
       interval: 10s
