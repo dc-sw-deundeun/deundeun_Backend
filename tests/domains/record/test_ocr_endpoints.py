@@ -10,6 +10,7 @@ from app.domains.ocr.repository import OcrRepository
 from app.domains.ocr.service import OcrService
 from app.domains.ocr.status import OcrStatus
 from app.domains.record.repository import RecordRepository
+from app.domains.record.schemas import MetricUpdateItem
 from app.domains.user.schemas import CurrentUser
 from app.infrastructure.ocr.ocr_dto import OcrFieldDTO, OcrResultDTO
 from app.infrastructure.ocr.parser import OcrParser
@@ -70,7 +71,8 @@ def test_upload_single_image_success(api):
 def test_upload_zero_images_rejected(api):
     client, _ = api
     resp = client.post("/api/v1/records/checkups/upload", json={"images": []})
-    assert resp.status_code == 422
+    assert resp.status_code == 400
+    assert resp.json()["error_code"] == "INVALID_IMAGE_COUNT"
 
 
 def test_upload_eleven_images_rejected(api):
@@ -96,6 +98,30 @@ def test_upload_unsupported_format_rejected(api):
     )
     assert resp.status_code == 415
     assert resp.json()["error_code"] == "UNSUPPORTED_MEDIA_TYPE"
+
+
+def test_upload_single_image_too_large_rejected(api):
+    client, _ = api
+    raw = b"\x89PNG\r\n\x1a\n" + b"\x00" * (10 * 1024 * 1024 + 1)
+    resp = client.post(
+        "/api/v1/records/checkups/upload",
+        json={"images": [base64.b64encode(raw).decode()]},
+    )
+    assert resp.status_code == 413
+    assert resp.json()["error_code"] == "PAYLOAD_TOO_LARGE"
+
+
+def test_upload_total_size_too_large_rejected(api, monkeypatch):
+    client, _ = api
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "max_total_upload_size_bytes", len(_PNG_BYTES) + 1)
+    resp = client.post(
+        "/api/v1/records/checkups/upload",
+        json={"images": [_PNG_B64, _PNG_B64]},
+    )
+    assert resp.status_code == 413
+    assert resp.json()["error_code"] == "PAYLOAD_TOO_LARGE"
 
 
 def test_upload_partial_failure_response(api):
@@ -162,3 +188,44 @@ def test_no_file_url_stored(api):
     assert record is not None
     assert record.file_url is None
     assert record.file_hash is None
+
+
+def test_partial_record_can_be_verified(api):
+    client, db = api
+    call_count = 0
+
+    class _PartialClient:
+        async def recognize(self, image, image_format="png"):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 2:
+                raise RuntimeError("clova timeout")
+            return OcrResultDTO(
+                fields=[
+                    OcrFieldDTO(text="공복혈당", confidence=0.9, x_min=10, x_max=40, y_center=100),
+                    OcrFieldDTO(text="109", confidence=0.9, x_min=120, x_max=150, y_center=100),
+                ]
+            )
+
+    service = OcrService(
+        ocr_repo=OcrRepository(db),
+        record_repo=RecordRepository(db),
+        ocr_client=_PartialClient(),
+        parser=OcrParser(),
+        max_retries=0,
+    )
+    app.dependency_overrides[get_ocr_service] = lambda: service
+
+    upload_resp = client.post(
+        "/api/v1/records/checkups/upload",
+        json={"images": [_PNG_B64, _PNG_B64]},
+    )
+    record_id = upload_resp.json()["data"]["record_id"]
+    metric = RecordRepository(db).list_metrics(record_id)[0]
+
+    verify_resp = client.post(
+        f"/api/v1/records/checkups/{record_id}/verify",
+        json={"metrics": [MetricUpdateItem(metric_id=metric.id, value="109").model_dump()]},
+    )
+    assert verify_resp.status_code == 200
+    assert verify_resp.json()["data"]["verification_status"] == "VERIFIED"

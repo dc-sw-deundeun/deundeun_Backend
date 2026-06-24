@@ -64,7 +64,7 @@ class RecordService:
         self, user_id: int, record_id: int, items: list[MetricUpdateItem] | None
     ) -> CheckupRecord:
         record = self._get_owned_record(user_id, record_id)
-        if record.ocr_status != OcrStatus.COMPLETED.value:
+        if record.ocr_status not in {OcrStatus.COMPLETED.value, OcrStatus.PARTIAL.value}:
             raise ConflictException(
                 message="OCR 처리가 완료되지 않은 기록은 검수할 수 없습니다.",
                 error_code="OCR_NOT_COMPLETED",

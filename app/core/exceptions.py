@@ -83,7 +83,7 @@ def register_exception_handlers(app: FastAPI) -> None:
         request: Request, exc: RequestValidationError
     ) -> JSONResponse:
         for error in exc.errors():
-            if error.get("type") == "too_long" and tuple(error.get("loc", ())) == (
+            if error.get("type") in {"too_long", "too_short"} and tuple(error.get("loc", ())) == (
                 "body",
                 "images",
             ):

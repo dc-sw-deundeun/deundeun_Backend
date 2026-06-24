@@ -1,4 +1,7 @@
+import asyncio
+
 import pytest
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.core.exceptions import OcrFailedException
 from app.domains.ocr.models import OcrJob
@@ -8,7 +11,7 @@ from app.domains.ocr.status import OcrStatus
 from app.domains.record.models import CheckupRecord
 from app.domains.record.repository import RecordRepository
 from app.infrastructure.ocr.ocr_dto import OcrFieldDTO, OcrResultDTO
-from app.infrastructure.ocr.parser import OcrParser
+from app.infrastructure.ocr.parser import OcrParser, ParsedMetric
 
 
 def _glucose_result(confidence: float = 0.95) -> OcrResultDTO:
@@ -54,6 +57,19 @@ class _PerPageClient:
         if isinstance(result, Exception):
             raise result
         return result
+
+
+class _DelayedClient:
+    def __init__(self) -> None:
+        self.in_flight = 0
+        self.max_in_flight = 0
+
+    async def recognize(self, image: bytes, image_format: str = "png") -> OcrResultDTO:
+        self.in_flight += 1
+        self.max_in_flight = max(self.max_in_flight, self.in_flight)
+        await asyncio.sleep(0.01)
+        self.in_flight -= 1
+        return _glucose_result()
 
 
 def _make_service(db, client, *, max_retries: int = 0, concurrency: int = 5) -> OcrService:
@@ -229,3 +245,43 @@ async def test_retry_on_transient_error(db_session):
 
     assert outcome.failed_pages == []
     assert call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_process_upload_respects_concurrency_limit(db_session):
+    client = _DelayedClient()
+    service = _make_service(db_session, client, concurrency=2)
+
+    await service.process_upload(user_id=1, images=[_PNG] * 5)
+
+    assert client.max_in_flight == 2
+
+
+@pytest.mark.asyncio
+async def test_process_upload_rolls_back_when_metric_insert_fails(db_session):
+    class _InvalidParser(OcrParser):
+        def parse(self, result: OcrResultDTO, row_tolerance: float = 12.0) -> list[ParsedMetric]:
+            return [
+                ParsedMetric(
+                    metric_code="invalid_metric",
+                    metric_name="x" * 101,
+                    value="1",
+                    unit="",
+                    confidence=0.9,
+                    raw_text="1",
+                )
+            ]
+
+    service = OcrService(
+        ocr_repo=OcrRepository(db_session),
+        record_repo=RecordRepository(db_session),
+        ocr_client=_SyncClient(result=_glucose_result()),
+        parser=_InvalidParser(),
+        max_retries=0,
+    )
+
+    with pytest.raises(SQLAlchemyError):
+        await service.process_upload(user_id=1, images=[_PNG])
+
+    db_session.rollback()
+    assert db_session.query(CheckupRecord).filter(CheckupRecord.user_id == 1).all() == []
