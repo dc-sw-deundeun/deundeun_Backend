@@ -33,6 +33,12 @@ NEO4J_URI = os.getenv("NEO4J_URI", "bolt://localhost:7687")
 NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
 NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "change-me")
 
+# 식약처 DUR API (공공데이터포털 - 의약품 DUR정보)
+DUR_API_KEY = os.getenv("DUR_API_KEY")
+DUR_BASE_URL = os.getenv(
+    "DUR_BASE_URL", "http://apis.data.go.kr/1471000/DURPrdlstInfoService03"
+)
+
 
 def get_driver():
     """Neo4j 드라이버를 반환한다. 호출 측에서 close() 책임.
