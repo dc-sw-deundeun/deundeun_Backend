@@ -9,6 +9,7 @@ from collections.abc import Sequence
 from typing import Union
 
 import sqlalchemy as sa
+
 from alembic import op
 
 # revision identifiers, used by Alembic.
@@ -24,8 +25,7 @@ def upgrade() -> None:
         sa.Column("page_index", sa.Integer(), nullable=True),
     )
     # Only drop constraint if it exists (it may not exist due to prior migration failures)
-    from sqlalchemy import inspect, text
-    from sqlalchemy.engine import Engine
+    from sqlalchemy import inspect
 
     inspector = inspect(op.get_bind())
     constraints = inspector.get_unique_constraints("checkup_records")
