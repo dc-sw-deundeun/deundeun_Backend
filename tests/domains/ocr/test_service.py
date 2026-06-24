@@ -3,7 +3,7 @@ import asyncio
 import pytest
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.core.exceptions import OcrFailedException
+from app.core.exceptions import OcrBusyException, OcrFailedException
 from app.domains.ocr.models import OcrJob
 from app.domains.ocr.repository import OcrRepository
 from app.domains.ocr.service import FinalMetric, OcrService, UploadOutcome
@@ -251,6 +251,30 @@ async def test_process_upload_respects_concurrency_limit(db_session):
     await service.process_upload(user_id=1, images=[_PNG] * 5)
 
     assert client.max_in_flight == 2
+
+
+@pytest.mark.asyncio
+async def test_process_upload_raises_ocr_busy_when_global_capacity_full(db_session):
+    limiter = asyncio.Semaphore(1)
+    await limiter.acquire()
+    service = OcrService(
+        ocr_repo=OcrRepository(db_session),
+        record_repo=RecordRepository(db_session),
+        ocr_client=_SyncClient(result=_glucose_result()),
+        parser=OcrParser(),
+        max_retries=0,
+        concurrency=1,
+        global_limiter=limiter,
+        acquire_timeout_seconds=0.01,
+        retry_after_seconds=10,
+    )
+
+    with pytest.raises(OcrBusyException) as exc_info:
+        await service.process_upload(user_id=1, images=[_PNG])
+
+    limiter.release()
+    assert exc_info.value.retry_after_seconds == 10
+    assert db_session.query(CheckupRecord).all() == []
 
 
 def test_commit_upload_rolls_back_when_metric_insert_fails(db_session):

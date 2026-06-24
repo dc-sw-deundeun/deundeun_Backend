@@ -4,6 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.core.dependencies import get_current_user
+from app.core.exceptions import OcrBusyException
 from app.database.session import get_db
 from app.domains.ocr.dependencies import get_ocr_service
 from app.domains.ocr.models import OcrJob
@@ -180,6 +181,25 @@ def test_upload_all_fail_returns_502(api):
     resp = client.post("/api/v1/records/checkups/upload", json={"images": [_PNG_B64]})
     assert resp.status_code == 502
     assert resp.json()["error_code"] == "OCR_FAILED"
+
+
+def test_upload_returns_429_when_ocr_capacity_is_busy(api):
+    client, _ = api
+
+    class _BusyOcrService:
+        async def process_upload(self, user_id, images):
+            raise OcrBusyException(retry_after_seconds=10)
+
+        def get_job(self, job_id):
+            return None
+
+    app.dependency_overrides[get_ocr_service] = lambda: _BusyOcrService()
+
+    resp = client.post("/api/v1/records/checkups/ocr-preview", json={"images": [_PNG_B64]})
+    assert resp.status_code == 429
+    assert resp.headers["retry-after"] == "10"
+    assert resp.json()["error_code"] == "OCR_BUSY"
+    assert resp.json()["data"]["retry_after_seconds"] == 10
 
 
 def test_ocr_preview_does_not_persist_db_rows(api):

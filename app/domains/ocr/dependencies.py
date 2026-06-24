@@ -1,3 +1,5 @@
+import asyncio
+
 from fastapi import Depends
 from sqlalchemy.orm import Session
 
@@ -10,6 +12,8 @@ from app.domains.record.service import RecordService
 from app.infrastructure.ocr.clova_client import ClovaOcrClient
 from app.infrastructure.ocr.ocr_client import StubOcrClient
 from app.infrastructure.ocr.parser import OcrParser
+
+_ocr_capacity_limiter = asyncio.Semaphore(settings.ocr_global_concurrency)
 
 
 def _build_ocr_client():
@@ -30,6 +34,9 @@ def build_ocr_service(db: Session) -> OcrService:
         parser=OcrParser(),
         max_retries=settings.ocr_max_retries,
         concurrency=settings.ocr_concurrency,
+        global_limiter=_ocr_capacity_limiter,
+        acquire_timeout_seconds=settings.ocr_acquire_timeout_seconds,
+        retry_after_seconds=settings.ocr_retry_after_seconds,
     )
 
 

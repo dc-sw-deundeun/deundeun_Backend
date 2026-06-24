@@ -68,6 +68,17 @@ class OcrFailedException(AppException):
         super().__init__(status_code=502, message=message, error_code=error_code)
 
 
+class OcrBusyException(AppException):
+    def __init__(
+        self,
+        retry_after_seconds: int,
+        message: str = "OCR 요청이 많아 잠시 후 다시 시도해 주세요.",
+        error_code: str = "OCR_BUSY",
+    ) -> None:
+        super().__init__(status_code=429, message=message, error_code=error_code)
+        self.retry_after_seconds = retry_after_seconds
+
+
 class InvalidImageCountException(AppException):
     def __init__(
         self,
@@ -102,11 +113,14 @@ def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppException)
     async def app_exception_handler(request: Request, exc: AppException) -> JSONResponse:
         data = None
+        headers = None
         retry_after_seconds = getattr(exc, "retry_after_seconds", None)
         if retry_after_seconds is not None:
             data = {"retry_after_seconds": retry_after_seconds}
+            headers = {"Retry-After": str(retry_after_seconds)}
         return JSONResponse(
             status_code=exc.status_code,
+            headers=headers,
             content={
                 "success": False,
                 "message": exc.message,

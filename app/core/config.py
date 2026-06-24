@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     max_images_per_upload: int = 10
     max_total_upload_size_bytes: int = 30 * 1024 * 1024
     ocr_concurrency: int = 5
+    ocr_global_concurrency: int = 10
+    ocr_acquire_timeout_seconds: float = 1.0
+    ocr_retry_after_seconds: int = 10
 
     @model_validator(mode="after")
     def validate_production_secrets(self) -> "Settings":

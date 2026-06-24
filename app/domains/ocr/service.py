@@ -2,7 +2,7 @@ import asyncio
 import logging
 from dataclasses import dataclass
 
-from app.core.exceptions import OcrFailedException
+from app.core.exceptions import OcrBusyException, OcrFailedException
 from app.domains.ocr.models import OcrJob
 from app.domains.ocr.repository import OcrRepository
 from app.domains.ocr.status import MetricSource, OcrStatus, VerificationStatus
@@ -53,6 +53,9 @@ class OcrService:
         *,
         max_retries: int = 1,
         concurrency: int = 5,
+        global_limiter: asyncio.Semaphore | None = None,
+        acquire_timeout_seconds: float = 1.0,
+        retry_after_seconds: int = 10,
     ) -> None:
         self._ocr_repo = ocr_repo
         self._record_repo = record_repo
@@ -60,6 +63,9 @@ class OcrService:
         self._parser = parser
         self._max_retries = max_retries
         self._concurrency = concurrency
+        self._global_limiter = global_limiter
+        self._acquire_timeout_seconds = acquire_timeout_seconds
+        self._retry_after_seconds = retry_after_seconds
 
     def get_job(self, job_id: int) -> OcrJob | None:
         return self._ocr_repo.get_job(job_id)
@@ -75,6 +81,8 @@ class OcrService:
         successful: list[tuple[int, OcrResultDTO]] = []
         failed_pages: list[int] = []
         for idx, result in pairs:
+            if isinstance(result, OcrBusyException):
+                raise result
             if isinstance(result, BaseException):
                 failed_pages.append(idx)
                 logger.warning(
@@ -202,9 +210,29 @@ class OcrService:
         last_error: Exception | None = None
         for _ in range(self._max_retries + 1):
             try:
-                return await self._ocr_client.recognize(image, image_format)
+                return await self._recognize_with_capacity(image, image_format)
+            except OcrBusyException:
+                raise
             except Exception as exc:  # noqa: BLE001
                 last_error = exc
         if last_error is None:
             raise RuntimeError("OCR recognition was not attempted")
         raise last_error
+
+    async def _recognize_with_capacity(self, image: bytes, image_format: str) -> OcrResultDTO:
+        if self._global_limiter is None:
+            return await self._ocr_client.recognize(image, image_format)
+
+        acquired = False
+        try:
+            await asyncio.wait_for(
+                self._global_limiter.acquire(),
+                timeout=self._acquire_timeout_seconds,
+            )
+            acquired = True
+            return await self._ocr_client.recognize(image, image_format)
+        except TimeoutError as exc:
+            raise OcrBusyException(retry_after_seconds=self._retry_after_seconds) from exc
+        finally:
+            if acquired:
+                self._global_limiter.release()

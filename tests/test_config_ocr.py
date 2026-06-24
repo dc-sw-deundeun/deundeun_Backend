@@ -8,6 +8,9 @@ def test_ocr_settings_defaults():
     assert settings.max_images_per_upload == 10
     assert settings.max_total_upload_size_bytes == 30 * 1024 * 1024
     assert settings.ocr_concurrency == 5
+    assert settings.ocr_global_concurrency == 10
+    assert settings.ocr_acquire_timeout_seconds == 1
+    assert settings.ocr_retry_after_seconds == 10
 
 
 def test_clova_secrets_default_to_none(monkeypatch):
