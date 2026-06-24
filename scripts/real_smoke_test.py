@@ -1,8 +1,8 @@
-"""실DB(deundeun) 대상 OCR 파이프라인 엔드투엔드 스모크 테스트.
+"""실DB(deundeun) 대상 OCR 동기 업로드 파이프라인 엔드투엔드 스모크 테스트.
 
 실행: DATABASE_URL 설정 후 `python scripts/real_smoke_test.py`
 - 앱 부팅(/health, 라우트 수) 확인
-- 실제 Postgres에 record/job 생성 → OCR(합성 결과) → 파서 → metric 영속화 → 검수 → 분석 게이트
+- 실제 Postgres에 동기 OCR 업로드 → 파서 → metric 영속화 → 검수 → 분석 게이트
 """
 
 import asyncio
@@ -14,12 +14,12 @@ from sqlalchemy.orm import sessionmaker
 from app.core.config import settings
 from app.core.exceptions import ConflictException
 from app.domains.analysis.service import AnalysisService
+from app.domains.ocr.models import OcrJob
 from app.domains.ocr.repository import OcrRepository
 from app.domains.ocr.service import OcrService
 from app.domains.record.repository import RecordRepository
 from app.infrastructure.ocr.ocr_dto import OcrFieldDTO, OcrResultDTO
 from app.infrastructure.ocr.parser import OcrParser
-from app.infrastructure.storage.file_storage import StubFileStorage
 
 
 class FakeClovaClient:
@@ -77,27 +77,21 @@ async def pipeline_smoke():
         ocr_repo=ocr_repo,
         record_repo=record_repo,
         ocr_client=FakeClovaClient(),
-        file_storage=StubFileStorage(),
         parser=OcrParser(),
     )
     try:
-        record = record_repo.create_record(
+        outcome = await service.process_upload(
             user_id=9001,
-            source_type="UPLOAD",
-            file_url="s3://stub/checkups/9001/sample.png",
-            file_hash="smoke-hash-001",
+            images=[b"\x89PNG\r\n\x1a\n" + b"\x00" * 32],
         )
-        db.flush()
-        job = await service.create_job(record.id, user_id=9001)
-        db.commit()
-        print(f"[STEP] record_id={record.id} ocr_job_id={job.id} (ocr_status={record.ocr_status})")
-
-        await service.process_job(job)
-        db.commit()
-        db.refresh(record)
+        record = record_repo.get_record(outcome.record_id)
+        assert record is not None
+        job = db.query(OcrJob).filter(OcrJob.record_id == record.id).one()
         print(
-            f"[STEP] process_job -> job.status={job.status} parsed={job.parsed_field_count} record.ocr_status={record.ocr_status}"
+            f"[STEP] record_id={record.id} page_count={outcome.page_count} "
+            f"failed_pages={outcome.failed_pages} record.ocr_status={record.ocr_status}"
         )
+        print(f"[STEP] audit_job -> job.status={job.status} " f"parsed={job.parsed_field_count}")
 
         metrics = {m.metric_code: m for m in record_repo.list_metrics(record.id)}
         print("[STEP] 영속화된 metric (실DB 조회):")
@@ -126,9 +120,9 @@ async def pipeline_smoke():
         )
 
         # 정리
-        urls = record_repo.delete_record_cascade(record)
+        record_repo.delete_record_cascade(record)
         db.commit()
-        print(f"[CLEAN] record/job/metric 삭제 완료, 정리 대상 파일 {len(urls)}개")
+        print("[CLEAN] record/job/metric 삭제 완료")
         remaining = record_repo.list_metrics(record.id)
         print(f"[CLEAN] 잔여 metric: {len(remaining)} (0 기대)")
         print("[RESULT] 실DB 엔드투엔드 파이프라인 PASS")

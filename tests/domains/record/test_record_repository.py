@@ -1,5 +1,4 @@
 import pytest
-from sqlalchemy.exc import IntegrityError
 
 from app.domains.ocr.models import OcrJob
 from app.domains.record.models import CheckupMetricResult
@@ -23,14 +22,6 @@ def test_create_and_get_record(db_session):
     record = repo.create_record(1, "UPLOAD", "s3://a.png", "hash1")
     db_session.commit()
     assert repo.get_record(record.id).file_hash == "hash1"
-
-
-def test_find_by_user_and_hash(db_session):
-    repo = RecordRepository(db_session)
-    repo.create_record(1, "UPLOAD", "s3://a.png", "hash1")
-    db_session.commit()
-    assert repo.find_by_user_and_hash(1, "hash1") is not None
-    assert repo.find_by_user_and_hash(1, "nope") is None
 
 
 def test_upsert_preserves_manual_edits(db_session):
@@ -82,15 +73,6 @@ def test_upsert_rejects_missing_record_without_creating_orphan(db_session):
     assert repo.list_metrics(999_999) == []
 
 
-def test_unique_constraint_user_file_hash(db_session):
-    repo = RecordRepository(db_session)
-    repo.create_record(1, "UPLOAD", "s3://a.png", "dup")
-    db_session.commit()
-    with pytest.raises(IntegrityError):
-        repo.create_record(1, "UPLOAD", "s3://b.png", "dup")
-    db_session.rollback()
-
-
 def test_delete_record_cascade_returns_file_urls(db_session):
     repo = RecordRepository(db_session)
     record = repo.create_record(1, "UPLOAD", "s3://a.png", "h")
@@ -122,30 +104,35 @@ def test_delete_record_cascade_returns_file_urls(db_session):
     assert repo.list_metrics(record.id) == []
 
 
-def test_metric_page_index_stored(db_session):
-    from app.domains.record.models import CheckupMetricResult
+def test_create_record_accepts_null_file_url_and_hash(db_session):
     from app.domains.record.repository import RecordRepository
 
     repo = RecordRepository(db_session)
-    record = repo.create_record(1, "UPLOAD", "s3://a.png", "h")
-    db_session.flush()
+    record = repo.create_record(1, "UPLOAD")  # no file_url/file_hash
+    db_session.commit()
+    assert record.file_url is None
+    assert record.file_hash is None
 
-    db_session.add(
-        CheckupMetricResult(
-            record_id=record.id,
+
+def test_metric_page_index_stored(db_session):
+    from app.infrastructure.ocr.parser import ParsedMetric
+
+    repo = RecordRepository(db_session)
+    record = repo.create_record(1, "UPLOAD")
+    db_session.commit()
+    metrics = [
+        ParsedMetric(
             metric_code="fasting_glucose",
             metric_name="공복혈당",
             value="98",
             unit="mg/dL",
-            source="OCR",
             confidence=0.95,
             raw_text="98",
             page_index=2,
-            is_edited=False,
         )
-    )
+    ]
+    repo.upsert_ocr_metrics(record.id, metrics)
     db_session.commit()
 
     rows = repo.list_metrics(record.id)
-    assert len(rows) == 1
     assert rows[0].page_index == 2

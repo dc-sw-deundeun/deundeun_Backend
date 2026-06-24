@@ -1,12 +1,6 @@
 from pydantic import BaseModel, Field
 
 
-class UploadResponse(BaseModel):
-    record_id: int
-    # 중복 업로드(멱등)로 새 잡이 생성되지 않은 경우 None.
-    ocr_job_id: int | None = None
-
-
 class MetricResponse(BaseModel):
     metric_id: int
     metric_code: str
@@ -34,6 +28,18 @@ class MetricResponse(BaseModel):
             source=metric.source,
             is_edited=metric.is_edited,
         )
+
+
+class MultiImageUploadRequest(BaseModel):
+    images: list[str] = Field(min_length=1, max_length=10)
+
+
+class UploadResponse(BaseModel):
+    record_id: int
+    page_count: int
+    failed_pages: list[int]
+    ocr_status: str
+    metrics: list["MetricResponse"]
 
 
 class MetricUpdateRequest(BaseModel):

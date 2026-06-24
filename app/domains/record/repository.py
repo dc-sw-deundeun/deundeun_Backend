@@ -21,14 +21,19 @@ class RecordRepository:
         self._db.commit()
 
     def create_record(
-        self, user_id: int, source_type: str, file_url: str, file_hash: str
+        self,
+        user_id: int,
+        source_type: str,
+        file_url: str | None = None,
+        file_hash: str | None = None,
+        ocr_status: str = "PENDING",
     ) -> CheckupRecord:
         record = CheckupRecord(
             user_id=user_id,
             source_type=source_type,
             file_url=file_url,
             file_hash=file_hash,
-            ocr_status="PENDING",
+            ocr_status=ocr_status,
             verification_status=VerificationStatus.UNVERIFIED.value,
             analysis_status="PENDING",
         )
@@ -58,20 +63,8 @@ class RecordRepository:
         """수동 수정/검수 경로가 OCR upsert와 같은 락 경계를 공유하도록 노출한다."""
         return self._lock_record(record_id)
 
-    def find_by_user_and_hash(self, user_id: int, file_hash: str) -> CheckupRecord | None:
-        stmt = select(CheckupRecord).where(
-            CheckupRecord.user_id == user_id,
-            CheckupRecord.file_hash == file_hash,
-        )
-        return self._db.execute(stmt).scalars().first()
-
     def set_ocr_status(self, record: CheckupRecord, status: str) -> None:
         record.ocr_status = status
-        self._db.flush()
-
-    def reset_verification(self, record: CheckupRecord) -> None:
-        record.verification_status = VerificationStatus.UNVERIFIED.value
-        record.verified_at = None
         self._db.flush()
 
     def set_verified(self, record: CheckupRecord) -> None:
@@ -116,6 +109,7 @@ class RecordRepository:
                     source=MetricSource.OCR.value,
                     confidence=parsed_metric.confidence,
                     raw_text=parsed_metric.raw_text,
+                    page_index=parsed_metric.page_index,
                     is_edited=False,
                 )
             )

@@ -22,6 +22,9 @@ DEFAULT_IMAGE = os.path.expanduser("~/Desktop/일반건강검진.png")
 
 
 def call_clova(image_path: str) -> dict:
+    invoke_url = settings.clova_ocr_invoke_url
+    secret_key = settings.clova_ocr_secret_key
+    assert invoke_url and secret_key, "Clova 설정 누락(.env)"
     with open(image_path, "rb") as fh:
         b64 = base64.b64encode(fh.read()).decode("ascii")
     ext = image_path.rsplit(".", 1)[-1].lower()
@@ -31,8 +34,8 @@ def call_clova(image_path: str) -> dict:
         "timestamp": int(time.time() * 1000),
         "images": [{"format": ext, "name": "checkup", "data": b64}],
     }
-    headers = {"X-OCR-SECRET": settings.clova_ocr_secret_key}
-    resp = httpx.post(settings.clova_ocr_invoke_url, json=payload, headers=headers, timeout=60.0)
+    headers = {"X-OCR-SECRET": secret_key}
+    resp = httpx.post(invoke_url, json=payload, headers=headers, timeout=60.0)
     resp.raise_for_status()
     return resp.json()
 

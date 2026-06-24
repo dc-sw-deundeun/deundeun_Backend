@@ -1,36 +1,38 @@
-import io
+import base64
 
 import pytest
 from fastapi.testclient import TestClient
 
 from app.core.dependencies import get_current_user
 from app.database.session import get_db
-from app.domains.ocr.dependencies import (
-    build_ocr_service,
-    get_ocr_job_runner,
-    get_ocr_service,
-    get_record_service,
-)
+from app.domains.ocr.dependencies import get_ocr_service
 from app.domains.ocr.repository import OcrRepository
 from app.domains.ocr.service import OcrService
 from app.domains.ocr.status import OcrStatus
 from app.domains.record.repository import RecordRepository
-from app.domains.record.service import RecordService
 from app.domains.user.schemas import CurrentUser
-from app.infrastructure.ocr.ocr_client import StubOcrClient
-from app.infrastructure.ocr.parser import OcrParser, ParsedMetric
-from app.infrastructure.storage.file_storage import StubFileStorage
+from app.infrastructure.ocr.ocr_dto import OcrFieldDTO, OcrResultDTO
+from app.infrastructure.ocr.parser import OcrParser
 from app.main import app
 
-_PNG_HEADER = b"\x89PNG\r\n\x1a\n" + b"0" * 32
+_PNG_BYTES = b"\x89PNG\r\n\x1a\n" + b"\x00" * 32
+_PNG_B64 = base64.b64encode(_PNG_BYTES).decode()
 
 
-class MemoryStorage:
-    async def upload(self, file_path, content):
-        return f"s3://{file_path}"
+class _StubOcrClient:
+    def __init__(self, result=None, error=None):
+        self._result = result
+        self._error = error
 
-    async def delete(self, file_path):
-        return None
+    async def recognize(self, image, image_format="png"):
+        if self._error:
+            raise self._error
+        return self._result or OcrResultDTO(
+            fields=[
+                OcrFieldDTO(text="공복혈당", confidence=0.95, x_min=10, x_max=40, y_center=100),
+                OcrFieldDTO(text="109", confidence=0.95, x_min=120, x_max=150, y_center=100),
+            ]
+        )
 
 
 @pytest.fixture
@@ -41,133 +43,122 @@ def api(db_session):
     def _user():
         return CurrentUser(id=1)
 
-    record_service = RecordService(RecordRepository(db_session), MemoryStorage())
-    ocr_service = OcrService(
+    service = OcrService(
         ocr_repo=OcrRepository(db_session),
         record_repo=RecordRepository(db_session),
-        ocr_client=StubOcrClient(),
-        file_storage=StubFileStorage(),
+        ocr_client=_StubOcrClient(),
         parser=OcrParser(),
     )
-
-    async def _runner(job_id: int):
-        await build_ocr_service(db_session).process_single(job_id)
-
     app.dependency_overrides[get_db] = _db
     app.dependency_overrides[get_current_user] = _user
-    app.dependency_overrides[get_record_service] = lambda: record_service
-    app.dependency_overrides[get_ocr_service] = lambda: ocr_service
-    app.dependency_overrides[get_ocr_job_runner] = lambda: _runner
+    app.dependency_overrides[get_ocr_service] = lambda: service
     yield TestClient(app), db_session
     app.dependency_overrides.clear()
 
 
-def _seed_record_with_metric(db):
-    repo = RecordRepository(db)
-    record = repo.create_record(1, "UPLOAD", "s3://a.png", "h")
-    repo.set_ocr_status(record, OcrStatus.COMPLETED.value)
-    db.commit()
-    repo.upsert_ocr_metrics(
-        record.id,
-        [
-            ParsedMetric(
-                metric_code="bmi",
-                metric_name="체질량지수",
-                value="24.1",
-                unit="kg/m2",
-                confidence=0.5,
-                raw_text="24.1",
-            ),
-        ],
-    )
-    db.commit()
-    return record, repo.list_metrics(record.id)[0]
-
-
-def test_upload_creates_record_and_job(api):
-    client, db = api
-    resp = client.post(
-        "/api/v1/records/checkups/upload",
-        files={"file": ("checkup.png", io.BytesIO(_PNG_HEADER), "image/png")},
-    )
-    assert resp.status_code == 202
+def test_upload_single_image_success(api):
+    client, _ = api
+    resp = client.post("/api/v1/records/checkups/upload", json={"images": [_PNG_B64]})
+    assert resp.status_code == 200
     data = resp.json()["data"]
-    assert "record_id" in data and "ocr_job_id" in data
+    assert data["page_count"] == 1
+    assert data["failed_pages"] == []
+    assert data["ocr_status"] == OcrStatus.COMPLETED.value
+    assert isinstance(data["metrics"], list)
 
 
-def test_upload_dedup_same_hash(api):
-    client, db = api
-    png = _PNG_HEADER
-    files = {"file": ("a.png", io.BytesIO(png), "image/png")}
-    first = client.post("/api/v1/records/checkups/upload", files=files).json()["data"]
-    files = {"file": ("a.png", io.BytesIO(png), "image/png")}
-    second = client.post("/api/v1/records/checkups/upload", files=files).json()["data"]
-    assert first["record_id"] == second["record_id"]
+def test_upload_zero_images_rejected(api):
+    client, _ = api
+    resp = client.post("/api/v1/records/checkups/upload", json={"images": []})
+    assert resp.status_code == 422
 
 
-def test_upload_rejects_oversized_file(api, monkeypatch):
-    from app.core.config import settings
+def test_upload_eleven_images_rejected(api):
+    client, _ = api
+    resp = client.post("/api/v1/records/checkups/upload", json={"images": [_PNG_B64] * 11})
+    assert resp.status_code == 400
+    assert resp.json()["error_code"] == "INVALID_IMAGE_COUNT"
 
-    client, db = api
-    monkeypatch.setattr(settings, "max_upload_size_bytes", 4)
+
+def test_upload_invalid_base64_rejected(api):
+    client, _ = api
+    resp = client.post("/api/v1/records/checkups/upload", json={"images": ["!!!not_base64!!!"]})
+    assert resp.status_code == 400
+    assert resp.json()["error_code"] == "INVALID_IMAGE_FORMAT"
+
+
+def test_upload_unsupported_format_rejected(api):
+    client, _ = api
+    bmp_bytes = b"BM" + b"\x00" * 30
     resp = client.post(
         "/api/v1/records/checkups/upload",
-        files={"file": ("a.png", io.BytesIO(_PNG_HEADER), "image/png")},
-    )
-    assert resp.status_code == 413
-    assert resp.json()["error_code"] == "PAYLOAD_TOO_LARGE"
-
-
-def test_upload_rejects_unsupported_format(api):
-    client, db = api
-    resp = client.post(
-        "/api/v1/records/checkups/upload",
-        files={"file": ("a.gif", io.BytesIO(b"GIF89a..."), "image/gif")},
+        json={"images": [base64.b64encode(bmp_bytes).decode()]},
     )
     assert resp.status_code == 415
+    assert resp.json()["error_code"] == "UNSUPPORTED_MEDIA_TYPE"
 
 
-def test_upload_png_triggers_background_ocr(api):
+def test_upload_partial_failure_response(api):
     client, db = api
-    png = _PNG_HEADER
+    call_count = 0
+
+    class _PartialClient:
+        async def recognize(self, image, image_format="png"):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 2:
+                raise RuntimeError("clova timeout")
+            return OcrResultDTO(
+                fields=[
+                    OcrFieldDTO(text="공복혈당", confidence=0.9, x_min=10, x_max=40, y_center=100),
+                    OcrFieldDTO(text="109", confidence=0.9, x_min=120, x_max=150, y_center=100),
+                ]
+            )
+
+    service = OcrService(
+        ocr_repo=OcrRepository(db),
+        record_repo=RecordRepository(db),
+        ocr_client=_PartialClient(),
+        parser=OcrParser(),
+        max_retries=0,
+    )
+    app.dependency_overrides[get_ocr_service] = lambda: service
+
     resp = client.post(
         "/api/v1/records/checkups/upload",
-        files={"file": ("a.png", io.BytesIO(png), "image/png")},
-    )
-    assert resp.status_code == 202
-    # 백그라운드 러너(override)가 동기 실행되어 잡 상태가 진전됨
-    from app.domains.ocr.repository import OcrRepository
-
-    job = OcrRepository(db).get_job(resp.json()["data"]["ocr_job_id"])
-    assert job.status in ("COMPLETED", "FAILED", "PROCESSING")
-
-
-def test_get_metrics_returns_flags(api):
-    client, db = api
-    record, _ = _seed_record_with_metric(db)
-    resp = client.get(f"/api/v1/records/checkups/{record.id}/metrics")
-    assert resp.status_code == 200
-    items = resp.json()["data"]
-    assert items[0]["low_confidence"] is True
-
-
-def test_patch_metric(api):
-    client, db = api
-    record, metric = _seed_record_with_metric(db)
-    resp = client.patch(
-        f"/api/v1/records/checkups/{record.id}/metrics/{metric.id}",
-        json={"value": "25.0", "unit": "kg/m2"},
+        json={"images": [_PNG_B64, _PNG_B64, _PNG_B64]},
     )
     assert resp.status_code == 200
-    assert resp.json()["data"]["source"] == "MANUAL"
+    data = resp.json()["data"]
+    assert data["ocr_status"] == OcrStatus.PARTIAL.value
+    assert 1 in data["failed_pages"]
 
 
-def test_verify_with_edits(api):
+def test_upload_all_fail_returns_502(api):
     client, db = api
-    record, metric = _seed_record_with_metric(db)
-    resp = client.post(
-        f"/api/v1/records/checkups/{record.id}/verify",
-        json={"metrics": [{"metric_id": metric.id, "value": "26.0"}]},
+
+    class _FailClient:
+        async def recognize(self, image, image_format="png"):
+            raise RuntimeError("all fail")
+
+    service = OcrService(
+        ocr_repo=OcrRepository(db),
+        record_repo=RecordRepository(db),
+        ocr_client=_FailClient(),
+        parser=OcrParser(),
     )
-    assert resp.status_code == 200
-    assert resp.json()["data"]["verification_status"] == "VERIFIED"
+    app.dependency_overrides[get_ocr_service] = lambda: service
+
+    resp = client.post("/api/v1/records/checkups/upload", json={"images": [_PNG_B64]})
+    assert resp.status_code == 502
+    assert resp.json()["error_code"] == "OCR_FAILED"
+
+
+def test_no_file_url_stored(api):
+    client, db = api
+    resp = client.post("/api/v1/records/checkups/upload", json={"images": [_PNG_B64]})
+    record_id = resp.json()["data"]["record_id"]
+    record = RecordRepository(db).get_record(record_id)
+    assert record is not None
+    assert record.file_url is None
+    assert record.file_hash is None

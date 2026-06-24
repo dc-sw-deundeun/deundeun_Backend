@@ -27,13 +27,12 @@ class Settings(BaseSettings):
 
     clova_ocr_invoke_url: str | None = None
     clova_ocr_secret_key: str | None = None
-    ocr_polling_interval_seconds: int = 30
     ocr_min_confidence: float = 0.8
-    ocr_request_timeout_seconds: int = 30
-    ocr_max_retries: int = 2
-    ocr_stuck_timeout_seconds: int = 300
-    local_storage_dir: str = "var/ocr_tmp"
-    max_upload_size_bytes: int = 10 * 1024 * 1024  # 업로드 결과지 최대 크기(기본 10MB)
+    ocr_request_timeout_seconds: int = 15
+    ocr_max_retries: int = 1
+    max_images_per_upload: int = 10
+    max_total_upload_size_bytes: int = 30 * 1024 * 1024
+    ocr_concurrency: int = 5
 
     @model_validator(mode="after")
     def validate_production_secrets(self) -> "Settings":

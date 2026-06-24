@@ -2,11 +2,12 @@ from app.core.config import Settings, settings
 
 
 def test_ocr_settings_defaults():
-    assert settings.ocr_polling_interval_seconds == 30
     assert settings.ocr_min_confidence == 0.8
-    assert settings.ocr_request_timeout_seconds == 30
-    assert settings.ocr_max_retries == 2
-    assert settings.ocr_stuck_timeout_seconds == 300
+    assert settings.ocr_request_timeout_seconds == 15
+    assert settings.ocr_max_retries == 1
+    assert settings.max_images_per_upload == 10
+    assert settings.max_total_upload_size_bytes == 30 * 1024 * 1024
+    assert settings.ocr_concurrency == 5
 
 
 def test_clova_secrets_default_to_none(monkeypatch):

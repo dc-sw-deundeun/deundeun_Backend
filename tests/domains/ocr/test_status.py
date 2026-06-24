@@ -3,7 +3,13 @@ from app.domains.ocr.status import MetricSource, OcrStatus, VerificationStatus
 
 def test_ocr_status_values():
     assert OcrStatus.PENDING == "PENDING"
-    assert {s.value for s in OcrStatus} == {"PENDING", "PROCESSING", "COMPLETED", "PARTIAL", "FAILED"}
+    assert {s.value for s in OcrStatus} == {
+        "PENDING",
+        "PROCESSING",
+        "COMPLETED",
+        "PARTIAL",
+        "FAILED",
+    }
 
 
 def test_verification_status_values():

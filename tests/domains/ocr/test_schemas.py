@@ -8,6 +8,7 @@ from app.domains.record.schemas import (
     MetricResponse,
     MetricUpdateItem,
     MetricUpdateRequest,
+    MultiImageUploadRequest,
     UploadResponse,
     VerifyRequest,
 )
@@ -66,12 +67,20 @@ def test_record_request_schemas_parse_nested_metric_updates():
     update = MetricUpdateRequest(value="24.1")
     bulk = MetricBulkUpdateRequest(metrics=[{"metric_id": 3, "value": "24.1", "unit": "kg/m2"}])
     verify = VerifyRequest()
-    upload = UploadResponse(record_id=2, ocr_job_id=1)
+    multi_upload = MultiImageUploadRequest(images=["abc"])
+    upload = UploadResponse(
+        record_id=2,
+        page_count=1,
+        failed_pages=[],
+        ocr_status="COMPLETED",
+        metrics=[],
+    )
 
     assert update.unit is None
     assert bulk.metrics[0].metric_id == 3
     assert verify.metrics is None
-    assert upload.ocr_job_id == 1
+    assert multi_upload.images == ["abc"]
+    assert upload.page_count == 1
 
 
 @pytest.mark.parametrize(

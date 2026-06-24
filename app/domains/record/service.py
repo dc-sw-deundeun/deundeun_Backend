@@ -7,13 +7,11 @@ from app.domains.ocr.status import OcrStatus
 from app.domains.record.models import CheckupMetricResult, CheckupRecord
 from app.domains.record.repository import RecordRepository
 from app.domains.record.schemas import MetricUpdateItem
-from app.infrastructure.storage.file_storage import FileStorage
 
 
 class RecordService:
-    def __init__(self, record_repo: RecordRepository, file_storage: FileStorage) -> None:
+    def __init__(self, record_repo: RecordRepository) -> None:
         self._record_repo = record_repo
-        self._file_storage = file_storage
 
     def _get_owned_record(self, user_id: int, record_id: int) -> CheckupRecord:
         record = self._record_repo.get_record(record_id)
@@ -78,37 +76,10 @@ class RecordService:
         self._record_repo.commit()
         return record
 
-    def delete_checkup(self, user_id: int, record_id: int) -> list[str]:
-        """검진 기록과 연관 행을 삭제하고, 정리해야 할 파일 URL을 반환합니다.
-
-        실제 스토리지 삭제는 DB 커밋이 성공한 뒤 purge_files()로 수행해야 한다.
-        비가역 외부 삭제를 커밋 전에 실행하면 커밋 실패 시 DB는 복구되지만
-        파일은 사라져 정합성이 깨진다.
-        """
+    def delete_checkup(self, user_id: int, record_id: int) -> None:
         record = self._get_owned_record(user_id, record_id)
-        file_urls = self._record_repo.delete_record_cascade(record)
-        # 파일 정리(purge_files)는 커밋 확정 이후에 호출자가 수행한다.
+        self._record_repo.delete_record_cascade(record)
         self._record_repo.commit()
-        return file_urls
-
-    async def purge_files(self, file_urls: list[str]) -> None:
-        for url in file_urls:
-            try:
-                await self._file_storage.delete(url)
-            except Exception:  # noqa: BLE001 — best-effort 정리
-                pass
-
-    def upload_checkup(self, user_id: int, file, request) -> None:
-        """검진 결과지를 업로드하고 분석 Job을 생성합니다.
-
-        흐름:
-        1. FileStorage에 결과지 저장
-        2. CheckupRecord 생성
-        3. AnalysisService.create_analysis_job() 호출
-        4. MissionService.check_record_related_mission() (Phase 4)
-        5. CharacterService.gain_exp() (Phase 4)
-        """
-        raise NotImplementedError
 
     def list_checkups(self, user_id: int):
         raise NotImplementedError

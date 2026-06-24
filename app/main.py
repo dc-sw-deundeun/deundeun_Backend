@@ -6,7 +6,6 @@ from fastapi import FastAPI
 from app.core.config import settings
 from app.core.exceptions import register_exception_handlers
 from app.core.openapi import _OPENAPI_TAGS, configure_openapi
-from app.workers.scheduler import start_scheduler, stop_scheduler
 
 if settings.app_env == "development":
     logging.basicConfig(level=logging.INFO)
@@ -28,15 +27,8 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             logger.warning("DB 연결 실패: %s", e)
 
-    # OCR 복구 배치 스케줄러 시작 (테스트 환경에서는 백그라운드 잡을 띄우지 않는다)
-    scheduler_enabled = settings.app_env != "test"
-    if scheduler_enabled:
-        start_scheduler()
-
     yield
 
-    if scheduler_enabled:
-        stop_scheduler()
     if engine is not None:
         engine.dispose()
         logger.info("DB 엔진 종료.")
