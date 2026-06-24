@@ -28,12 +28,15 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             logger.warning("DB 연결 실패: %s", e)
 
-    # OCR 복구 배치 스케줄러 시작
-    start_scheduler()
+    # OCR 복구 배치 스케줄러 시작 (테스트 환경에서는 백그라운드 잡을 띄우지 않는다)
+    scheduler_enabled = settings.app_env != "test"
+    if scheduler_enabled:
+        start_scheduler()
 
     yield
 
-    stop_scheduler()
+    if scheduler_enabled:
+        stop_scheduler()
     if engine is not None:
         engine.dispose()
         logger.info("DB 엔진 종료.")

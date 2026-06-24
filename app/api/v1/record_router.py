@@ -2,7 +2,6 @@ import hashlib
 from collections.abc import Awaitable, Callable
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Response, UploadFile
-from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.dependencies import get_current_user
@@ -11,7 +10,6 @@ from app.core.exceptions import (
     UnsupportedMediaTypeException,
 )
 from app.core.response import not_implemented_response, success_response
-from app.database.session import get_db
 from app.domains.ocr.dependencies import (
     get_ocr_job_runner,
     get_ocr_service,
@@ -102,13 +100,11 @@ def update_metric(
     metric_id: int,
     body: MetricUpdateRequest,
     current_user: CurrentUser = Depends(get_current_user),
-    db: Session = Depends(get_db),
     service: RecordService = Depends(get_record_service),
 ):
     metric = service.update_metric(
         current_user.id, record_id, metric_id, body.value, body.unit
     )
-    db.commit()
     return success_response(
         message="수치를 수정했습니다.",
         data=MetricResponse.from_model(metric, settings.ocr_min_confidence).model_dump(),
@@ -120,11 +116,9 @@ def bulk_update_metrics(
     record_id: int,
     body: MetricBulkUpdateRequest,
     current_user: CurrentUser = Depends(get_current_user),
-    db: Session = Depends(get_db),
     service: RecordService = Depends(get_record_service),
 ):
     service.bulk_update_metrics(current_user.id, record_id, body.metrics)
-    db.commit()
     return success_response(
         message="수치를 일괄 수정했습니다.",
         data=_metric_list(service, current_user.id, record_id),
@@ -136,11 +130,9 @@ def verify_checkup(
     record_id: int,
     body: VerifyRequest,
     current_user: CurrentUser = Depends(get_current_user),
-    db: Session = Depends(get_db),
     service: RecordService = Depends(get_record_service),
 ):
     record = service.verify(current_user.id, record_id, body.metrics)
-    db.commit()
     return success_response(
         message="검수를 완료했습니다.",
         data={"record_id": record.id, "verification_status": record.verification_status},
@@ -151,11 +143,9 @@ def verify_checkup(
 async def delete_checkup(
     record_id: int,
     current_user: CurrentUser = Depends(get_current_user),
-    db: Session = Depends(get_db),
     service: RecordService = Depends(get_record_service),
 ):
     file_urls = service.delete_checkup(current_user.id, record_id)
-    db.commit()
     # 커밋이 확정된 뒤에만 비가역 스토리지 삭제를 수행한다(best-effort).
     await service.purge_files(file_urls)
     return success_response(message="검진 기록을 삭제했습니다.")

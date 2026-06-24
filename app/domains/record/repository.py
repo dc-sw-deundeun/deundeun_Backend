@@ -17,6 +17,9 @@ class RecordRepository:
     def __init__(self, db: Session) -> None:
         self._db = db
 
+    def commit(self) -> None:
+        self._db.commit()
+
     def create_record(
         self, user_id: int, source_type: str, file_url: str, file_hash: str
     ) -> CheckupRecord:

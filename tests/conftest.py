@@ -72,6 +72,7 @@ def db_engine(db_url: str) -> Generator[Engine, None, None]:
     import app.core.config as config_module
     import app.database.session as session_module
 
+    config_module.settings.app_env = "test"
     config_module.settings.database_url = db_url
     session_module.init_db(db_url)
 
