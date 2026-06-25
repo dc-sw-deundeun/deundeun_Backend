@@ -7,5 +7,8 @@ from app.domains.auth.models import (  # noqa: F401
     EmailVerification,
     RefreshToken,
 )
-from app.domains.health_metric.models import HealthMetricAnalysis, HealthMetricReference  # noqa: F401
+from app.domains.health_metric.models import (  # noqa: F401
+    HealthMetricAnalysis,
+    HealthMetricReference,
+)
 from app.domains.user.models import User  # noqa: F401

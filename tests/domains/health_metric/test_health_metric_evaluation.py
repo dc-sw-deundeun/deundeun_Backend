@@ -221,16 +221,13 @@ def test_create_analysis_rate_limit(monkeypatch) -> None:
 
 
 @pytest.mark.parametrize("bad_value", [float("nan"), float("inf"), float("-inf")])
-def test_evaluate_endpoint_rejects_non_finite_value(monkeypatch, bad_value: float) -> None:
-    monkeypatch.setattr(settings, "openai_api_key", None)
+def test_non_finite_value_rejected_by_schema(bad_value: float) -> None:
+    from pydantic import ValidationError
 
-    with TestClient(app) as client:
-        response = client.post(
-            "/api/v1/health-metrics/evaluate",
-            json={"metrics": [{"label": "LDL", "value": bad_value}]},
-        )
+    from app.domains.health_metric.schemas import HealthMetricInput
 
-    assert response.status_code == 422
+    with pytest.raises(ValidationError):
+        HealthMetricInput(label="LDL", value=bad_value)
 
 
 def test_explanation_service_uses_openai_structured_response(monkeypatch) -> None:

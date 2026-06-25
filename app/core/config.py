@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     app_env: str = "development"
     database_url: str | None = None
 
-    jwt_secret_key: str
+    jwt_secret_key: str = "change-me"
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = 30
     jwt_refresh_expire_days: int = 14

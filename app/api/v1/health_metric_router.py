@@ -3,17 +3,17 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
-from app.core.dependencies import get_current_user
 from app.core.config import settings
+from app.core.dependencies import get_current_user
 from app.core.rate_limit import rate_limiter
-from app.database.session import get_db
 from app.core.response import success_response
+from app.database.session import get_db
+from app.domains.health_metric.explanation_service import HealthMetricExplanationService
 from app.domains.health_metric.schemas import (
     HealthMetricAnalysisCreateResponse,
     HealthMetricEvaluationRequest,
     HealthMetricEvaluationResponse,
 )
-from app.domains.health_metric.explanation_service import HealthMetricExplanationService
 from app.domains.health_metric.service import (
     HealthMetricAnalysisService,
     HealthMetricService,
