@@ -8,7 +8,6 @@ from app.core.config import settings
 from app.core.rate_limit import rate_limiter
 from app.database.session import get_db
 from app.core.response import success_response
-from app.domains.health_metric.models import HealthMetricAnalysis
 from app.domains.health_metric.schemas import (
     HealthMetricAnalysisCreateResponse,
     HealthMetricEvaluationRequest,
@@ -16,6 +15,7 @@ from app.domains.health_metric.schemas import (
 )
 from app.domains.health_metric.explanation_service import HealthMetricExplanationService
 from app.domains.health_metric.service import (
+    HealthMetricAnalysisService,
     HealthMetricService,
     build_detail_views,
     build_summary_view,
@@ -60,45 +60,12 @@ async def create_health_metric_analysis(
     db: Session = Depends(get_db),
 ):
     _check_analysis_rate_limit(current_user.id)
-    service = HealthMetricService()
-    results = service.evaluate_metrics(request)
-    explanation = await HealthMetricExplanationService().build_explanation(
+    analysis_id, summary = await HealthMetricAnalysisService(db).create(
         request=request,
-        results=results,
-    )
-
-    analysis = HealthMetricAnalysis(
         user_id=current_user.id,
-        sex=request.sex,
         measured_at=_parse_measured_at(request.measured_at),
-        request_payload=request.model_dump(mode="json"),
-        results_payload=[item.model_dump(mode="json") for item in results],
-        explanation_payload=explanation.model_dump(mode="json"),
-        summary_payload={},
-        details_payload=[],
     )
-    db.add(analysis)
-    db.flush()
-
-    summary = build_summary_view(
-        results=results,
-        explanation=explanation,
-        analysis_id=analysis.id,
-    )
-    details = build_detail_views(
-        results=results,
-        explanation=explanation,
-        analysis_id=analysis.id,
-    )
-    analysis.summary_payload = summary.model_dump(mode="json")
-    analysis.details_payload = [detail.model_dump(mode="json") for detail in details]
-    db.commit()
-    db.refresh(analysis)
-
-    response = HealthMetricAnalysisCreateResponse(
-        analysis_id=analysis.id,
-        summary=summary,
-    )
+    response = HealthMetricAnalysisCreateResponse(analysis_id=analysis_id, summary=summary)
     return success_response(
         message="건강검진 분석이 생성되었습니다.",
         data=response.model_dump(mode="json"),

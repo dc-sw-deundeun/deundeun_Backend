@@ -1,6 +1,12 @@
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import datetime
 
+from sqlalchemy.orm import Session
+
+from app.domains.health_metric.explanation_service import HealthMetricExplanationService
+from app.domains.health_metric.models import HealthMetricAnalysis
+from app.domains.health_metric.repository import HealthMetricAnalysisRepository
 from app.domains.health_metric.schemas import (
     HealthMetricDetailView,
     HealthMetricEvaluationItem,
@@ -637,6 +643,46 @@ def _range_bar(item: HealthMetricEvaluationItem) -> HealthMetricRangeBar | None:
             for label, from_value, to_value, color in segment_specs
         ],
     )
+
+
+class HealthMetricAnalysisService:
+    def __init__(self, db: Session) -> None:
+        self._db = db
+        self._repo = HealthMetricAnalysisRepository(db)
+
+    async def create(
+        self,
+        request: HealthMetricEvaluationRequest,
+        user_id: int,
+        measured_at: datetime | None,
+    ) -> tuple[int, HealthMetricSummaryView]:
+        results = HealthMetricService().evaluate_metrics(request)
+        explanation = await HealthMetricExplanationService().build_explanation(
+            request=request,
+            results=results,
+        )
+
+        analysis = HealthMetricAnalysis(
+            user_id=user_id,
+            sex=request.sex,
+            measured_at=measured_at,
+            request_payload=request.model_dump(mode="json"),
+            results_payload=[item.model_dump(mode="json") for item in results],
+            explanation_payload=explanation.model_dump(mode="json"),
+            summary_payload={},
+            details_payload=[],
+        )
+        self._db.add(analysis)
+        self._db.flush()
+
+        summary = build_summary_view(results=results, explanation=explanation, analysis_id=analysis.id)
+        details = build_detail_views(results=results, explanation=explanation, analysis_id=analysis.id)
+        analysis.summary_payload = summary.model_dump(mode="json")
+        analysis.details_payload = [detail.model_dump(mode="json") for detail in details]
+        self._db.commit()
+        self._db.refresh(analysis)
+
+        return analysis.id, summary
 
 
 def _fallback_meaning(item: HealthMetricEvaluationItem) -> str:
