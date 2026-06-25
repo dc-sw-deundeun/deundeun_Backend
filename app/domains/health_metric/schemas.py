@@ -1,4 +1,6 @@
-from pydantic import BaseModel, Field
+import math
+
+from pydantic import BaseModel, Field, field_validator
 
 
 class HealthMetricReferenceResponse(BaseModel):
@@ -28,6 +30,13 @@ class HealthMetricInput(BaseModel):
     item9_positive: bool | None = Field(
         default=None, description="PHQ-9 9번 문항 양성 여부"
     )
+
+    @field_validator("value")
+    @classmethod
+    def value_must_be_finite(cls, v: float) -> float:
+        if not math.isfinite(v):
+            raise ValueError("value must be a finite number")
+        return v
 
 
 class HealthMetricEvaluationRequest(BaseModel):

@@ -364,6 +364,19 @@ def test_detail_endpoint_returns_metric_trend_from_previous_analyses(monkeypatch
             app.dependency_overrides[get_current_user] = previous_user_override
 
 
+@pytest.mark.parametrize("bad_value", [float("nan"), float("inf"), float("-inf")])
+def test_evaluate_endpoint_rejects_non_finite_value(monkeypatch, bad_value: float) -> None:
+    monkeypatch.setattr(settings, "openai_api_key", None)
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/v1/health-metrics/evaluate",
+            json={"metrics": [{"label": "LDL", "value": bad_value}]},
+        )
+
+    assert response.status_code == 422
+
+
 def test_explanation_service_uses_openai_structured_response(monkeypatch) -> None:
     async def fake_call_openai(self, payload):
         assert payload["model"] == "test-model"
