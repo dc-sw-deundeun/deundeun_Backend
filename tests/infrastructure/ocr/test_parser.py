@@ -84,3 +84,53 @@ def test_parsed_metric_has_page_index():
         page_index=3,
     )
     assert m2.page_index == 3
+
+
+def test_shinjangjilhwan_alias_collision_resolved():
+    # "신장질환"이 height alias "신장"에 exact 매칭되지 않아야 함
+    # "크레아티닌(mg/dL)"이 creatinine(5자)으로 선택돼 0.9가 올바르게 추출돼야 함
+    result = _result(
+        [
+            _field("신장질환", 10, 100),
+            _field("크레아티닌(mg/dL)", 100, 100),
+            _field("0.9", 300, 100),
+            _field("1.5이하", 380, 100),
+        ]
+    )
+    metrics = {m.metric_code: m for m in OcrParser().parse(result)}
+    assert "height" not in metrics
+    assert metrics["creatinine"].value == "0.9"
+
+
+def test_parses_height_weight_pair():
+    result = _result(
+        [
+            _field("키", 10, 200),
+            _field("(cm)", 50, 200),
+            _field("및", 80, 200),
+            _field("몸무게", 110, 200),
+            _field("(kg)", 160, 200),
+            _field("163.3", 210, 200),
+            _field("/", 260, 200),
+            _field("55.3", 290, 200),
+        ]
+    )
+    metrics = {m.metric_code: m for m in OcrParser().parse(result)}
+    assert metrics["height"].value == "163.3"
+    assert metrics["weight"].value == "55.3"
+
+
+def test_character_split_label_joined_by_window():
+    # Clova가 "체질량지수"를 글자별로 분리해 반환한 경우
+    result = _result(
+        [
+            _field("체", 10, 300),
+            _field("질", 20, 300),
+            _field("량", 30, 300),
+            _field("지", 40, 300),
+            _field("수", 50, 300),
+            _field("20.7", 120, 300),
+        ]
+    )
+    metrics = {m.metric_code: m for m in OcrParser().parse(result)}
+    assert metrics["bmi"].value == "20.7"

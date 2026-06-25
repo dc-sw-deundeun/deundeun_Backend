@@ -1,12 +1,14 @@
 import re
+import statistics
 
 from pydantic import BaseModel
 
-from app.infrastructure.ocr.metric_dictionary import MetricSpec, find_spec_by_label
+from app.infrastructure.ocr.metric_dictionary import MetricSpec, find_best_alias_match
 from app.infrastructure.ocr.ocr_dto import OcrFieldDTO, OcrResultDTO
 
 _NUMBER_RE = re.compile(r"^\d+(\.\d+)?$")
 _REFERENCE_MARKERS = ("정상", "미만", "이하", "이상", "~", "범위", "음성±")
+_MAX_LABEL_WINDOW = 5
 
 
 class ParsedMetric(BaseModel):
@@ -28,23 +30,24 @@ def _is_reference(text: str) -> bool:
 
 
 class OcrParser:
-    def parse(self, result: OcrResultDTO, row_tolerance: float = 20.0) -> list[ParsedMetric]:
+    def parse(self, result: OcrResultDTO) -> list[ParsedMetric]:
+        if not result.fields:
+            return []
+        heights = [f.y_height for f in result.fields if f.y_height > 0]
+        row_tolerance = max(20.0, statistics.median(heights) * 1.5) if heights else 20.0
         rows = self._cluster_rows(result.fields, row_tolerance)
         metrics: list[ParsedMetric] = []
         seen: set[str] = set()
         for row in rows:
-            for idx, fld in enumerate(row):
-                spec = find_spec_by_label(fld.text)
-                if spec is None:
-                    continue
-                right = [f for f in row[idx + 1 :] if not _is_reference(f.text)]
-                parsed = self._extract(spec, right)
-                for m in parsed:
-                    if m.metric_code in seen:
-                        continue
+            found = self._find_label_in_row(row)
+            if found is None:
+                continue
+            spec, label_end = found
+            right = [f for f in row[label_end:] if not _is_reference(f.text)]
+            for m in self._extract(spec, right):
+                if m.metric_code not in seen:
                     seen.add(m.metric_code)
                     metrics.append(m)
-                break  # 한 행은 하나의 라벨만 처리
         return metrics
 
     def _cluster_rows(self, fields: list[OcrFieldDTO], tolerance: float) -> list[list[OcrFieldDTO]]:
@@ -59,9 +62,34 @@ class OcrParser:
             row.sort(key=lambda f: f.x_min)
         return rows
 
+    def _find_label_in_row(self, row: list[OcrFieldDTO]) -> tuple[MetricSpec, int] | None:
+        """행에서 가장 긴 alias로 매칭되는 스펙을 반환한다.
+
+        연속 토큰을 최대 _MAX_LABEL_WINDOW개씩 join해 alias 매칭 시도.
+        반환: (spec, label_end_idx) — label_end_idx 이후가 값 후보 영역.
+        """
+        best_spec: MetricSpec | None = None
+        best_alias_len: int = 0
+        best_end: int = 0
+
+        for start in range(len(row)):
+            for window in range(1, _MAX_LABEL_WINDOW + 1):
+                if start + window > len(row):
+                    break
+                combined = "".join(f.text for f in row[start : start + window])
+                match = find_best_alias_match(combined)
+                if match and len(match[1]) > best_alias_len:
+                    best_spec = match[0]
+                    best_alias_len = len(match[1])
+                    best_end = start + window
+
+        return (best_spec, best_end) if best_spec else None
+
     def _extract(self, spec: MetricSpec, right: list[OcrFieldDTO]) -> list[ParsedMetric]:
         if spec.kind == "bp_pair":
             return self._extract_bp(right)
+        if spec.kind == "hw_pair":
+            return self._extract_hw(right)
         if spec.kind == "categorical":
             return self._extract_categorical(spec, right)
         return self._extract_numeric(spec, right)
@@ -104,6 +132,33 @@ class OcrParser:
                 raw_text=dia_f.text,
             ),
         ]
+
+    def _extract_hw(self, right: list[OcrFieldDTO]) -> list[ParsedMetric]:
+        numbers = [f for f in right if _is_number(f.text)]
+        if not numbers:
+            return []
+        result = [
+            ParsedMetric(
+                metric_code="height",
+                metric_name="신장",
+                value=numbers[0].text.strip(),
+                unit="cm",
+                confidence=numbers[0].confidence,
+                raw_text=numbers[0].text,
+            )
+        ]
+        if len(numbers) >= 2:
+            result.append(
+                ParsedMetric(
+                    metric_code="weight",
+                    metric_name="체중",
+                    value=numbers[1].text.strip(),
+                    unit="kg",
+                    confidence=numbers[1].confidence,
+                    raw_text=numbers[1].text,
+                )
+            )
+        return result
 
     def _extract_categorical(
         self, spec: MetricSpec, right: list[OcrFieldDTO]
