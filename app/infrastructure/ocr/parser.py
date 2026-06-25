@@ -38,13 +38,21 @@ class OcrParser:
         rows = self._cluster_rows(result.fields, row_tolerance)
         metrics: list[ParsedMetric] = []
         seen: set[str] = set()
-        for row in rows:
+        for row_index, row in enumerate(rows):
             found = self._find_label_in_row(row)
             if found is None:
                 continue
             spec, label_end = found
             right = [f for f in row[label_end:] if not _is_reference(f.text)]
-            for m in self._extract(spec, right):
+            extracted = self._extract(spec, right)
+            if not extracted and spec.kind == "hw_pair" and row_index + 1 < len(rows):
+                extracted = self._extract(
+                    spec,
+                    [f for f in rows[row_index + 1] if not _is_reference(f.text)],
+                )
+            if not extracted and spec.code == "alt" and row_index > 0:
+                extracted = self._extract_alt_from_previous_ast_row(rows[row_index - 1])
+            for m in extracted:
                 if m.metric_code not in seen:
                     seen.add(m.metric_code)
                     metrics.append(m)
@@ -54,7 +62,18 @@ class OcrParser:
         ordered = sorted(fields, key=lambda f: f.y_center)
         rows: list[list[OcrFieldDTO]] = []
         for fld in ordered:
-            if rows and abs(fld.y_center - rows[-1][0].y_center) <= tolerance:
+            if rows:
+                row_ys = [f.y_center for f in rows[-1]]
+                row_y = statistics.median(row_ys)
+                candidate_span = max([*row_ys, fld.y_center]) - min([*row_ys, fld.y_center])
+            else:
+                row_y = None
+                candidate_span = 0.0
+            if (
+                row_y is not None
+                and abs(fld.y_center - row_y) <= tolerance
+                and candidate_span <= tolerance * 1.1
+            ):
                 rows[-1].append(fld)
             else:
                 rows.append([fld])
@@ -131,6 +150,27 @@ class OcrParser:
                 confidence=dia_f.confidence,
                 raw_text=dia_f.text,
             ),
+        ]
+
+    def _extract_alt_from_previous_ast_row(
+        self, previous_row: list[OcrFieldDTO]
+    ) -> list[ParsedMetric]:
+        found = self._find_label_in_row(previous_row)
+        if found is None or found[0].code != "ast":
+            return []
+        numbers = [f for f in previous_row if _is_number(f.text)]
+        if len(numbers) < 2:
+            return []
+        alt_f = numbers[1]
+        return [
+            ParsedMetric(
+                metric_code="alt",
+                metric_name="ALT",
+                value=alt_f.text.strip(),
+                unit="U/L",
+                confidence=alt_f.confidence,
+                raw_text=alt_f.text,
+            )
         ]
 
     def _extract_hw(self, right: list[OcrFieldDTO]) -> list[ParsedMetric]:

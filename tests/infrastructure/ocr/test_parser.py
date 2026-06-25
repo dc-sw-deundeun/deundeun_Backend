@@ -2,8 +2,15 @@ from app.infrastructure.ocr.ocr_dto import OcrFieldDTO, OcrResultDTO
 from app.infrastructure.ocr.parser import OcrParser
 
 
-def _field(text, x_min, y_center, conf=0.95):
-    return OcrFieldDTO(text=text, confidence=conf, x_min=x_min, x_max=x_min + 30, y_center=y_center)
+def _field(text, x_min, y_center, conf=0.95, y_height=0.0):
+    return OcrFieldDTO(
+        text=text,
+        confidence=conf,
+        x_min=x_min,
+        x_max=x_min + 30,
+        y_center=y_center,
+        y_height=y_height,
+    )
 
 
 def _result(fields):
@@ -134,3 +141,80 @@ def test_character_split_label_joined_by_window():
     )
     metrics = {m.metric_code: m for m in OcrParser().parse(result)}
     assert metrics["bmi"].value == "20.7"
+
+
+def test_row_clustering_uses_row_center_not_first_outlier_token():
+    result = _result(
+        [
+            _field("01:10-1.9", 690, 307, y_height=15),
+            _field("/15.6-16.5", 752, 306, y_height=13),
+            _field("174.5", 425, 330, y_height=19),
+            _field("cm", 525, 330, y_height=13),
+            _field("신", 264, 331, y_height=17),
+            _field("장", 283, 331, y_height=17),
+        ]
+    )
+
+    metrics = {m.metric_code: m for m in OcrParser().parse(result)}
+
+    assert metrics["height"].value == "174.5"
+
+
+def test_label_header_can_use_next_row_values():
+    result = _result(
+        [
+            _field("키", 10, 100),
+            _field("및", 50, 100),
+            _field("몸무게", 80, 100),
+            _field("결과", 130, 100),
+            _field("163.3", 10, 125),
+            _field("/", 60, 125),
+            _field("55.3", 90, 125),
+        ]
+    )
+
+    metrics = {m.metric_code: m for m in OcrParser().parse(result)}
+
+    assert metrics["height"].value == "163.3"
+    assert metrics["weight"].value == "55.3"
+
+
+def test_alt_can_use_second_number_from_previous_ast_row():
+    result = _result(
+        [
+            _field("AST(SGOT)", 10, 100),
+            _field("(IU/L)", 100, 100),
+            _field("18", 160, 100),
+            _field("9", 200, 100),
+            _field("40이하", 240, 100),
+            _field("35이하", 300, 100),
+            _field("ALT(SGPT)", 10, 125),
+            _field("(IU/L)", 100, 125),
+        ]
+    )
+
+    metrics = {m.metric_code: m for m in OcrParser().parse(result)}
+
+    assert metrics["ast"].value == "18"
+    assert metrics["alt"].value == "9"
+
+
+def test_parser_allows_single_character_ocr_typo_for_long_korean_labels():
+    result = _result(
+        [
+            _field("히", 243, 385),
+            _field("리", 264, 385),
+            _field("둘", 285, 385),
+            _field("레", 303, 385),
+            _field("84.0", 429, 385),
+            _field("cm", 525, 385),
+            _field("체질랑지수", 243, 412),
+            _field("24.1", 422, 412),
+            _field("kg/m2", 505, 413),
+        ]
+    )
+
+    metrics = {m.metric_code: m for m in OcrParser().parse(result)}
+
+    assert metrics["waist"].value == "84.0"
+    assert metrics["bmi"].value == "24.1"

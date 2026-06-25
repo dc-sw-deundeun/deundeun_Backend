@@ -45,11 +45,18 @@ def normalize_label(s: str) -> str:
     return s.replace(" ", "").replace("\t", "").upper()
 
 
+def _is_single_char_typo(alias: str, text: str) -> bool:
+    if len(alias) != len(text):
+        return False
+    return sum(a != b for a, b in zip(alias, text)) == 1
+
+
 def find_best_alias_match(text: str) -> tuple[MetricSpec, str] | None:
     """정규화된 text에서 가장 긴 alias를 가진 스펙을 반환한다.
 
     - alias 길이 ≤ 3: exact match (신장, 키, LDL, HDL 등 단어 충돌 방지)
     - alias 길이 ≥ 4: substring match (크레아티닌(mg/dL) 등 부가 정보 포함 토큰 대응)
+    - alias 길이 ≥ 4이고 길이가 같은 경우 한 글자 OCR 오인식 허용
     alias 길이가 같으면 METRIC_SPECS 순서상 앞선 스펙이 우선한다.
     """
     norm = normalize_label(text)
@@ -63,7 +70,7 @@ def find_best_alias_match(text: str) -> tuple[MetricSpec, str] | None:
             if len(norm_alias) <= 3:
                 matched = norm_alias == norm
             else:
-                matched = norm_alias in norm
+                matched = norm_alias in norm or _is_single_char_typo(norm_alias, norm)
             if matched and len(norm_alias) > len(best_alias):
                 best_spec = spec
                 best_alias = norm_alias
