@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -34,16 +36,19 @@ class HealthMetricAnalysisRepository:
         )
 
     def list_until(
-        self, analysis_id: int, user_id: int, limit: int = 4
+        self, measured_at: datetime, user_id: int, limit: int = 4
     ) -> list[HealthMetricAnalysis]:
         return list(
             self.db.scalars(
                 select(HealthMetricAnalysis)
                 .where(
-                    HealthMetricAnalysis.id <= analysis_id,
+                    HealthMetricAnalysis.measured_at <= measured_at,
                     HealthMetricAnalysis.user_id == user_id,
                 )
-                .order_by(HealthMetricAnalysis.id.desc())
+                .order_by(
+                    HealthMetricAnalysis.measured_at.desc(),
+                    HealthMetricAnalysis.created_at.desc(),
+                )
                 .limit(limit)
             )
         )

@@ -135,7 +135,10 @@ async def get_health_metric_analysis_detail(
         ):
             detail = dict(detail)
             detail["trend"] = _build_metric_trend(
-                analyses=repo.list_until(analysis_id, user_id=current_user.id),
+                analyses=repo.list_until(
+                    analysis.measured_at or analysis.created_at,
+                    user_id=current_user.id,
+                ),
                 metric_code=code or normalized_code,
             )
             return success_response(data=detail)
