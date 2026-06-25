@@ -30,3 +30,22 @@ def test_from_vertices_handles_empty_vertices():
 def test_result_holds_fields():
     result = OcrResultDTO(fields=[])
     assert result.fields == []
+
+
+def test_from_vertices_computes_y_height():
+    field = OcrFieldDTO.from_vertices(
+        text="공복혈당",
+        confidence=0.97,
+        vertices=[
+            {"x": 10, "y": 100},
+            {"x": 60, "y": 100},
+            {"x": 60, "y": 130},
+            {"x": 10, "y": 130},
+        ],
+    )
+    assert field.y_height == 30.0
+
+
+def test_from_vertices_empty_returns_zero_y_height():
+    field = OcrFieldDTO.from_vertices(text="x", confidence=0.5, vertices=[])
+    assert field.y_height == 0.0
