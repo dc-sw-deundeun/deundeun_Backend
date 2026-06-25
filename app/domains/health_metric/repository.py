@@ -33,11 +33,16 @@ class HealthMetricAnalysisRepository:
             select(HealthMetricAnalysis).where(HealthMetricAnalysis.id == analysis_id)
         )
 
-    def list_until(self, analysis_id: int, limit: int = 4) -> list[HealthMetricAnalysis]:
+    def list_until(
+        self, analysis_id: int, user_id: int, limit: int = 4
+    ) -> list[HealthMetricAnalysis]:
         return list(
             self.db.scalars(
                 select(HealthMetricAnalysis)
-                .where(HealthMetricAnalysis.id <= analysis_id)
+                .where(
+                    HealthMetricAnalysis.id <= analysis_id,
+                    HealthMetricAnalysis.user_id == user_id,
+                )
                 .order_by(HealthMetricAnalysis.id.desc())
                 .limit(limit)
             )

@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.core.dependencies import get_current_user
 from app.database.session import get_db
 from app.core.response import success_response
 from app.domains.health_metric.models import HealthMetricAnalysis
@@ -18,6 +19,7 @@ from app.domains.health_metric.service import (
     build_detail_views,
     build_summary_view,
 )
+from app.domains.user.schemas import CurrentUser
 
 router = APIRouter()
 
@@ -49,6 +51,7 @@ async def evaluate_health_metrics(request: HealthMetricEvaluationRequest):
 @router.post("/analyses")
 async def create_health_metric_analysis(
     request: HealthMetricEvaluationRequest,
+    current_user: CurrentUser = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     service = HealthMetricService()
@@ -59,7 +62,7 @@ async def create_health_metric_analysis(
     )
 
     analysis = HealthMetricAnalysis(
-        user_id=None,
+        user_id=current_user.id,
         sex=request.sex,
         measured_at=_parse_measured_at(request.measured_at),
         request_payload=request.model_dump(mode="json"),
@@ -99,9 +102,10 @@ async def create_health_metric_analysis(
 @router.get("/analyses/{analysis_id}/summary")
 async def get_health_metric_analysis_summary(
     analysis_id: int,
+    current_user: CurrentUser = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    analysis = _get_analysis_or_404(analysis_id, db)
+    analysis = _get_analysis_or_404(analysis_id, current_user.id, db)
     return success_response(data=analysis.summary_payload)
 
 
@@ -109,9 +113,10 @@ async def get_health_metric_analysis_summary(
 async def get_health_metric_analysis_detail(
     analysis_id: int,
     metric_code: str,
+    current_user: CurrentUser = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    analysis = _get_analysis_or_404(analysis_id, db)
+    analysis = _get_analysis_or_404(analysis_id, current_user.id, db)
     repo = HealthMetricAnalysisRepository(db)
     normalized_code = metric_code.strip().upper()
     for detail in analysis.details_payload:
@@ -123,16 +128,18 @@ async def get_health_metric_analysis_detail(
         ):
             detail = dict(detail)
             detail["trend"] = _build_metric_trend(
-                analyses=repo.list_until(analysis_id),
+                analyses=repo.list_until(analysis_id, user_id=current_user.id),
                 metric_code=code or normalized_code,
             )
             return success_response(data=detail)
     raise HTTPException(status_code=404, detail="Health metric detail not found")
 
 
-def _get_analysis_or_404(analysis_id: int, db: Session) -> HealthMetricAnalysis:
+def _get_analysis_or_404(
+    analysis_id: int, user_id: int, db: Session
+) -> HealthMetricAnalysis:
     analysis = HealthMetricAnalysisRepository(db).get(analysis_id)
-    if analysis is None:
+    if analysis is None or analysis.user_id != user_id:
         raise HTTPException(status_code=404, detail="Health metric analysis not found")
     return analysis
 

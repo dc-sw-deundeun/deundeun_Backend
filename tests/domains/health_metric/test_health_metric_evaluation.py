@@ -7,6 +7,7 @@ import app.domains.health_metric.models  # noqa: F401
 import app.domains.auth.models  # noqa: F401
 import app.domains.user.models  # noqa: F401
 from app.core.config import settings
+from app.core.dependencies import get_current_user
 from app.database.base import Base
 from app.database.session import get_db
 from app.domains.health_metric.explanation_service import HealthMetricExplanationService
@@ -16,6 +17,7 @@ from app.domains.health_metric.service import (
     build_detail_views,
     build_summary_view,
 )
+from app.domains.user.schemas import CurrentUser
 from app.main import app
 
 
@@ -128,6 +130,19 @@ def test_builds_summary_and_detail_view_models() -> None:
     assert details[0].recommendations.items
 
 
+def test_create_analysis_requires_authentication(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "openai_api_key", None)
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/v1/health-metrics/analyses",
+            json={"metrics": [{"label": "LDL", "value": 150}]},
+        )
+
+    assert response.status_code == 401
+    assert response.json()["error_code"] == "AUTH_REQUIRED"
+
+
 def test_create_summary_and_detail_endpoints(monkeypatch) -> None:
     monkeypatch.setattr(settings, "openai_api_key", None)
     engine = create_engine(
@@ -146,7 +161,9 @@ def test_create_summary_and_detail_endpoints(monkeypatch) -> None:
             db.close()
 
     previous_override = app.dependency_overrides.get(get_db)
+    previous_user_override = app.dependency_overrides.get(get_current_user)
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = lambda: CurrentUser(id=1)
     try:
         with TestClient(app) as client:
             create_response = client.post(
@@ -176,11 +193,22 @@ def test_create_summary_and_detail_endpoints(monkeypatch) -> None:
         assert detail_response.status_code == 200
         assert detail_response.json()["data"]["metric"]["code"] == "LDL"
         assert detail_response.json()["data"]["meaning"]["body"]
+
+        app.dependency_overrides[get_current_user] = lambda: CurrentUser(id=2)
+        with TestClient(app) as client:
+            forbidden_summary = client.get(
+                f"/api/v1/health-metrics/analyses/{analysis_id}/summary"
+            )
+        assert forbidden_summary.status_code == 404
     finally:
         if previous_override is None:
             app.dependency_overrides.pop(get_db, None)
         else:
             app.dependency_overrides[get_db] = previous_override
+        if previous_user_override is None:
+            app.dependency_overrides.pop(get_current_user, None)
+        else:
+            app.dependency_overrides[get_current_user] = previous_user_override
 
 
 def test_detail_endpoint_returns_metric_trend_from_previous_analyses(monkeypatch) -> None:
@@ -201,7 +229,9 @@ def test_detail_endpoint_returns_metric_trend_from_previous_analyses(monkeypatch
             db.close()
 
     previous_override = app.dependency_overrides.get(get_db)
+    previous_user_override = app.dependency_overrides.get(get_current_user)
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = lambda: CurrentUser(id=1)
     try:
         with TestClient(app) as client:
             first = client.post(
@@ -211,6 +241,15 @@ def test_detail_endpoint_returns_metric_trend_from_previous_analyses(monkeypatch
                     "metrics": [{"label": "LDL", "value": 150}],
                 },
             )
+            app.dependency_overrides[get_current_user] = lambda: CurrentUser(id=2)
+            other_user = client.post(
+                "/api/v1/health-metrics/analyses",
+                json={
+                    "measured_at": "2026-06-25",
+                    "metrics": [{"label": "LDL", "value": 999}],
+                },
+            )
+            app.dependency_overrides[get_current_user] = lambda: CurrentUser(id=1)
             second = client.post(
                 "/api/v1/health-metrics/analyses",
                 json={
@@ -231,6 +270,7 @@ def test_detail_endpoint_returns_metric_trend_from_previous_analyses(monkeypatch
             )
 
         assert first.status_code == 200
+        assert other_user.status_code == 200
         assert second.status_code == 200
         assert third.status_code == 200
         assert detail_response.status_code == 200
@@ -242,6 +282,10 @@ def test_detail_endpoint_returns_metric_trend_from_previous_analyses(monkeypatch
             app.dependency_overrides.pop(get_db, None)
         else:
             app.dependency_overrides[get_db] = previous_override
+        if previous_user_override is None:
+            app.dependency_overrides.pop(get_current_user, None)
+        else:
+            app.dependency_overrides[get_current_user] = previous_user_override
 
 
 def test_explanation_service_uses_openai_structured_response(monkeypatch) -> None:
