@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class HealthMetricReferenceResponse(BaseModel):
@@ -19,3 +19,125 @@ class MetricDetailResponse(BaseModel):
     # reference: HealthMetricReferenceResponse
     # analysis_summary: str | None
     pass
+
+
+class HealthMetricInput(BaseModel):
+    label: str = Field(..., description="OCR 또는 클라이언트가 전달한 항목명")
+    value: float = Field(..., description="검진 수치")
+    unit: str | None = Field(default=None, description="선택 입력 단위")
+    item9_positive: bool | None = Field(
+        default=None, description="PHQ-9 9번 문항 양성 여부"
+    )
+
+
+class HealthMetricEvaluationRequest(BaseModel):
+    sex: str | None = Field(default=None, description="male/female 또는 남/여")
+    measured_at: str | None = Field(default=None, description="검진 결과지 날짜 YYYY-MM-DD")
+    metrics: list[HealthMetricInput]
+
+
+class HealthMetricEvaluationItem(BaseModel):
+    input_label: str
+    canonical_test_code: str | None
+    name: str | None
+    value: float
+    unit: str | None = None
+    status: str
+    status_label: str
+    matched_rule: str | None = None
+    note: str | None = None
+
+
+class HealthMetricItemExplanation(BaseModel):
+    canonical_test_code: str | None
+    input_label: str
+    title: str
+    explanation: str
+    status_label: str
+
+
+class HealthMetricExplanation(BaseModel):
+    status: str
+    summary: str
+    highlights: list[str]
+    item_explanations: list[HealthMetricItemExplanation]
+    disclaimer: str
+
+
+class HealthMetricRangeSegment(BaseModel):
+    label: str
+    from_value: float
+    to_value: float
+    color: str
+
+
+class HealthMetricRangeBar(BaseModel):
+    min: float
+    max: float
+    marker: float
+    marker_percent: float
+    segments: list[HealthMetricRangeSegment]
+
+
+class HealthMetricSummaryCard(BaseModel):
+    code: str | None
+    label: str
+    value: float
+    unit: str | None
+    status: str
+    status_label: str
+    value_text: str
+    badge_text: str
+    range_bar: HealthMetricRangeBar | None = None
+
+
+class HealthMetricOverallSummary(BaseModel):
+    title: str
+    summary: str
+    counts: dict[str, int]
+
+
+class HealthMetricSummaryView(BaseModel):
+    analysis_id: int | None = None
+    overall: HealthMetricOverallSummary
+    cards: list[HealthMetricSummaryCard]
+
+
+class HealthMetricTrendPoint(BaseModel):
+    label: str
+    value: float
+
+
+class HealthMetricTrend(BaseModel):
+    title: str
+    points: list[HealthMetricTrendPoint]
+
+
+class HealthMetricMeaning(BaseModel):
+    title: str
+    body: str
+
+
+class HealthMetricRecommendations(BaseModel):
+    title: str
+    items: list[str]
+
+
+class HealthMetricDetailView(BaseModel):
+    analysis_id: int | None = None
+    metric: HealthMetricSummaryCard
+    range_bar: HealthMetricRangeBar | None = None
+    trend: HealthMetricTrend
+    meaning: HealthMetricMeaning
+    recommendations: HealthMetricRecommendations
+
+
+class HealthMetricAnalysisCreateResponse(BaseModel):
+    analysis_id: int
+    summary: HealthMetricSummaryView
+
+
+class HealthMetricEvaluationResponse(BaseModel):
+    results: list[HealthMetricEvaluationItem]
+    explanation: HealthMetricExplanation
+    ui: dict | None = None

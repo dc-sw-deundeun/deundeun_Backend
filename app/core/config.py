@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     analysis_callback_secret: str | None = None
     analysis_polling_interval_seconds: int = 60
 
+    openai_api_key: str | None = None
+    openai_model: str = "gpt-4.1-mini"
+    openai_timeout_seconds: float = 20.0
+
     @model_validator(mode="after")
     def validate_production_secrets(self) -> "Settings":
         if self.app_env in ("production", "staging") and self.jwt_secret_key == "change-me":
