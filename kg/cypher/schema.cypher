@@ -13,3 +13,7 @@ FOR (e:Effect) REQUIRE e.hpo_id IS UNIQUE;
 // 조회용 보조 인덱스 — ATC 기준 조인(DUR 단계)에 사용. 대표 ATC(atc_code) 단일값 인덱스.
 CREATE INDEX drug_atc_code IF NOT EXISTS
 FOR (d:Drug) ON (d.atc_code);
+
+// 한국어명 직접 조회용 — 검진 finding name_ko 매칭(보조). 정본 매칭 키는 mondo_id.
+CREATE INDEX disease_name_ko IF NOT EXISTS
+FOR (d:Disease) ON (d.name_ko);

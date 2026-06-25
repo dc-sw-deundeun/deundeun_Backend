@@ -1,8 +1,11 @@
 """Step 3: PrimeKG kg.csv를 임상 레이어로 필터링한다.
 
 - 노드 prune: x_type, y_type 둘 다 {disease, drug, effect/phenotype} 인 엣지만 유지
-- relation 필터: display_relation 화이트리스트만 유지
+- relation 필터: `relation` 컬럼(머신 이름) 화이트리스트만 유지 (display_relation 아님)
 - 결과: kg/data/kg_clinical.csv + 노드/엣지/relation 카운트 리포트
+
+drug_drug(약물 상호작용)는 제외 — 약물-약물 안전은 DUR 레이어(병용금기)로 커버한다.
+off-label use, phenotype_phenotype(effect 계층)도 제외.
 
 사용:
     python kg/scripts/02_filter_primekg.py [입력 kg.csv] [출력 kg_clinical.csv]
@@ -21,17 +24,14 @@ from _common import KG_CLINICAL_CSV, KG_CSV
 # (실행 초반 출력되는 x_type 분포로 실제 문자열을 반드시 확인할 것)
 KEEP_NODE_TYPES = {"disease", "drug", "effect/phenotype"}
 
-# display_relation 유지 대상
+# `relation` 컬럼(머신 이름) 유지 대상 — 앱 목적(치료/가드레일/고위험군/증상/부작용)에 맞춘 6종
 KEEP_RELATIONS = {
-    "indication",
-    "contraindication",
-    "off-label use",
-    "side effect",
-    "interacts with",
-    "synergistic interaction",
-    "phenotype present",
-    "phenotype absent",
-    "parent-child",
+    "indication",                   # Drug→Disease: 치료 적응증
+    "contraindication",             # Drug→Disease: 안전 가드레일
+    "disease_disease",              # Disease→Disease: 고위험군 판별
+    "disease_phenotype_positive",   # Disease→Phenotype: 동반 증상 (해석 grounding)
+    "disease_phenotype_negative",   # Disease→Phenotype: 배제 증상
+    "drug_effect",                  # Drug→Phenotype: 약물 부작용
 }
 
 CHUNK = 500_000
@@ -53,15 +53,15 @@ def main() -> None:
         if first_chunk:
             print("[info] x_type 분포:", chunk["x_type"].value_counts().to_dict())
             print(
-                "[info] display_relation 상위 20:",
-                chunk["display_relation"].value_counts().head(20).to_dict(),
+                "[info] relation 상위 20:",
+                chunk["relation"].value_counts().head(20).to_dict(),
             )
             first_chunk = False
 
         filtered = chunk[
             chunk["x_type"].isin(KEEP_NODE_TYPES)
             & chunk["y_type"].isin(KEEP_NODE_TYPES)
-            & chunk["display_relation"].isin(KEEP_RELATIONS)
+            & chunk["relation"].isin(KEEP_RELATIONS)
         ]
         if filtered.empty:
             continue
@@ -74,7 +74,7 @@ def main() -> None:
         )
         header_written = True
         edge_total += len(filtered)
-        rel_counter.update(filtered["display_relation"].tolist())
+        rel_counter.update(filtered["relation"].tolist())
 
         for side in ("x", "y"):
             sub = filtered[[f"{side}_type", f"{side}_id"]].drop_duplicates()
@@ -85,7 +85,7 @@ def main() -> None:
 
     if not header_written:
         print("\n[경고] 필터 결과가 비었습니다. KEEP_NODE_TYPES / KEEP_RELATIONS 문자열을 "
-              "위 x_type·display_relation 분포와 대조하세요.")
+              "위 x_type·relation 분포와 대조하세요.")
         return
 
     print("\n===== 필터링 리포트 =====")

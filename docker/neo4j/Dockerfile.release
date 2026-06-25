@@ -1,0 +1,17 @@
+# 배포용 self-contained Neo4j 이미지 — neo4j.dump를 이미지에 굽는다(baked-in).
+# 개발용(docker/neo4j/Dockerfile)은 덤프를 볼륨 마운트하지만, 이 이미지는 덤프 없이도
+# 단독 실행된다(레지스트리 push / docker save 핸드오프용).
+#
+# 빌드는 반드시 docker/build-release.sh 로 한다 — 덤프와 엔트리포인트를 임시 컨텍스트로
+# 스테이징해 빌드하므로 거대한 kg/data를 빌드 컨텍스트로 보내지 않는다.
+FROM neo4j:5.26-community
+
+USER root
+
+# 스테이징 컨텍스트 루트에 둔 파일들을 복사
+COPY docker-entrypoint-kg.sh /docker-entrypoint-kg.sh
+COPY neo4j.dump /dumps/neo4j.dump
+RUN chmod +x /docker-entrypoint-kg.sh
+
+ENTRYPOINT ["/docker-entrypoint-kg.sh"]
+CMD ["neo4j"]

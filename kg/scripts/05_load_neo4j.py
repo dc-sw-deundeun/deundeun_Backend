@@ -16,9 +16,11 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import json
+
 import pandas as pd
 
-from _common import DRUGBANK_ATC_CSV, KG_CLINICAL_CSV, KG_DIR, get_driver
+from _common import DRUGBANK_ATC_CSV, KG_CLINICAL_CSV, KG_DIR, MAPPING_TABLE, get_driver
 
 SCHEMA_CYPHER = KG_DIR / "cypher" / "schema.cypher"
 BATCH = 5000
@@ -109,6 +111,31 @@ def merge_nodes(driver, nodes: dict[str, dict[str, str]], atc_map: dict[str, lis
     )
 
 
+def set_name_ko(driver) -> None:
+    """mapping_table.json의 검진 finding 한국어명을 Disease 노드(name_ko)에 주입.
+
+    원본 name(영문)은 보존하고 mondo_id가 확정된 검진 관련 노드에만 name_ko를 채운다.
+    """
+    if not MAPPING_TABLE.exists():
+        print("[name_ko] mapping_table.json 없음 — 스킵")
+        return
+    mappings = json.loads(MAPPING_TABLE.read_text(encoding="utf-8"))["mappings"]
+    rows = [
+        {"id": m["mondo_id"], "name_ko": m.get("name_ko") or m["finding_ko"]}
+        for m in mappings
+        if m.get("mondo_id")
+    ]
+    records, _, _ = driver.execute_query(
+        "UNWIND $rows AS r "
+        "MATCH (d:Disease {mondo_id: r.id}) "
+        "SET d.name_ko = r.name_ko "
+        "RETURN count(d) AS c",
+        rows=rows, database_="neo4j",
+    )
+    matched = records[0]["c"] if records else 0
+    print(f"[name_ko] 검진 finding {len(rows)}개 중 {matched}개 Disease 노드에 name_ko 주입")
+
+
 def merge_edges(driver, csv_path: Path) -> None:
     cols = ["x_type", "x_id", "y_type", "y_id", "display_relation"]
     total = 0
@@ -148,6 +175,7 @@ def main() -> None:
         run_schema(driver)
         nodes = collect_nodes(csv_path)
         merge_nodes(driver, nodes, load_atc_map(atc_path))
+        set_name_ko(driver)
         merge_edges(driver, csv_path)
         print("[done] 적재 완료")
     finally:
