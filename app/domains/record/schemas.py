@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -78,7 +80,7 @@ class CommitMetricRequest(BaseModel):
 
 
 class CommitCheckupRequest(BaseModel):
-    ocr_status: str
+    ocr_status: Literal["COMPLETED", "PARTIAL", "FAILED"]
     failed_pages: list[int] = Field(default_factory=list)
     metrics: list[CommitMetricRequest] = Field(min_length=1)
 

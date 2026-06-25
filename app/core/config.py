@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     ocr_request_timeout_seconds: int = 15
     ocr_max_retries: int = 1
     max_images_per_upload: int = 10
+    max_single_upload_size_bytes: int = 10 * 1024 * 1024
     max_total_upload_size_bytes: int = 30 * 1024 * 1024
     ocr_concurrency: int = 5
     ocr_global_concurrency: int = 10
@@ -39,8 +40,15 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_production_secrets(self) -> "Settings":
-        if self.app_env in ("production", "staging") and self.jwt_secret_key == "change-me":
-            raise ValueError("JWT_SECRET_KEY must be set to a secure value in production/staging")
+        if self.app_env in ("production", "staging"):
+            if self.jwt_secret_key == "change-me":
+                raise ValueError(
+                    "JWT_SECRET_KEY must be set to a secure value in production/staging"
+                )
+            if not self.clova_ocr_invoke_url or not self.clova_ocr_secret_key:
+                raise ValueError(
+                    "CLOVA_OCR_INVOKE_URL and CLOVA_OCR_SECRET_KEY must be configured in production/staging"
+                )
         return self
 
 

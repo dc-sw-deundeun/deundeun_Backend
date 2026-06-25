@@ -2,7 +2,7 @@
 
 실행: DATABASE_URL 설정 후 `python scripts/real_smoke_test.py`
 - 앱 부팅(/health, 라우트 수) 확인
-- 실제 Postgres에 동기 OCR 업로드 → 파서 → metric 영속화 → 검수 → 분석 게이트
+- 실제 Postgres에 두 단계 OCR 업로드(preview → commit) → metric 영속화 → 검수 → 분석 게이트
 """
 
 import asyncio
@@ -12,11 +12,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.core.config import settings
-from app.core.exceptions import ConflictException
 from app.domains.analysis.service import AnalysisService
 from app.domains.ocr.models import OcrJob
 from app.domains.ocr.repository import OcrRepository
-from app.domains.ocr.service import OcrService
+from app.domains.ocr.service import FinalMetric, OcrService
 from app.domains.record.repository import RecordRepository
 from app.infrastructure.ocr.ocr_dto import OcrFieldDTO, OcrResultDTO
 from app.infrastructure.ocr.parser import OcrParser
@@ -80,50 +79,92 @@ async def pipeline_smoke():
         parser=OcrParser(),
     )
     try:
-        outcome = await service.process_upload(
+        # Step 1: OCR 미리보기 (DB 기록 없음)
+        preview = await service.process_upload(
             user_id=9001,
             images=[b"\x89PNG\r\n\x1a\n" + b"\x00" * 32],
         )
-        record = record_repo.get_record(outcome.record_id)
-        assert record is not None
-        job = db.query(OcrJob).filter(OcrJob.record_id == record.id).one()
         print(
-            f"[STEP] record_id={record.id} page_count={outcome.page_count} "
-            f"failed_pages={outcome.failed_pages} record.ocr_status={record.ocr_status}"
+            f"[PREVIEW] page_count={preview.page_count} failed={preview.failed_pages} "
+            f"status={preview.ocr_status} metric_count={len(preview.metrics)}"
         )
-        print(f"[STEP] audit_job -> job.status={job.status} " f"parsed={job.parsed_field_count}")
+        assert (
+            db.execute(
+                __import__("sqlalchemy").text(
+                    "SELECT COUNT(*) FROM checkup_records WHERE user_id=9001"
+                )
+            ).scalar()
+            == 0
+        ), "preview 단계에서 DB 기록이 생성되면 안 됩니다"
+        print("[PREVIEW] DB 기록 없음 확인 OK")
 
-        metrics = {m.metric_code: m for m in record_repo.list_metrics(record.id)}
-        print("[STEP] 영속화된 metric (실DB 조회):")
+        # 사용자 수동 수정 시뮬레이션 (BMI 값 변경)
+        final_metrics = []
+        for m in preview.metrics:
+            if m.metric_code == "bmi":
+                final_metrics.append(
+                    FinalMetric(
+                        metric_code=m.metric_code,
+                        metric_name=m.metric_name,
+                        value="24.2",
+                        unit=m.unit,
+                        confidence=m.confidence,
+                        raw_text=m.raw_text,
+                        page_index=m.page_index,
+                        is_edited=True,
+                    )
+                )
+            else:
+                final_metrics.append(
+                    FinalMetric(
+                        metric_code=m.metric_code,
+                        metric_name=m.metric_name,
+                        value=m.value,
+                        unit=m.unit,
+                        confidence=m.confidence,
+                        raw_text=m.raw_text,
+                        page_index=m.page_index,
+                    )
+                )
+
+        # Step 2: 커밋 (DB 영속화 + 자동 검수)
+        commit = service.commit_upload(
+            user_id=9001,
+            ocr_status=preview.ocr_status,
+            failed_pages=preview.failed_pages,
+            metrics=final_metrics,
+        )
+        record = record_repo.get_record(commit.record_id)
+        assert record is not None
+        job = db.query(OcrJob).filter(OcrJob.record_id == commit.record_id).one()
+        print(
+            f"[COMMIT] record_id={commit.record_id} ocr_status={record.ocr_status} "
+            f"verification_status={record.verification_status}"
+        )
+        print(f"[COMMIT] audit_job -> status={job.status} parsed={job.parsed_field_count}")
+
+        metrics = {m.metric_code: m for m in record_repo.list_metrics(commit.record_id)}
+        print("[COMMIT] 영속화된 metric (실DB 조회):")
         for code, m in sorted(metrics.items()):
             print(
-                f"        {code:18} = {m.value:8} {m.unit or '':6} src={m.source} conf={m.confidence}"
+                f"        {code:18} = {m.value:8} {m.unit or '':6} "
+                f"src={m.source} conf={m.confidence} edited={m.is_edited}"
             )
+        bmi = metrics.get("bmi")
+        assert bmi is not None and bmi.value == "24.2" and bmi.is_edited is True
+        print("[COMMIT] BMI 수동 수정값 확인 OK")
 
-        # 분석 게이트: 검수 전이면 409
+        # 분석 게이트: 커밋 직후 이미 VERIFIED이므로 바로 통과
+        assert record.verification_status == "VERIFIED"
         analysis = AnalysisService(record_repo=record_repo)
-        try:
-            analysis.ensure_verified(record.id)
-            print("[GATE] 검수 전 ensure_verified -> 예외 없음 (FAIL 기대했음)")
-        except ConflictException as exc:
-            print(f"[GATE] 검수 전 ensure_verified -> 409 차단 OK ({exc.error_code})")
-
-        # 사용자 수동 수정 + 검수
-        bmi = metrics["bmi"]
-        record_repo.update_metric_value(bmi, "24.2", "kg/m2")
-        record_repo.set_verified(record)
-        db.commit()
-        analysis.ensure_verified(record.id)  # 이제 통과해야 함
-        db.refresh(bmi)
-        print(
-            f"[GATE] 검수 후 ensure_verified -> 통과 OK / bmi 수정값={bmi.value} src={bmi.source} edited={bmi.is_edited}"
-        )
+        analysis.ensure_verified(commit.record_id)
+        print("[GATE] 커밋 후 ensure_verified -> 통과 OK (자동 검수)")
 
         # 정리
         record_repo.delete_record_cascade(record)
         db.commit()
         print("[CLEAN] record/job/metric 삭제 완료")
-        remaining = record_repo.list_metrics(record.id)
+        remaining = record_repo.list_metrics(commit.record_id)
         print(f"[CLEAN] 잔여 metric: {len(remaining)} (0 기대)")
         print("[RESULT] 실DB 엔드투엔드 파이프라인 PASS")
     finally:

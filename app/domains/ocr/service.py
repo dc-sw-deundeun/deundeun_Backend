@@ -2,6 +2,8 @@ import asyncio
 import logging
 from dataclasses import dataclass
 
+import httpx
+
 from app.core.exceptions import OcrBusyException, OcrFailedException
 from app.domains.ocr.models import OcrJob
 from app.domains.ocr.repository import OcrRepository
@@ -213,6 +215,10 @@ class OcrService:
                 return await self._recognize_with_capacity(image, image_format)
             except OcrBusyException:
                 raise
+            except httpx.HTTPStatusError as exc:
+                if exc.response.status_code < 500:
+                    raise  # 4xx: permanent client error, do not retry
+                last_error = exc
             except Exception as exc:  # noqa: BLE001
                 last_error = exc
         if last_error is None:

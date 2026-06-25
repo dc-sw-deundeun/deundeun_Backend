@@ -67,12 +67,16 @@ async def preview_checkup_ocr(
         if detect_image_format(raw) is None:
             raise UnsupportedMediaTypeException()
         total_bytes += len(raw)
-        if len(raw) > 10 * 1024 * 1024:
-            raise PayloadTooLargeException(message="단일 이미지가 10MB를 초과했습니다.")
+        if len(raw) > settings.max_single_upload_size_bytes:
+            max_mb = settings.max_single_upload_size_bytes // (1024 * 1024)
+            raise PayloadTooLargeException(message=f"단일 이미지가 {max_mb}MB를 초과했습니다.")
         images.append(raw)
 
     if total_bytes > settings.max_total_upload_size_bytes:
-        raise PayloadTooLargeException(message="전체 이미지 합계가 30MB를 초과했습니다.")
+        max_total_mb = settings.max_total_upload_size_bytes // (1024 * 1024)
+        raise PayloadTooLargeException(
+            message=f"전체 이미지 합계가 {max_total_mb}MB를 초과했습니다."
+        )
 
     outcome = await ocr_service.process_upload(current_user.id, images)
 

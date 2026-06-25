@@ -255,14 +255,13 @@ def test_commit_checkup_persists_record_metrics_and_audit_job(api):
     assert job.error_message == "pages [1] failed"
 
 
-def test_commit_checkup_rolls_back_on_invalid_metric(api):
+def test_commit_checkup_returns_422_on_invalid_ocr_status(api):
     _, db = api
-    client = TestClient(app, raise_server_exceptions=False)
 
-    resp = client.post(
+    resp = TestClient(app).post(
         "/api/v1/records/checkups",
         json={
-            "ocr_status": "X" * 21,
+            "ocr_status": "INVALID_STATUS",
             "failed_pages": [],
             "metrics": [
                 {
@@ -278,7 +277,33 @@ def test_commit_checkup_rolls_back_on_invalid_metric(api):
         },
     )
 
-    assert resp.status_code >= 500
-    db.rollback()
+    assert resp.status_code == 422
+    assert db.query(CheckupRecord).all() == []
+    assert db.query(OcrJob).all() == []
+
+
+def test_commit_checkup_returns_422_on_metric_name_too_long(api):
+    _, db = api
+
+    resp = TestClient(app).post(
+        "/api/v1/records/checkups",
+        json={
+            "ocr_status": "COMPLETED",
+            "failed_pages": [],
+            "metrics": [
+                {
+                    "metric_code": "fasting_glucose",
+                    "metric_name": "x" * 101,  # exceeds max_length=100 in schema
+                    "value": "1",
+                    "unit": "",
+                    "confidence": 0.9,
+                    "raw_text": "1",
+                    "page_index": 0,
+                }
+            ],
+        },
+    )
+
+    assert resp.status_code == 422
     assert db.query(CheckupRecord).all() == []
     assert db.query(OcrJob).all() == []

@@ -108,7 +108,15 @@ def register_exception_handlers(app: FastAPI) -> None:
                         "error_code": invalid_count.error_code,
                     },
                 )
-        return JSONResponse(status_code=422, content={"detail": exc.errors()})
+        return JSONResponse(
+            status_code=422,
+            content={
+                "success": False,
+                "message": "입력값이 올바르지 않습니다.",
+                "data": {"detail": exc.errors()},
+                "error_code": "VALIDATION_ERROR",
+            },
+        )
 
     @app.exception_handler(AppException)
     async def app_exception_handler(request: Request, exc: AppException) -> JSONResponse:

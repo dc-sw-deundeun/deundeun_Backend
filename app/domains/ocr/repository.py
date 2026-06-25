@@ -23,6 +23,11 @@ class OcrRepository:
         parsed_field_count: int | None = None,
         error_message: str | None = None,
     ) -> OcrJob:
+        valid_statuses = {s.value for s in OcrStatus}
+        if status not in valid_statuses:
+            raise ValueError(
+                f"Invalid OcrStatus: {status!r}. Must be one of {sorted(valid_statuses)}"
+            )
         now = _now()
         terminal = {OcrStatus.COMPLETED.value, OcrStatus.PARTIAL.value, OcrStatus.FAILED.value}
         job = OcrJob(
