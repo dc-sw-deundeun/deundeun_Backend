@@ -1,4 +1,3 @@
-from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -8,7 +7,7 @@ class Settings(BaseSettings):
     app_env: str = "development"
     database_url: str | None = None
 
-    jwt_secret_key: str = "change-me"
+    jwt_secret_key: str
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = 30
     jwt_refresh_expire_days: int = 14
@@ -34,12 +33,6 @@ class Settings(BaseSettings):
 
     # X-Forwarded-For를 신뢰할 리버스 프록시(nginx 등) 뒤에 배포될 때 True로 설정
     trusted_proxy: bool = False
-
-    @model_validator(mode="after")
-    def validate_production_secrets(self) -> "Settings":
-        if self.app_env in ("production", "staging") and self.jwt_secret_key == "change-me":
-            raise ValueError("JWT_SECRET_KEY must be set to a secure value in production/staging")
-        return self
 
 
 settings = Settings()
