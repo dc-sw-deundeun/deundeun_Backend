@@ -1,9 +1,11 @@
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_current_user
+from app.core.config import settings
+from app.core.rate_limit import rate_limiter
 from app.database.session import get_db
 from app.core.response import success_response
 from app.domains.health_metric.models import HealthMetricAnalysis
@@ -25,7 +27,11 @@ router = APIRouter()
 
 
 @router.post("/evaluate")
-async def evaluate_health_metrics(request: HealthMetricEvaluationRequest):
+async def evaluate_health_metrics(
+    request: HealthMetricEvaluationRequest,
+    http_request: Request,
+):
+    _check_evaluate_rate_limit(http_request)
     service = HealthMetricService()
     results = service.evaluate_metrics(request)
     explanation = await HealthMetricExplanationService().build_explanation(
@@ -54,6 +60,7 @@ async def create_health_metric_analysis(
     current_user: CurrentUser = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    _check_analysis_rate_limit(current_user.id)
     service = HealthMetricService()
     results = service.evaluate_metrics(request)
     explanation = await HealthMetricExplanationService().build_explanation(
@@ -142,6 +149,21 @@ def _get_analysis_or_404(
     if analysis is None or analysis.user_id != user_id:
         raise HTTPException(status_code=404, detail="Health metric analysis not found")
     return analysis
+
+
+def _check_evaluate_rate_limit(request: Request) -> None:
+    client_host = request.client.host if request.client else "unknown"
+    rate_limiter.check(
+        key=f"health-metric:evaluate:ip:{client_host}",
+        limit=settings.health_metric_evaluate_rate_limit_per_minute,
+    )
+
+
+def _check_analysis_rate_limit(user_id: int) -> None:
+    rate_limiter.check(
+        key=f"health-metric:analysis:user:{user_id}",
+        limit=settings.health_metric_analysis_rate_limit_per_minute,
+    )
 
 
 def _build_metric_trend(

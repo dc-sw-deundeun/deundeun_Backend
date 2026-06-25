@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     openai_model: str = "gpt-4.1-mini"
     openai_timeout_seconds: float = 20.0
 
+    health_metric_evaluate_rate_limit_per_minute: int = 20
+    health_metric_analysis_rate_limit_per_minute: int = 10
+
     @model_validator(mode="after")
     def validate_production_secrets(self) -> "Settings":
         if self.app_env in ("production", "staging") and self.jwt_secret_key == "change-me":

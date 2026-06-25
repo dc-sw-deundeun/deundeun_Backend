@@ -1,4 +1,5 @@
 from fastapi.testclient import TestClient
+import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
@@ -8,6 +9,7 @@ import app.domains.auth.models  # noqa: F401
 import app.domains.user.models  # noqa: F401
 from app.core.config import settings
 from app.core.dependencies import get_current_user
+from app.core.rate_limit import rate_limiter
 from app.database.base import Base
 from app.database.session import get_db
 from app.domains.health_metric.explanation_service import HealthMetricExplanationService
@@ -19,6 +21,13 @@ from app.domains.health_metric.service import (
 )
 from app.domains.user.schemas import CurrentUser
 from app.main import app
+
+
+@pytest.fixture(autouse=True)
+def clear_rate_limiter():
+    rate_limiter.clear()
+    yield
+    rate_limiter.clear()
 
 
 def _result_by_code(results, code: str):
@@ -107,6 +116,26 @@ def test_endpoint_returns_structured_evaluation_response(monkeypatch) -> None:
     assert body["data"]["ui"]["details"]
 
 
+def test_evaluate_endpoint_rate_limit(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "openai_api_key", None)
+    monkeypatch.setattr(settings, "health_metric_evaluate_rate_limit_per_minute", 1)
+
+    with TestClient(app) as client:
+        first = client.post(
+            "/api/v1/health-metrics/evaluate",
+            json={"metrics": [{"label": "LDL", "value": 130}]},
+        )
+        second = client.post(
+            "/api/v1/health-metrics/evaluate",
+            json={"metrics": [{"label": "LDL", "value": 130}]},
+        )
+
+    assert first.status_code == 200
+    assert second.status_code == 429
+    assert second.json()["error_code"] == "RATE_LIMIT_EXCEEDED"
+    assert second.json()["data"]["retry_after_seconds"] > 0
+
+
 def test_builds_summary_and_detail_view_models() -> None:
     request = HealthMetricEvaluationRequest(
         sex="male",
@@ -141,6 +170,53 @@ def test_create_analysis_requires_authentication(monkeypatch) -> None:
 
     assert response.status_code == 401
     assert response.json()["error_code"] == "AUTH_REQUIRED"
+
+
+def test_create_analysis_rate_limit(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "openai_api_key", None)
+    monkeypatch.setattr(settings, "health_metric_analysis_rate_limit_per_minute", 1)
+    engine = create_engine(
+        "sqlite+pysqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    Base.metadata.create_all(bind=engine)
+
+    def override_get_db():
+        db = TestingSessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    previous_override = app.dependency_overrides.get(get_db)
+    previous_user_override = app.dependency_overrides.get(get_current_user)
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = lambda: CurrentUser(id=1)
+    try:
+        with TestClient(app) as client:
+            first = client.post(
+                "/api/v1/health-metrics/analyses",
+                json={"metrics": [{"label": "LDL", "value": 150}]},
+            )
+            second = client.post(
+                "/api/v1/health-metrics/analyses",
+                json={"metrics": [{"label": "LDL", "value": 150}]},
+            )
+
+        assert first.status_code == 200
+        assert second.status_code == 429
+        assert second.json()["error_code"] == "RATE_LIMIT_EXCEEDED"
+    finally:
+        if previous_override is None:
+            app.dependency_overrides.pop(get_db, None)
+        else:
+            app.dependency_overrides[get_db] = previous_override
+        if previous_user_override is None:
+            app.dependency_overrides.pop(get_current_user, None)
+        else:
+            app.dependency_overrides[get_current_user] = previous_user_override
 
 
 def test_create_summary_and_detail_endpoints(monkeypatch) -> None:
