@@ -7,4 +7,11 @@ from app.domains.auth.models import (  # noqa: F401
     EmailVerification,
     RefreshToken,
 )
+from app.domains.ocr.models import OcrJob  # noqa: F401
+from app.domains.record.models import (  # noqa: F401
+    CheckupFile,
+    CheckupMetricResult,
+    CheckupRecord,
+    MealRecord,
+)
 from app.domains.user.models import User  # noqa: F401

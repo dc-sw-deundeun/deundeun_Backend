@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 
@@ -40,15 +41,94 @@ class BadRequestException(AppException):
         super().__init__(status_code=400, message=message, error_code=error_code)
 
 
+class UnsupportedMediaTypeException(AppException):
+    def __init__(
+        self,
+        message: str = "지원하지 않는 파일 형식입니다.",
+        error_code: str = "UNSUPPORTED_MEDIA_TYPE",
+    ) -> None:
+        super().__init__(status_code=415, message=message, error_code=error_code)
+
+
+class PayloadTooLargeException(AppException):
+    def __init__(
+        self,
+        message: str = "업로드 가능한 파일 크기를 초과했습니다.",
+        error_code: str = "PAYLOAD_TOO_LARGE",
+    ) -> None:
+        super().__init__(status_code=413, message=message, error_code=error_code)
+
+
+class OcrFailedException(AppException):
+    def __init__(
+        self,
+        message: str = "OCR 처리에 실패했습니다. 다시 시도해 주세요.",
+        error_code: str = "OCR_FAILED",
+    ) -> None:
+        super().__init__(status_code=502, message=message, error_code=error_code)
+
+
+class OcrBusyException(AppException):
+    def __init__(
+        self,
+        retry_after_seconds: int,
+        message: str = "OCR 요청이 많아 잠시 후 다시 시도해 주세요.",
+        error_code: str = "OCR_BUSY",
+    ) -> None:
+        super().__init__(status_code=429, message=message, error_code=error_code)
+        self.retry_after_seconds = retry_after_seconds
+
+
+class InvalidImageCountException(AppException):
+    def __init__(
+        self,
+        message: str = "이미지는 1장 이상 10장 이하로 업로드해 주세요.",
+        error_code: str = "INVALID_IMAGE_COUNT",
+    ) -> None:
+        super().__init__(status_code=400, message=message, error_code=error_code)
+
+
 def register_exception_handlers(app: FastAPI) -> None:
+    @app.exception_handler(RequestValidationError)
+    async def validation_exception_handler(
+        request: Request, exc: RequestValidationError
+    ) -> JSONResponse:
+        for error in exc.errors():
+            if error.get("type") in {"too_long", "too_short"} and tuple(error.get("loc", ())) == (
+                "body",
+                "images",
+            ):
+                invalid_count = InvalidImageCountException()
+                return JSONResponse(
+                    status_code=invalid_count.status_code,
+                    content={
+                        "success": False,
+                        "message": invalid_count.message,
+                        "data": None,
+                        "error_code": invalid_count.error_code,
+                    },
+                )
+        return JSONResponse(
+            status_code=422,
+            content={
+                "success": False,
+                "message": "입력값이 올바르지 않습니다.",
+                "data": {"detail": exc.errors()},
+                "error_code": "VALIDATION_ERROR",
+            },
+        )
+
     @app.exception_handler(AppException)
     async def app_exception_handler(request: Request, exc: AppException) -> JSONResponse:
         data = None
+        headers = None
         retry_after_seconds = getattr(exc, "retry_after_seconds", None)
         if retry_after_seconds is not None:
             data = {"retry_after_seconds": retry_after_seconds}
+            headers = {"Retry-After": str(retry_after_seconds)}
         return JSONResponse(
             status_code=exc.status_code,
+            headers=headers,
             content={
                 "success": False,
                 "message": exc.message,
