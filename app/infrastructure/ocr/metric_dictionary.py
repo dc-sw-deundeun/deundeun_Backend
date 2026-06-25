@@ -29,7 +29,7 @@ METRIC_SPECS: list[MetricSpec] = [
         categories=("음성", "약양성", "양성"),
     ),
     MetricSpec("creatinine", "혈청크레아티닌", ("혈청크레아티닌", "크레아티닌"), "mg/dL"),
-    MetricSpec("egfr", "신사구체여과율", ("신사구체여과율", "GFR", "eGFR"), "mL/min"),
+    MetricSpec("egfr", "신사구체여과율", ("신사구체여과율", "GFR", "EGFR"), "mL/min"),
     MetricSpec("hemoglobin", "혈색소", ("혈색소",), "g/dL"),
     MetricSpec("ast", "AST", ("AST", "SGOT"), "U/L"),
     MetricSpec("alt", "ALT", ("ALT", "SGPT"), "U/L"),
@@ -42,14 +42,14 @@ METRIC_SPECS: list[MetricSpec] = [
 
 
 def normalize_label(s: str) -> str:
-    return s.replace(" ", "").replace("\t", "")
+    return s.replace(" ", "").replace("\t", "").upper()
 
 
 def find_best_alias_match(text: str) -> tuple[MetricSpec, str] | None:
     """정규화된 text에서 가장 긴 alias를 가진 스펙을 반환한다.
 
-    - alias 길이 ≤ 2: exact match (신장, 키 등 단어 충돌 방지)
-    - alias 길이 ≥ 3: substring match (크레아티닌(mg/dL) 등 부가 정보 포함 토큰 대응)
+    - alias 길이 ≤ 3: exact match (신장, 키, LDL, HDL 등 단어 충돌 방지)
+    - alias 길이 ≥ 4: substring match (크레아티닌(mg/dL) 등 부가 정보 포함 토큰 대응)
     alias 길이가 같으면 METRIC_SPECS 순서상 앞선 스펙이 우선한다.
     """
     norm = normalize_label(text)
@@ -60,7 +60,7 @@ def find_best_alias_match(text: str) -> tuple[MetricSpec, str] | None:
     for spec in METRIC_SPECS:
         for alias in spec.aliases:
             norm_alias = normalize_label(alias)
-            if len(norm_alias) <= 2:
+            if len(norm_alias) <= 3:
                 matched = norm_alias == norm
             else:
                 matched = norm_alias in norm

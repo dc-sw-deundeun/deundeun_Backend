@@ -85,3 +85,17 @@ def test_substring_alias_in_compound_token():
     result = find_best_alias_match("혈청크레아티닌(mg/dL)")
     assert result is not None
     assert result[0].code == "creatinine"
+
+
+def test_vldl_does_not_match_ldl():
+    # LDL is 3-char exact match only — VLDL contains LDL but must not match
+    result = find_best_alias_match("VLDL")
+    assert result is None or result[0].code != "ldl"
+
+
+def test_egfr_case_insensitive():
+    # normalize_label uppercases, so egfr/EGFR/eGFR all match
+    for token in ("eGFR", "EGFR", "egfr"):
+        result = find_best_alias_match(token)
+        assert result is not None, f"{token!r} should match egfr spec"
+        assert result[0].code == "egfr", f"{token!r} matched {result[0].code} instead of egfr"
