@@ -8,7 +8,6 @@
 
 import base64
 import os
-import sys
 import time
 import uuid
 
@@ -58,12 +57,26 @@ def to_result(body: dict) -> OcrResultDTO:
 
 
 def main():
-    image_path = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_IMAGE
+    import argparse
+
+    ap = argparse.ArgumentParser(description="실제 Clova OCR 호출 + 파서 검증")
+    ap.add_argument("image", nargs="?", default=DEFAULT_IMAGE, help="이미지 경로")
+    ap.add_argument("--save-json", metavar="PATH", help="raw Clova 응답 JSON 저장 경로")
+    args = ap.parse_args()
+
     assert settings.clova_ocr_invoke_url and settings.clova_ocr_secret_key, "Clova 설정 누락(.env)"
-    print(f"[IMG]  {image_path}")
+    print(f"[IMG]  {args.image}")
     print(f"[API]  {settings.clova_ocr_invoke_url[:60]}...")
 
-    body = call_clova(image_path)
+    body = call_clova(args.image)
+
+    if args.save_json:
+        import json as _json
+
+        with open(args.save_json, "w", encoding="utf-8") as f:
+            _json.dump(body, f, ensure_ascii=False, indent=2)
+        print(f"[SAVE] raw JSON → {args.save_json}")
+
     result = to_result(body)
     print(f"\n[RAW]  Clova 인식 토큰 {len(result.fields)}개 (원문):")
     line = " ".join(
