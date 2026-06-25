@@ -32,6 +32,9 @@ class Settings(BaseSettings):
     health_metric_evaluate_rate_limit_per_minute: int = 20
     health_metric_analysis_rate_limit_per_minute: int = 10
 
+    # X-Forwarded-For를 신뢰할 리버스 프록시(nginx 등) 뒤에 배포될 때 True로 설정
+    trusted_proxy: bool = False
+
     @model_validator(mode="after")
     def validate_production_secrets(self) -> "Settings":
         if self.app_env in ("production", "staging") and self.jwt_secret_key == "change-me":

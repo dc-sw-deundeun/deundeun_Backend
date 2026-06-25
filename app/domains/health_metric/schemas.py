@@ -23,10 +23,13 @@ class MetricDetailResponse(BaseModel):
     pass
 
 
+_ALLOWED_SEX_VALUES = {"male", "female", "남", "여", "남성", "여성", "m", "f"}
+
+
 class HealthMetricInput(BaseModel):
-    label: str = Field(..., description="OCR 또는 클라이언트가 전달한 항목명")
+    label: str = Field(..., max_length=200, description="OCR 또는 클라이언트가 전달한 항목명")
     value: float = Field(..., description="검진 수치")
-    unit: str | None = Field(default=None, description="선택 입력 단위")
+    unit: str | None = Field(default=None, max_length=20, description="선택 입력 단위")
     item9_positive: bool | None = Field(
         default=None, description="PHQ-9 9번 문항 양성 여부"
     )
@@ -42,7 +45,14 @@ class HealthMetricInput(BaseModel):
 class HealthMetricEvaluationRequest(BaseModel):
     sex: str | None = Field(default=None, description="male/female 또는 남/여")
     measured_at: str | None = Field(default=None, description="검진 결과지 날짜 YYYY-MM-DD")
-    metrics: list[HealthMetricInput] = Field(..., min_length=1)
+    metrics: list[HealthMetricInput] = Field(..., min_length=1, max_length=100)
+
+    @field_validator("sex")
+    @classmethod
+    def sex_must_be_allowed(cls, v: str | None) -> str | None:
+        if v is not None and v.lower() not in _ALLOWED_SEX_VALUES:
+            raise ValueError(f"sex must be one of {sorted(_ALLOWED_SEX_VALUES)}")
+        return v
 
 
 class HealthMetricEvaluationItem(BaseModel):
