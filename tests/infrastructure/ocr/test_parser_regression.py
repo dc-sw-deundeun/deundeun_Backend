@@ -43,10 +43,10 @@ def _load_fixture(path: Path) -> OcrResultDTO:
     return OcrResultDTO(fields=fields)
 
 
-@pytest.mark.skipif(
-    not _FIXTURE.exists(), reason="Clova 회귀 픽스처 미생성 — Task 4 수동 단계 필요"
-)
 def test_samsung2019_parser_regression():
+    if not _FIXTURE.exists():
+        pytest.fail(f"회귀 픽스처 없음: {_FIXTURE} — scripts/real_clova_test.py --save-json 로 생성하세요")
+
     result = _load_fixture(_FIXTURE)
     metrics = {m.metric_code: m for m in OcrParser().parse(result)}
 
@@ -58,4 +58,7 @@ def test_samsung2019_parser_regression():
             errors.append(
                 f"WRONG    {code}: got {metrics[code].value!r}, expected {expected_value!r}"
             )
+    extra_codes = set(metrics.keys()) - set(_EXPECTED.keys())
+    for code in sorted(extra_codes):
+        errors.append(f"UNEXPECTED {code}: {metrics[code].value!r}")
     assert not errors, "파서 회귀 실패:\n" + "\n".join(errors)

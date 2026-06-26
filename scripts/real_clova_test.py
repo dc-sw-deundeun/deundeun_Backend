@@ -23,7 +23,8 @@ DEFAULT_IMAGE = os.path.expanduser("~/Desktop/일반건강검진.png")
 def call_clova(image_path: str) -> dict:
     invoke_url = settings.clova_ocr_invoke_url
     secret_key = settings.clova_ocr_secret_key
-    assert invoke_url and secret_key, "Clova 설정 누락(.env)"
+    if not (invoke_url and secret_key):
+        raise SystemExit("Clova 설정 누락(.env): CLOVA_OCR_INVOKE_URL / CLOVA_OCR_SECRET_KEY 필요")
     with open(image_path, "rb") as fh:
         b64 = base64.b64encode(fh.read()).decode("ascii")
     ext = image_path.rsplit(".", 1)[-1].lower()
@@ -64,7 +65,8 @@ def main():
     ap.add_argument("--save-json", metavar="PATH", help="raw Clova 응답 JSON 저장 경로")
     args = ap.parse_args()
 
-    assert settings.clova_ocr_invoke_url and settings.clova_ocr_secret_key, "Clova 설정 누락(.env)"
+    if not (settings.clova_ocr_invoke_url and settings.clova_ocr_secret_key):
+        ap.error("Clova 설정 누락(.env): CLOVA_OCR_INVOKE_URL / CLOVA_OCR_SECRET_KEY 필요")
     print(f"[IMG]  {args.image}")
     print(f"[API]  {settings.clova_ocr_invoke_url[:60]}...")
 
