@@ -13,14 +13,14 @@ from app.core.rate_limit import rate_limiter
 from app.database.base import Base
 from app.database.session import get_db
 from app.domains.health_metric.explanation_service import HealthMetricExplanationService
-from app.domains.health_metric.schemas import HealthMetricEvaluationRequest
+from app.domains.health_metric.schemas import HealthMetricEvaluationRequest, HealthMetricInput
 from app.domains.health_metric.service import (
     HealthMetricService,
     build_detail_views,
     build_summary_view,
 )
 from app.domains.user.schemas import CurrentUser
-from app.main import app
+from app.main import app as fastapi_app
 
 
 @pytest.fixture(autouse=True)
@@ -34,14 +34,29 @@ def _result_by_code(results, code: str):
     return next(item for item in results if item.canonical_test_code == code)
 
 
+def _metric(
+    label: str,
+    value: float,
+    *,
+    unit: str | None = None,
+    item9_positive: bool | None = None,
+) -> HealthMetricInput:
+    return HealthMetricInput(
+        label=label,
+        value=value,
+        unit=unit,
+        item9_positive=item9_positive,
+    )
+
+
 def test_evaluate_metrics_classifies_normal_caution_and_risk() -> None:
     request = HealthMetricEvaluationRequest(
         sex="male",
         metrics=[
-            {"label": "BMI", "value": 22.0},
-            {"label": "LDL", "value": 130.0},
-            {"label": "중성지방", "value": 510.0},
-            {"label": "허리둘레", "value": 92.0},
+            _metric("BMI", 22.0),
+            _metric("LDL", 130.0),
+            _metric("중성지방", 510.0),
+            _metric("허리둘레", 92.0),
         ],
     )
 
@@ -67,7 +82,7 @@ def test_evaluate_metrics_classifies_normal_caution_and_risk() -> None:
 )
 def test_bmi_boundary_has_no_gap(value: float, expected_status: str) -> None:
     request = HealthMetricEvaluationRequest(
-        metrics=[{"label": "BMI", "value": value}],
+        metrics=[_metric("BMI", value)],
     )
 
     result = HealthMetricService().evaluate_metrics(request)[0]
@@ -79,8 +94,8 @@ def test_sex_specific_metric_aliases_override_request_sex() -> None:
     request = HealthMetricEvaluationRequest(
         sex="female",
         metrics=[
-            {"label": "HGB_M", "value": 12.9},
-            {"label": "GGT_F", "value": 36},
+            _metric("HGB_M", 12.9),
+            _metric("GGT_F", 36),
         ],
     )
 
@@ -96,7 +111,7 @@ def test_sex_specific_metric_aliases_override_request_sex() -> None:
 
 def test_unknown_metric_returns_unknown_item() -> None:
     request = HealthMetricEvaluationRequest(
-        metrics=[{"label": "지원안함", "value": 1.0}],
+        metrics=[_metric("지원안함", 1.0)],
     )
 
     result = HealthMetricService().evaluate_metrics(request)[0]
@@ -109,7 +124,7 @@ def test_unknown_metric_returns_unknown_item() -> None:
 def test_endpoint_returns_structured_evaluation_response(monkeypatch) -> None:
     monkeypatch.setattr(settings, "openai_api_key", None)
 
-    with TestClient(app) as client:
+    with TestClient(fastapi_app) as client:
         response = client.post(
             "/api/v1/health-metrics/evaluate",
             json={
@@ -140,7 +155,7 @@ def test_evaluate_endpoint_rate_limit(monkeypatch) -> None:
     monkeypatch.setattr(settings, "openai_api_key", None)
     monkeypatch.setattr(settings, "health_metric_evaluate_rate_limit_per_minute", 1)
 
-    with TestClient(app) as client:
+    with TestClient(fastapi_app) as client:
         first = client.post(
             "/api/v1/health-metrics/evaluate",
             json={"metrics": [{"label": "LDL", "value": 130}]},
@@ -160,8 +175,8 @@ def test_builds_summary_and_detail_view_models() -> None:
     request = HealthMetricEvaluationRequest(
         sex="male",
         metrics=[
-            {"label": "LDL", "value": 190},
-            {"label": "공복혈당", "value": 110},
+            _metric("LDL", 190),
+            _metric("공복혈당", 110),
         ],
     )
     results = HealthMetricService().evaluate_metrics(request)
@@ -182,7 +197,7 @@ def test_builds_summary_and_detail_view_models() -> None:
 def test_create_analysis_requires_authentication(monkeypatch) -> None:
     monkeypatch.setattr(settings, "openai_api_key", None)
 
-    with TestClient(app) as client:
+    with TestClient(fastapi_app) as client:
         response = client.post(
             "/api/v1/health-metrics/analyses",
             json={"metrics": [{"label": "LDL", "value": 150}]},
@@ -210,12 +225,12 @@ def test_create_analysis_rate_limit(monkeypatch) -> None:
         finally:
             db.close()
 
-    previous_override = app.dependency_overrides.get(get_db)
-    previous_user_override = app.dependency_overrides.get(get_current_user)
-    app.dependency_overrides[get_db] = override_get_db
-    app.dependency_overrides[get_current_user] = lambda: CurrentUser(id=1)
+    previous_override = fastapi_app.dependency_overrides.get(get_db)
+    previous_user_override = fastapi_app.dependency_overrides.get(get_current_user)
+    fastapi_app.dependency_overrides[get_db] = override_get_db
+    fastapi_app.dependency_overrides[get_current_user] = lambda: CurrentUser(id=1)
     try:
-        with TestClient(app) as client:
+        with TestClient(fastapi_app) as client:
             first = client.post(
                 "/api/v1/health-metrics/analyses",
                 json={"metrics": [{"label": "LDL", "value": 150}]},
@@ -230,13 +245,13 @@ def test_create_analysis_rate_limit(monkeypatch) -> None:
         assert second.json()["error_code"] == "RATE_LIMIT_EXCEEDED"
     finally:
         if previous_override is None:
-            app.dependency_overrides.pop(get_db, None)
+            fastapi_app.dependency_overrides.pop(get_db, None)
         else:
-            app.dependency_overrides[get_db] = previous_override
+            fastapi_app.dependency_overrides[get_db] = previous_override
         if previous_user_override is None:
-            app.dependency_overrides.pop(get_current_user, None)
+            fastapi_app.dependency_overrides.pop(get_current_user, None)
         else:
-            app.dependency_overrides[get_current_user] = previous_user_override
+            fastapi_app.dependency_overrides[get_current_user] = previous_user_override
 
 
 @pytest.mark.parametrize("bad_value", [float("nan"), float("inf"), float("-inf")])
@@ -276,7 +291,7 @@ def test_explanation_service_uses_openai_structured_response(monkeypatch) -> Non
     monkeypatch.setattr(HealthMetricExplanationService, "_call_openai", fake_call_openai)
     request = HealthMetricEvaluationRequest(
         sex="male",
-        metrics=[{"label": "LDL", "value": 190}],
+        metrics=[_metric("LDL", 190)],
     )
     results = HealthMetricService().evaluate_metrics(request)
 
@@ -301,7 +316,7 @@ def test_explanation_service_falls_back_on_openai_failure(monkeypatch) -> None:
     monkeypatch.setattr(HealthMetricExplanationService, "_call_openai", fake_call_openai)
     request = HealthMetricEvaluationRequest(
         sex="male",
-        metrics=[{"label": "중성지방", "value": 510}],
+        metrics=[_metric("중성지방", 510)],
     )
     results = HealthMetricService().evaluate_metrics(request)
 

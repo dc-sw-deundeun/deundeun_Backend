@@ -13,6 +13,8 @@ def resolve_client_ip(
         and forwarded_for
         and _is_trusted_proxy_source(direct_client_host, trusted_proxy_cidrs)
     ):
+        if direct_client_host is None:
+            return "unknown"
         forwarded_client = _client_ip_from_forwarded_chain(
             forwarded_for=forwarded_for,
             direct_client_host=direct_client_host,
