@@ -152,15 +152,18 @@ PR 또는 `develop`/`main` push 시 자동 실행됩니다.
 
 `develop` 브랜치 CI 통과 후 자동 실행됩니다.
 
-- Docker Hub에 `:develop`, `:sha-<short>` 태그로 push
-- `ENABLE_STAGING_DEPLOY=true` variable 설정 시 VM에 `scripts/deploy.sh` 실행
+- `REGISTRY_IMAGE`에 `:develop`, `:sha-<short>` 태그로 push
+- `ENABLE_STAGING_DEPLOY=true` variable 설정 시 SSH 대상 서버에서 `scripts/deploy.sh` 실행
 
 ### CD — 프로덕션 (`deploy-production.yml`)
 
 `main` 브랜치 CI 통과 후 자동 실행됩니다.
 
-- Docker Hub에 `:latest`, `:prod-sha-<short>` 태그로 push
-- `ENABLE_PRODUCTION_DEPLOY=true` variable 설정 시 VM에 배포
+- `REGISTRY_IMAGE`에 `:latest`, `:prod-sha-<short>` 태그로 push
+- `ENABLE_PRODUCTION_DEPLOY=true` variable 설정 시 SSH 대상 서버에 배포
+
+CD는 특정 클라우드에 직접 의존하지 않고, **컨테이너 레지스트리 + SSH 대상 서버 + Docker Compose** 계약으로 동작합니다.
+GCP VM, 온프레미스 서버, MSP VM 모두 같은 방식으로 연결할 수 있습니다.
 
 ---
 
@@ -170,15 +173,17 @@ PR 또는 `develop`/`main` push 시 자동 실행됩니다.
 
 | Secret | 용도 | 등록 시점 |
 |--------|------|-----------|
-| `DOCKERHUB_USERNAME` | Docker Hub 로그인 ID | 즉시 필요 |
-| `DOCKERHUB_TOKEN` | Docker Hub Access Token | 즉시 필요 |
-| `GCP_VM_HOST` | 스테이징 VM IP / hostname | VM 준비 후 |
-| `GCP_VM_USER` | SSH 사용자 (예: `deploy`) | VM 준비 후 |
-| `GCP_VM_SSH_KEY` | 배포용 SSH private key | VM 준비 후 |
-| `GCP_VM_HOST_PROD` | 프로덕션 VM IP / hostname | main 배포 시 |
+| `REGISTRY_USERNAME` | 컨테이너 레지스트리 로그인 ID | 즉시 필요 |
+| `REGISTRY_TOKEN` | 컨테이너 레지스트리 token/password | 즉시 필요 |
+| `DEPLOY_HOST_STAGING` | 스테이징 SSH 대상 IP / hostname | 서버 준비 후 |
+| `DEPLOY_HOST_PRODUCTION` | 프로덕션 SSH 대상 IP / hostname | 운영 배포 시 |
+| `DEPLOY_PORT` | SSH 포트 (기본 22) | 필요 시 |
+| `DEPLOY_PORT_STAGING` | 스테이징 SSH 포트 override | 필요 시 |
+| `DEPLOY_PORT_PRODUCTION` | 프로덕션 SSH 포트 override | 필요 시 |
+| `DEPLOY_USER` | SSH 사용자 (예: `deploy`) | 서버 준비 후 |
+| `DEPLOY_SSH_KEY` | 배포용 SSH private key | 서버 준비 후 |
 
-> `DOCKERHUB_TOKEN`은 Docker Hub **Access Token**을 사용하세요 (계정 비밀번호 대신).  
-> 발급 경로: Docker Hub → Account Settings → Security → Access Tokens
+기존 `DOCKERHUB_USERNAME`/`DOCKERHUB_TOKEN`, `GCP_VM_HOST`/`GCP_VM_HOST_PROD`, `GCP_VM_USER`, `GCP_VM_SSH_KEY`도 fallback으로 지원합니다.
 
 ## GitHub Variables 설정 (배포 on/off)
 
@@ -186,23 +191,43 @@ PR 또는 `develop`/`main` push 시 자동 실행됩니다.
 
 | Variable | 값 | 설명 |
 |----------|-----|------|
+| `REGISTRY_HOST` | `docker.io` | 레지스트리 hostname (Docker Hub 기본값) |
+| `REGISTRY_IMAGE` | `deundeun/backend` | push/pull할 이미지 이름 |
 | `ENABLE_STAGING_DEPLOY` | `true` | 스테이징 VM 배포 job 활성화 (미설정 시 skip) |
 | `ENABLE_PRODUCTION_DEPLOY` | `true` | 프로덕션 VM 배포 job 활성화 (미설정 시 skip) |
+| `DEPLOY_DIR` | `/opt/deundeun` | 대상 서버 배포 디렉터리 |
+| `COMPOSE_FILE` | `/opt/deundeun/docker-compose.yml` | 대상 서버 Compose 파일 경로 |
+| `APP_ENV_FILE` | `/opt/deundeun/.env` | 컨테이너에 주입할 앱 env 파일 |
+| `DEPLOY_SCRIPT` | `/opt/deundeun/deploy.sh` | 대상 서버 배포 스크립트 경로 |
+| `RUN_MIGRATIONS` | `true` | 배포 전 `alembic upgrade head` 실행 여부 |
 
-> GitHub Actions에서는 `secrets`를 job `if` 조건에서 직접 참조할 수 없습니다.  
-> VM secret 등록 + 위 variable을 `true`로 설정해야 배포 job이 실행됩니다.
+환경별 override가 필요하면 `STAGING_*`, `PRODUCTION_*` prefix를 붙여 설정합니다.
+예: `STAGING_DEPLOY_DIR`, `PRODUCTION_APP_ENV_FILE`, `PRODUCTION_RUN_MIGRATIONS`.
+Docker Hub가 아닌 Harbor, GHCR, MSP registry 등을 쓰면 `REGISTRY_IMAGE`는 `registry.example.com/deundeun/backend`처럼 registry host를 포함한 full image name으로 설정합니다.
+
+> GitHub Actions에서는 `secrets`를 job `if` 조건에서 직접 참조할 수 없습니다.
+> 서버 secret 등록 + `ENABLE_*_DEPLOY=true` variable 설정이 모두 필요합니다.
 
 ---
 
-## GCP VM 사전 준비 사항
+## SSH 대상 서버 사전 준비 사항
 
-VM에 아래 작업이 완료되어야 배포 스크립트가 동작합니다.
+온프레미스, MSP VM, 클라우드 VM 모두 아래 계약을 맞추면 배포 스크립트가 동작합니다.
 
-1. Docker Engine 설치
-2. 배포 스크립트 복사: `scp scripts/deploy.sh user@VM:/opt/deundeun/deploy.sh`
-3. 환경변수 파일 배치: `/opt/deundeun/.env`
-4. 방화벽 8000 포트 허용 (또는 Nginx reverse proxy 설정)
-5. SSH public key 등록 (배포 전용 키 권장)
+1. Docker Engine 및 Docker Compose v2 설치
+2. 배포 디렉터리 생성: `/opt/deundeun`
+3. `scripts/deploy.sh` 복사: `/opt/deundeun/deploy.sh`
+4. `docker/docker-compose.yml` 복사: `/opt/deundeun/docker-compose.yml`
+5. 환경변수 파일 배치: `/opt/deundeun/.env`
+6. 컨테이너 레지스트리가 private이면 대상 서버에서 `docker login` 수행
+7. 방화벽 8000 포트 허용 또는 Nginx 등 reverse proxy 연결
+8. SSH public key 등록 (배포 전용 키 권장)
+
+### `.env` 주입 방식
+
+- `docker compose --env-file "$APP_ENV_FILE"`: Compose 변수 보간에 사용합니다. 예: `IMAGE_TAG`, `API_HOST_PORT`, `API_CONTAINER_NAME`.
+- Compose `api.env_file: ${APP_ENV_FILE:-../.env}`: 동일 파일을 컨테이너 내부 애플리케이션 환경변수로 주입합니다. 예: `DATABASE_URL`, `JWT_SECRET_KEY`, `CLOVA_OCR_SECRET_KEY`.
+- FastAPI 설정은 알 수 없는 env를 무시하도록 되어 있어, `.env`에 Compose 전용 변수를 함께 둬도 앱 실행에는 영향이 없습니다.
 
 ---
 
@@ -233,7 +258,7 @@ docker build -t deundeun/backend:local .
 # 컨테이너 실행
 docker run -p 8000:8000 deundeun/backend:local
 
-# docker-compose (단일 파일, VM/API 배포 profile)
-IMAGE_TAG=deundeun/backend:latest ENV_FILE=/opt/deundeun/.env \
+# docker-compose (단일 파일, SSH 대상/API 배포 profile)
+IMAGE_TAG=deundeun/backend:latest APP_ENV_FILE=/opt/deundeun/.env \
   docker compose -f docker/docker-compose.yml --profile deploy up -d api
 ```

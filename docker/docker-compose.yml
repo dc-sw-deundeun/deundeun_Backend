@@ -4,7 +4,7 @@
 #   docker compose -f docker/docker-compose.yml up -d postgres
 #
 # VM API 배포 (외부 DB — DATABASE_URL은 env_file에 설정):
-#   IMAGE_TAG=deundeun/backend:sha-abc1234 ENV_FILE=/opt/deundeun/.env \
+#   IMAGE_TAG=deundeun/backend:sha-abc1234 APP_ENV_FILE=/opt/deundeun/.env \
 #     docker compose -f docker/docker-compose.yml --profile deploy up -d api
 #
 # 로컬 API + Postgres (이미지 빌드 후):
@@ -12,39 +12,43 @@
 
 services:
   postgres:
-    image: postgres:16-alpine
-    container_name: deundeun-postgres
-    restart: unless-stopped
+    image: ${POSTGRES_IMAGE:-postgres:16-alpine}
+    container_name: ${POSTGRES_CONTAINER_NAME:-deundeun-postgres}
+    restart: ${POSTGRES_RESTART_POLICY:-unless-stopped}
     environment:
-      POSTGRES_USER: deundeun
-      POSTGRES_PASSWORD: deundeun
-      POSTGRES_DB: deundeun
+      POSTGRES_USER: ${POSTGRES_USER:-deundeun}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-deundeun}
+      POSTGRES_DB: ${POSTGRES_DB:-deundeun}
     ports:
       - "${POSTGRES_PORT:-55432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U deundeun"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-deundeun} -d ${POSTGRES_DB:-deundeun}"]
+      interval: ${POSTGRES_HEALTHCHECK_INTERVAL:-5s}
+      timeout: ${POSTGRES_HEALTHCHECK_TIMEOUT:-5s}
+      retries: ${POSTGRES_HEALTHCHECK_RETRIES:-5}
+      start_period: ${POSTGRES_HEALTHCHECK_START_PERIOD:-10s}
 
   api:
     profiles: ["deploy"]
     image: ${IMAGE_TAG:-deundeun/backend:latest}
-    container_name: deundeun-api
-    restart: unless-stopped
+    container_name: ${API_CONTAINER_NAME:-deundeun-api}
+    restart: ${API_RESTART_POLICY:-unless-stopped}
     ports:
-      - "8000:8000"
+      - "${API_HOST_PORT:-8000}:${API_CONTAINER_PORT:-8000}"
     env_file:
-      - ${ENV_FILE:-../.env}
+      - ${APP_ENV_FILE:-../.env}
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
+      test:
+        [
+          "CMD-SHELL",
+          "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:${API_CONTAINER_PORT:-8000}/health')\"",
+        ]
+      interval: ${API_HEALTHCHECK_INTERVAL:-30s}
+      timeout: ${API_HEALTHCHECK_TIMEOUT:-10s}
+      retries: ${API_HEALTHCHECK_RETRIES:-3}
+      start_period: ${API_HEALTHCHECK_START_PERIOD:-10s}
 
 volumes:
   pgdata:
