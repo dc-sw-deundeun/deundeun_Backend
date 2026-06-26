@@ -75,6 +75,8 @@ def main():
     if args.save_json:
         import json as _json
 
+        print("[WARN] raw JSON에는 실제 검진 결과(PII/건강정보)가 포함됩니다.")
+        print("       회귀 픽스처로 커밋하기 전 반드시 개인정보를 마스킹하세요.")
         with open(args.save_json, "w", encoding="utf-8") as f:
             _json.dump(body, f, ensure_ascii=False, indent=2)
         print(f"[SAVE] raw JSON → {args.save_json}")

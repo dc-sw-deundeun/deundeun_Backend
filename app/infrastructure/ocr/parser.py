@@ -174,7 +174,7 @@ class OcrParser:
         found = self._find_label_in_row(previous_row)
         if found is None or found[0].code != "ast":
             return []
-        numbers = [f for f in previous_row if _is_number(f.text)]
+        numbers = [f for f in previous_row if _is_number(f.text) and not _is_reference(f.text)]
         if len(numbers) < 2:
             return []
         alt_f = numbers[1]
