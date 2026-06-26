@@ -1,4 +1,5 @@
 from collections.abc import Generator
+from contextlib import contextmanager
 
 from sqlalchemy import Engine, create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
@@ -38,6 +39,18 @@ def check_db_connection() -> bool:
 
 def get_db() -> Generator[Session, None, None]:
     """FastAPI Depends()용 DB 세션 generator입니다."""
+    if _SessionLocal is None:
+        raise RuntimeError("DATABASE_URL이 설정되지 않았습니다.")
+    db = _SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+@contextmanager
+def session_scope() -> Generator[Session, None, None]:
+    """백그라운드 잡(OCR 워커/스케줄러)용 독립 세션 컨텍스트 매니저입니다."""
     if _SessionLocal is None:
         raise RuntimeError("DATABASE_URL이 설정되지 않았습니다.")
     db = _SessionLocal()

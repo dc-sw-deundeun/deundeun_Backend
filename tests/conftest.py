@@ -9,12 +9,18 @@ from sqlalchemy.orm import Session, sessionmaker
 from alembic import command
 from alembic.config import Config
 
-_AUTH_TABLES = (
+# 테스트 간 격리를 위해 비우는 애플리케이션 테이블 목록(인증 + OCR/검진).
+_APP_TABLES = (
     "access_token_blacklist",
     "refresh_tokens",
     "email_verifications",
     "consent_histories",
     "users",
+    "ocr_jobs",
+    "checkup_metric_results",
+    "checkup_files",
+    "checkup_records",
+    "meal_records",
 )
 
 
@@ -40,6 +46,11 @@ def _upgrade_alembic(url: str) -> None:
     command.upgrade(cfg, "head")
 
 
+def _truncate_app_tables(engine: Engine) -> None:
+    with engine.begin() as conn:
+        conn.execute(text(f"TRUNCATE {', '.join(_APP_TABLES)} RESTART IDENTITY CASCADE"))
+
+
 @pytest.fixture(scope="session")
 def db_url() -> Generator[str, None, None]:
     """명시된 DATABASE_URL을 우선 사용하고, 없으면 로컬 testcontainers를 사용합니다."""
@@ -61,6 +72,7 @@ def db_engine(db_url: str) -> Generator[Engine, None, None]:
     import app.core.config as config_module
     import app.database.session as session_module
 
+    config_module.settings.app_env = "test"
     config_module.settings.database_url = db_url
     session_module.init_db(db_url)
 
@@ -72,11 +84,6 @@ def db_engine(db_url: str) -> Generator[Engine, None, None]:
     engine.dispose()
 
 
-def _truncate_auth_tables(engine: Engine) -> None:
-    with engine.begin() as conn:
-        conn.execute(text(f"TRUNCATE {', '.join(_AUTH_TABLES)} RESTART IDENTITY CASCADE"))
-
-
 @pytest.fixture
 def email_client() -> CapturingEmailClient:
     return CapturingEmailClient()
@@ -84,13 +91,17 @@ def email_client() -> CapturingEmailClient:
 
 @pytest.fixture
 def db_session(db_engine: Engine) -> Generator[Session, None, None]:
-    """테스트에서 DB를 직접 조작하기 위한 세션 (예: 인증 코드 만료 시뮬레이션)."""
+    """테스트에서 DB를 직접 조작하기 위한 세션.
+
+    각 테스트 종료 시 애플리케이션 테이블을 비워 테스트 간 격리를 보장한다.
+    """
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=db_engine)
     session = SessionLocal()
     try:
         yield session
     finally:
         session.close()
+        _truncate_app_tables(db_engine)
 
 
 @pytest.fixture
@@ -134,4 +145,4 @@ def client(
             app.dependency_overrides[get_email_client_dep] = _prev_email_dep
         session_module._engine = _orig_engine
         session_module._SessionLocal = _orig_session
-        _truncate_auth_tables(db_engine)
+        _truncate_app_tables(db_engine)

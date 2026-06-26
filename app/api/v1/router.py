@@ -9,6 +9,7 @@ from app.api.v1 import (
     mission_router,
     my_router,
     notification_router,
+    ocr_router,
     onboarding_router,
     record_router,
 )
@@ -20,6 +21,7 @@ api_router.include_router(onboarding_router.router, prefix="/onboarding", tags=[
 api_router.include_router(home_router.router, prefix="/home", tags=["Home"])
 api_router.include_router(mission_router.router, prefix="/missions", tags=["Mission"])
 api_router.include_router(record_router.router, prefix="/records", tags=["Record"])
+api_router.include_router(ocr_router.router, prefix="/ocr", tags=["OCR"])
 api_router.include_router(analysis_router.router, prefix="/analysis", tags=["Analysis"])
 api_router.include_router(character_router.router, prefix="/characters", tags=["Character"])
 api_router.include_router(my_router.router, prefix="/my", tags=["My"])
