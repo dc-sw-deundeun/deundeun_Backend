@@ -17,9 +17,7 @@ _NUMBER_RE = re.compile(r"^\d+(\.\d+)?$")
 _REFERENCE_MARKERS = ("정상", "미만", "이하", "이상", "~", "범위", "음성±")
 # alias 중 가장 긴 것의 문자 수 = 글자별 토큰 분리 시 필요한 최대 윈도우 크기
 _MAX_LABEL_WINDOW: int = max(
-    len(normalize_label(alias))
-    for spec in METRIC_SPECS
-    for alias in spec.aliases
+    len(normalize_label(alias)) for spec in METRIC_SPECS for alias in spec.aliases
 )
 
 

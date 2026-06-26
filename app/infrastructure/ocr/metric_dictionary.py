@@ -14,14 +14,31 @@ class MetricSpec:
 
 
 METRIC_SPECS: list[MetricSpec] = [
-    MetricSpec("height", "신장", ("신장", "키"), "cm", kind="hw_pair", plausible_min=50.0, plausible_max=230.0),
+    MetricSpec(
+        "height",
+        "신장",
+        ("신장", "키"),
+        "cm",
+        kind="hw_pair",
+        plausible_min=50.0,
+        plausible_max=230.0,
+    ),
     MetricSpec("weight", "체중", ("체중",), "kg", plausible_min=10.0, plausible_max=300.0),
     MetricSpec("waist", "허리둘레", ("허리둘레",), "cm", plausible_min=30.0, plausible_max=200.0),
-    MetricSpec("bmi", "체질량지수", ("체질량지수",), "kg/m2", plausible_min=10.0, plausible_max=70.0),
+    MetricSpec(
+        "bmi", "체질량지수", ("체질량지수",), "kg/m2", plausible_min=10.0, plausible_max=70.0
+    ),
     MetricSpec("systolic_bp", "수축기혈압", (), "mmHg", plausible_min=60.0, plausible_max=270.0),
     MetricSpec("diastolic_bp", "이완기혈압", (), "mmHg", plausible_min=20.0, plausible_max=160.0),
     MetricSpec("blood_pressure", "혈압", ("혈압", "고혈압", "혈압(최고"), "mmHg", kind="bp_pair"),
-    MetricSpec("fasting_glucose", "공복혈당", ("공복혈당",), "mg/dL", plausible_min=40.0, plausible_max=600.0),
+    MetricSpec(
+        "fasting_glucose",
+        "공복혈당",
+        ("공복혈당",),
+        "mg/dL",
+        plausible_min=40.0,
+        plausible_max=600.0,
+    ),
     MetricSpec(
         "urine_protein",
         "요단백",
@@ -30,16 +47,51 @@ METRIC_SPECS: list[MetricSpec] = [
         kind="categorical",
         categories=("음성", "약양성", "양성"),
     ),
-    MetricSpec("creatinine", "혈청크레아티닌", ("혈청크레아티닌", "크레아티닌"), "mg/dL", plausible_min=0.1, plausible_max=30.0),
-    MetricSpec("egfr", "신사구체여과율", ("신사구체여과율", "GFR", "EGFR"), "mL/min", plausible_min=0.5, plausible_max=200.0),
+    MetricSpec(
+        "creatinine",
+        "혈청크레아티닌",
+        ("혈청크레아티닌", "크레아티닌"),
+        "mg/dL",
+        plausible_min=0.1,
+        plausible_max=30.0,
+    ),
+    MetricSpec(
+        "egfr",
+        "신사구체여과율",
+        ("신사구체여과율", "GFR", "EGFR"),
+        "mL/min",
+        plausible_min=0.5,
+        plausible_max=200.0,
+    ),
     MetricSpec("hemoglobin", "혈색소", ("혈색소",), "g/dL", plausible_min=2.0, plausible_max=25.0),
     MetricSpec("ast", "AST", ("AST", "SGOT"), "U/L", plausible_min=1.0, plausible_max=3000.0),
     MetricSpec("alt", "ALT", ("ALT", "SGPT"), "U/L", plausible_min=1.0, plausible_max=3000.0),
-    MetricSpec("gamma_gtp", "감마지티피", ("감마지티피", "GTP"), "U/L", plausible_min=1.0, plausible_max=3000.0),
-    MetricSpec("total_cholesterol", "총콜레스테롤", ("총콜레스테롤",), "mg/dL", plausible_min=50.0, plausible_max=700.0),
+    MetricSpec(
+        "gamma_gtp",
+        "감마지티피",
+        ("감마지티피", "GTP"),
+        "U/L",
+        plausible_min=1.0,
+        plausible_max=3000.0,
+    ),
+    MetricSpec(
+        "total_cholesterol",
+        "총콜레스테롤",
+        ("총콜레스테롤",),
+        "mg/dL",
+        plausible_min=50.0,
+        plausible_max=700.0,
+    ),
     MetricSpec("hdl", "HDL콜레스테롤", ("HDL",), "mg/dL", plausible_min=5.0, plausible_max=200.0),
     MetricSpec("ldl", "LDL콜레스테롤", ("LDL",), "mg/dL", plausible_min=10.0, plausible_max=500.0),
-    MetricSpec("triglyceride", "트리글리세라이드", ("트리글리세라이드", "중성지방"), "mg/dL", plausible_min=10.0, plausible_max=5000.0),
+    MetricSpec(
+        "triglyceride",
+        "트리글리세라이드",
+        ("트리글리세라이드", "중성지방"),
+        "mg/dL",
+        plausible_min=10.0,
+        plausible_max=5000.0,
+    ),
 ]
 
 
