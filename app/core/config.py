@@ -1,4 +1,4 @@
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -24,7 +24,6 @@ class Settings(BaseSettings):
     analysis_server_api_key: str | None = None
     analysis_callback_secret: str | None = None
     analysis_polling_interval_seconds: int = 60
-
 
     openai_api_key: str | None = None
     openai_model: str = "gpt-4.1-mini"

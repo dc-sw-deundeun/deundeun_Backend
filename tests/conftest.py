@@ -2,12 +2,12 @@ import os
 from collections.abc import Generator
 
 import pytest
+from alembic.config import Config
 from fastapi.testclient import TestClient
 from sqlalchemy import Engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from alembic import command
-from alembic.config import Config
 
 # 테스트 간 격리를 위해 비우는 애플리케이션 테이블 목록(인증 + OCR/검진).
 _APP_TABLES = (
