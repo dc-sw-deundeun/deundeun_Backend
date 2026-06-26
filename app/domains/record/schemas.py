@@ -41,6 +41,7 @@ class PreviewMetricResponse(BaseModel):
     raw_text: str | None
     page_index: int | None
     low_confidence: bool
+    out_of_range: bool
 
     @classmethod
     def from_parsed(cls, metric, min_confidence: float) -> "PreviewMetricResponse":
@@ -54,6 +55,7 @@ class PreviewMetricResponse(BaseModel):
             raw_text=metric.raw_text,
             page_index=metric.page_index,
             low_confidence=low_confidence,
+            out_of_range=getattr(metric, "out_of_range", False),
         )
 
 

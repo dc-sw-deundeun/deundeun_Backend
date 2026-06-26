@@ -4,9 +4,11 @@ import statistics
 from pydantic import BaseModel
 
 from app.infrastructure.ocr.metric_dictionary import (
+    METRIC_SPEC_BY_CODE,
     METRIC_SPECS,
     MetricSpec,
     find_best_alias_match,
+    is_plausible,
     normalize_label,
 )
 from app.infrastructure.ocr.ocr_dto import OcrFieldDTO, OcrResultDTO
@@ -29,6 +31,7 @@ class ParsedMetric(BaseModel):
     confidence: float
     raw_text: str
     page_index: int = 0
+    out_of_range: bool = False
 
 
 def _is_number(text: str) -> bool:
@@ -134,6 +137,7 @@ class OcrParser:
                         unit=spec.unit,
                         confidence=fld.confidence,
                         raw_text=fld.text,
+                        out_of_range=not is_plausible(spec, fld.text),
                     )
                 ]
         return []
@@ -143,6 +147,8 @@ class OcrParser:
         if len(numbers) < 2:
             return []
         sys_f, dia_f = numbers[0], numbers[1]
+        sys_spec = METRIC_SPEC_BY_CODE["systolic_bp"]
+        dia_spec = METRIC_SPEC_BY_CODE["diastolic_bp"]
         return [
             ParsedMetric(
                 metric_code="systolic_bp",
@@ -151,6 +157,7 @@ class OcrParser:
                 unit="mmHg",
                 confidence=sys_f.confidence,
                 raw_text=sys_f.text,
+                out_of_range=not is_plausible(sys_spec, sys_f.text),
             ),
             ParsedMetric(
                 metric_code="diastolic_bp",
@@ -159,6 +166,7 @@ class OcrParser:
                 unit="mmHg",
                 confidence=dia_f.confidence,
                 raw_text=dia_f.text,
+                out_of_range=not is_plausible(dia_spec, dia_f.text),
             ),
         ]
 
@@ -172,6 +180,7 @@ class OcrParser:
         if len(numbers) < 2:
             return []
         alt_f = numbers[1]
+        alt_spec = METRIC_SPEC_BY_CODE["alt"]
         return [
             ParsedMetric(
                 metric_code="alt",
@@ -180,6 +189,7 @@ class OcrParser:
                 unit="U/L",
                 confidence=alt_f.confidence,
                 raw_text=alt_f.text,
+                out_of_range=not is_plausible(alt_spec, alt_f.text),
             )
         ]
 
@@ -187,6 +197,8 @@ class OcrParser:
         numbers = [f for f in right if _is_number(f.text)]
         if not numbers:
             return []
+        h_spec = METRIC_SPEC_BY_CODE["height"]
+        w_spec = METRIC_SPEC_BY_CODE["weight"]
         result = [
             ParsedMetric(
                 metric_code="height",
@@ -195,6 +207,7 @@ class OcrParser:
                 unit="cm",
                 confidence=numbers[0].confidence,
                 raw_text=numbers[0].text,
+                out_of_range=not is_plausible(h_spec, numbers[0].text),
             )
         ]
         if len(numbers) >= 2:
@@ -206,6 +219,7 @@ class OcrParser:
                     unit="kg",
                     confidence=numbers[1].confidence,
                     raw_text=numbers[1].text,
+                    out_of_range=not is_plausible(w_spec, numbers[1].text),
                 )
             )
         return result
