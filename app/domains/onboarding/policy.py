@@ -25,15 +25,27 @@ NEXT_STEP: dict[OnboardingStep, OnboardingStep] = {
 }
 
 
-def ensure_step(current_step: str, expected: OnboardingStep) -> None:
+def _normalize_step(step: str | OnboardingStep) -> OnboardingStep:
+    if isinstance(step, OnboardingStep):
+        return step
+    try:
+        return OnboardingStep(step)
+    except ValueError as exc:
+        raise InvalidOnboardingStepException(
+            message=f"알 수 없는 온보딩 단계입니다. (현재: {step})"
+        ) from exc
+
+
+def ensure_step(current_step: str | OnboardingStep, expected: OnboardingStep) -> None:
     """현재 단계가 기대 단계인지 검증한다.
 
     이미 완료된 경우 ONBOARDING_ALREADY_COMPLETED,
     그 외 불일치는 INVALID_ONBOARDING_STEP을 발생시킨다.
     """
-    if current_step == OnboardingStep.COMPLETED.value:
+    current = _normalize_step(current_step)
+    if current == OnboardingStep.COMPLETED:
         raise OnboardingAlreadyCompletedException()
-    if current_step != expected.value:
+    if current != expected:
         raise InvalidOnboardingStepException(
-            message=f"이 작업은 {expected.value} 단계에서만 가능합니다. (현재: {current_step})"
+            message=f"이 작업은 {expected.value} 단계에서만 가능합니다. (현재: {current.value})"
         )

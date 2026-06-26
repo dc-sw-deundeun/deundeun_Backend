@@ -228,6 +228,11 @@ class AuthService:
 
         onboarding_policy.ensure_step(user.onboarding_step, OnboardingStep.CONSENT)
 
+        consent_types = [item.consent_type for item in request.consents]
+        required_types = set(policy.REQUIRED_CONSENT_TYPES)
+        if len(consent_types) != len(set(consent_types)) or set(consent_types) != required_types:
+            raise ConsentRequiredException()
+
         provided = {item.consent_type: item for item in request.consents}
         for required in policy.REQUIRED_CONSENT_TYPES:
             item = provided.get(required)

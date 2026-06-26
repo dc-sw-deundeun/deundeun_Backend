@@ -8,6 +8,8 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.domains.onboarding import policy as onboarding_policy
+from app.domains.onboarding.models import WearableConnection
 from app.domains.user.models import OnboardingStep, User
 from tests.conftest import CapturingEmailClient
 from tests.test_auth_flow import login_user, signup_user
@@ -91,6 +93,26 @@ def test_agree_policies_version_mismatch_returns_400(
     assert res.json()["error_code"] == "POLICY_VERSION_MISMATCH"
 
 
+def test_agree_policies_duplicate_consent_type_returns_422(
+    client: TestClient, email_client: CapturingEmailClient, db_session: Session
+) -> None:
+    email = "duplicate-consent@example.com"
+    headers = _auth_headers(client, email_client, email)
+    consents = [
+        {"consent_type": "TERMS_OF_SERVICE", "version": "1.0", "agreed": False},
+        {"consent_type": "TERMS_OF_SERVICE", "version": "1.0", "agreed": True},
+        {"consent_type": "PRIVACY", "version": "1.0", "agreed": True},
+        {"consent_type": "HEALTH_DATA", "version": "1.0", "agreed": True},
+    ]
+
+    res = client.post(f"{AUTH}/policies/agree", json={"consents": consents}, headers=headers)
+
+    assert res.status_code == 422
+    user = db_session.scalar(select(User).where(User.email == email))
+    assert user is not None
+    assert user.onboarding_step == OnboardingStep.CONSENT
+
+
 def test_agree_policies_twice_returns_409_invalid_step(
     client: TestClient, email_client: CapturingEmailClient
 ) -> None:
@@ -133,6 +155,43 @@ def test_wearable_connect_apple_health_advances_step(
     assert status["onboarding_step"] == "INITIAL_CHECKUP"
     assert len(status["wearable_connections"]) == 1
     assert status["wearable_connections"][0]["provider"] == "APPLE_HEALTH"
+
+
+def test_wearable_connect_same_provider_updates_existing_connection(
+    client: TestClient, email_client: CapturingEmailClient, db_session: Session
+) -> None:
+    email = "reconnect@example.com"
+    headers = _auth_headers(client, email_client, email)
+    client.post(f"{AUTH}/policies/agree", json={"consents": _FULL_CONSENTS}, headers=headers)
+    client.post(
+        f"{ONB}/wearable",
+        json={
+            "action": "CONNECT",
+            "provider": "APPLE_HEALTH",
+            "scopes": ["steps"],
+        },
+        headers=headers,
+    )
+    _set_step(db_session, email, OnboardingStep.WEARABLE)
+
+    res = client.post(
+        f"{ONB}/wearable",
+        json={
+            "action": "CONNECT",
+            "provider": "APPLE_HEALTH",
+            "scopes": ["steps", "heart_rate"],
+        },
+        headers=headers,
+    )
+
+    assert res.status_code == 200
+    user = db_session.scalar(select(User).where(User.email == email))
+    assert user is not None
+    connections = list(
+        db_session.scalars(select(WearableConnection).where(WearableConnection.user_id == user.id))
+    )
+    assert len(connections) == 1
+    assert connections[0].scopes == ["steps", "heart_rate"]
 
 
 def test_wearable_skip_advances_without_connection(
@@ -203,3 +262,12 @@ def test_complete_after_checkup_verified(
 def test_onboarding_status_requires_auth(client: TestClient) -> None:
     res = client.get(f"{ONB}/status")
     assert res.status_code == 401
+
+
+def test_onboarding_checkup_requires_auth(client: TestClient) -> None:
+    res = client.post(f"{ONB}/checkup")
+    assert res.status_code == 401
+
+
+def test_ensure_step_accepts_enum_member() -> None:
+    onboarding_policy.ensure_step(OnboardingStep.WEARABLE, OnboardingStep.WEARABLE)

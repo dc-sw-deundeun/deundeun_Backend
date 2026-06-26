@@ -1,4 +1,5 @@
-from sqlalchemy import select
+from sqlalchemy import func, select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from app.domains.onboarding.models import WearableConnection
@@ -38,17 +39,27 @@ class OnboardingRepository:
         status: str,
         scopes: list[str] | None,
     ) -> WearableConnection:
-        connection = self.find_wearable_connection(user_id, provider)
-        if connection is None:
-            connection = WearableConnection(
+        stmt = (
+            insert(WearableConnection)
+            .values(
                 user_id=user_id,
                 provider=provider,
                 status=status,
                 scopes=scopes,
             )
-            self.db.add(connection)
-        else:
-            connection.status = status
-            connection.scopes = scopes
+            .on_conflict_do_update(
+                constraint="uq_wearable_connections_user_provider",
+                set_={
+                    "status": status,
+                    "scopes": scopes,
+                    "updated_at": func.now(),
+                },
+            )
+            .returning(WearableConnection.id)
+        )
+        connection_id = self.db.scalar(stmt)
         self.db.flush()
+        connection = self.db.get(WearableConnection, connection_id, populate_existing=True)
+        if connection is None:
+            raise RuntimeError("Failed to upsert wearable connection")
         return connection

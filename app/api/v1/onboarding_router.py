@@ -27,8 +27,11 @@ def get_onboarding_status(
     "/checkup",
     summary="초기 검진 업로드 (Phase 3 연동 예정)",
     description="최초 검진 기록 업로드는 검진 도메인(Phase 3)에서 처리합니다.",
+    dependencies=[Security(bearer_scheme)],
 )
-async def submit_initial_checkup():
+async def submit_initial_checkup(
+    current_user: CurrentUser = Depends(get_current_user),
+):
     return not_implemented_response()
 
 
