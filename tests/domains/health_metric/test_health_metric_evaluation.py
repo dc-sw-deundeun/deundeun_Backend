@@ -239,7 +239,6 @@ def test_create_analysis_rate_limit(monkeypatch) -> None:
             app.dependency_overrides[get_current_user] = previous_user_override
 
 
-
 @pytest.mark.parametrize("bad_value", [float("nan"), float("inf"), float("-inf")])
 def test_non_finite_value_rejected_by_schema(bad_value: float) -> None:
     from pydantic import ValidationError

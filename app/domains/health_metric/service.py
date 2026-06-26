@@ -523,7 +523,11 @@ RANGE_BAR_CONFIGS: dict[str, tuple[float, float, list[tuple[str, float, float, s
 
 RECOMMENDATIONS: dict[str, list[str]] = {
     "FPG": ["식후 30분 가볍게 걷기", "단 음료 대신 물 마시기", "식사 때 채소를 먼저 먹기"],
-    "LDL": ["기름진 음식 빈도 줄이기", "주 3회 이상 유산소 운동하기", "검진 결과를 전문가와 상담하기"],
+    "LDL": [
+        "기름진 음식 빈도 줄이기",
+        "주 3회 이상 유산소 운동하기",
+        "검진 결과를 전문가와 상담하기",
+    ],
     "TG": ["술과 단 음료 줄이기", "야식과 과식 줄이기", "빠른 시일 내 전문가와 상담하기"],
     "WAIST": ["하루 걸음 수 늘리기", "늦은 밤 간식 줄이기", "허리둘레를 주기적으로 기록하기"],
     "BMI": ["현재 습관 유지하기", "주기적으로 체중 확인하기", "근력 운동을 함께 하기"],
@@ -564,15 +568,12 @@ def build_detail_views(
     analysis_id: int | None = None,
 ) -> list[HealthMetricDetailView]:
     explanation_by_key = {
-        (item.canonical_test_code, item.input_label): item
-        for item in explanation.item_explanations
+        (item.canonical_test_code, item.input_label): item for item in explanation.item_explanations
     }
     details: list[HealthMetricDetailView] = []
     for item in results:
         card = _summary_card(item)
-        item_explanation = explanation_by_key.get(
-            (item.canonical_test_code, item.input_label)
-        )
+        item_explanation = explanation_by_key.get((item.canonical_test_code, item.input_label))
         body = (
             item_explanation.explanation
             if item_explanation is not None
@@ -675,8 +676,12 @@ class HealthMetricAnalysisService:
         self._db.add(analysis)
         self._db.flush()
 
-        summary = build_summary_view(results=results, explanation=explanation, analysis_id=analysis.id)
-        details = build_detail_views(results=results, explanation=explanation, analysis_id=analysis.id)
+        summary = build_summary_view(
+            results=results, explanation=explanation, analysis_id=analysis.id
+        )
+        details = build_detail_views(
+            results=results, explanation=explanation, analysis_id=analysis.id
+        )
         analysis.summary_payload = summary.model_dump(mode="json")
         analysis.details_payload = [detail.model_dump(mode="json") for detail in details]
         self._db.commit()
@@ -691,9 +696,17 @@ def _fallback_meaning(item: HealthMetricEvaluationItem) -> str:
 
 def _recommendations(item: HealthMetricEvaluationItem) -> list[str]:
     if item.status == "normal":
-        return ["현재 좋은 흐름 유지하기", "다음 검진 때도 같은 항목 확인하기", "무리한 변화보다 꾸준함 유지하기"]
+        return [
+            "현재 좋은 흐름 유지하기",
+            "다음 검진 때도 같은 항목 확인하기",
+            "무리한 변화보다 꾸준함 유지하기",
+        ]
     if item.canonical_test_code and item.canonical_test_code in RECOMMENDATIONS:
         return RECOMMENDATIONS[item.canonical_test_code]
     if item.status == "unknown":
-        return ["항목명과 단위를 다시 확인하기", "지원되는 검진 항목인지 확인하기", "필요하면 결과지를 다시 등록하기"]
+        return [
+            "항목명과 단위를 다시 확인하기",
+            "지원되는 검진 항목인지 확인하기",
+            "필요하면 결과지를 다시 등록하기",
+        ]
     return ["생활습관 점검하기", "같은 항목을 추적 확인하기", "필요하면 전문가와 상담하기"]
