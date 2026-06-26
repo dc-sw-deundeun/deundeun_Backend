@@ -37,7 +37,29 @@ def test_ignores_forwarded_for_from_untrusted_proxy_source() -> None:
 def test_uses_forwarded_for_from_trusted_proxy_source() -> None:
     client_ip = resolve_client_ip(
         direct_client_host="10.0.0.10",
-        forwarded_for="198.51.100.1, 10.0.0.10",
+        forwarded_for="198.51.100.1",
+        trusted_proxy=True,
+        trusted_proxy_cidrs=["10.0.0.0/8"],
+    )
+
+    assert client_ip == "198.51.100.1"
+
+
+def test_uses_rightmost_untrusted_forwarded_for_from_single_trusted_proxy() -> None:
+    client_ip = resolve_client_ip(
+        direct_client_host="10.0.0.10",
+        forwarded_for="203.0.113.99, 198.51.100.1",
+        trusted_proxy=True,
+        trusted_proxy_cidrs=["10.0.0.0/8"],
+    )
+
+    assert client_ip == "198.51.100.1"
+
+
+def test_skips_trusted_proxy_hops_from_right_side_of_forwarded_chain() -> None:
+    client_ip = resolve_client_ip(
+        direct_client_host="10.0.0.10",
+        forwarded_for="203.0.113.99, 198.51.100.1, 10.0.1.20",
         trusted_proxy=True,
         trusted_proxy_cidrs=["10.0.0.0/8"],
     )

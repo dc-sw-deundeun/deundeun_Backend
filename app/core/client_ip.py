@@ -13,7 +13,11 @@ def resolve_client_ip(
         and forwarded_for
         and _is_trusted_proxy_source(direct_client_host, trusted_proxy_cidrs)
     ):
-        forwarded_client = _first_forwarded_ip(forwarded_for)
+        forwarded_client = _client_ip_from_forwarded_chain(
+            forwarded_for=forwarded_for,
+            direct_client_host=direct_client_host,
+            trusted_proxy_cidrs=trusted_proxy_cidrs,
+        )
         if forwarded_client is not None:
             return forwarded_client
 
@@ -41,12 +45,32 @@ def _is_trusted_proxy_source(
     return False
 
 
-def _first_forwarded_ip(forwarded_for: str) -> str | None:
-    first = forwarded_for.split(",", 1)[0].strip()
-    if not first:
-        return None
-    try:
-        ip_address(first)
-    except ValueError:
-        return None
-    return first
+def _client_ip_from_forwarded_chain(
+    *,
+    forwarded_for: str,
+    direct_client_host: str,
+    trusted_proxy_cidrs: list[str],
+) -> str | None:
+    chain = [
+        item
+        for item in [*_parse_forwarded_for(forwarded_for), direct_client_host]
+        if item is not None
+    ]
+    for candidate in reversed(chain):
+        if not _is_trusted_proxy_source(candidate, trusted_proxy_cidrs):
+            return candidate
+    return None
+
+
+def _parse_forwarded_for(forwarded_for: str) -> list[str]:
+    forwarded_ips: list[str] = []
+    for raw_ip in forwarded_for.split(","):
+        candidate = raw_ip.strip()
+        if not candidate:
+            continue
+        try:
+            ip_address(candidate)
+        except ValueError:
+            continue
+        forwarded_ips.append(candidate)
+    return forwarded_ips
