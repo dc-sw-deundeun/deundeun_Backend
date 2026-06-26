@@ -1,0 +1,334 @@
+import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
+
+import app.domains.auth.models  # noqa: F401
+import app.domains.health_metric.models  # noqa: F401
+import app.domains.user.models  # noqa: F401
+from app.core.config import settings
+from app.core.dependencies import get_current_user
+from app.core.rate_limit import rate_limiter
+from app.database.base import Base
+from app.database.session import get_db
+from app.domains.health_metric.explanation_service import HealthMetricExplanationService
+from app.domains.health_metric.schemas import HealthMetricEvaluationRequest, HealthMetricInput
+from app.domains.health_metric.service import (
+    HealthMetricService,
+    build_detail_views,
+    build_summary_view,
+)
+from app.domains.user.schemas import CurrentUser
+from app.main import app as fastapi_app
+
+
+@pytest.fixture(autouse=True)
+def clear_rate_limiter():
+    rate_limiter.clear()
+    yield
+    rate_limiter.clear()
+
+
+def _result_by_code(results, code: str):
+    return next(item for item in results if item.canonical_test_code == code)
+
+
+def _metric(
+    label: str,
+    value: float,
+    *,
+    unit: str | None = None,
+    item9_positive: bool | None = None,
+) -> HealthMetricInput:
+    return HealthMetricInput(
+        label=label,
+        value=value,
+        unit=unit,
+        item9_positive=item9_positive,
+    )
+
+
+def test_evaluate_metrics_classifies_normal_caution_and_risk() -> None:
+    request = HealthMetricEvaluationRequest(
+        sex="male",
+        metrics=[
+            _metric("BMI", 22.0),
+            _metric("LDL", 130.0),
+            _metric("중성지방", 510.0),
+            _metric("허리둘레", 92.0),
+        ],
+    )
+
+    results = HealthMetricService().evaluate_metrics(request)
+
+    assert _result_by_code(results, "BMI").status == "normal"
+    assert _result_by_code(results, "LDL").status == "caution"
+    tg = _result_by_code(results, "TG")
+    assert tg.status == "risk"
+    assert tg.note == "매우 높음"
+    assert _result_by_code(results, "WAIST").status == "risk"
+
+
+@pytest.mark.parametrize(
+    ("value", "expected_status"),
+    [
+        (24.9, "normal"),
+        (24.91, "caution"),
+        (25.0, "caution"),
+        (29.99, "caution"),
+        (30.0, "risk"),
+    ],
+)
+def test_bmi_boundary_has_no_gap(value: float, expected_status: str) -> None:
+    request = HealthMetricEvaluationRequest(
+        metrics=[_metric("BMI", value)],
+    )
+
+    result = HealthMetricService().evaluate_metrics(request)[0]
+
+    assert result.status == expected_status
+
+
+def test_sex_specific_metric_aliases_override_request_sex() -> None:
+    request = HealthMetricEvaluationRequest(
+        sex="female",
+        metrics=[
+            _metric("HGB_M", 12.9),
+            _metric("GGT_F", 36),
+        ],
+    )
+
+    results = HealthMetricService().evaluate_metrics(request)
+
+    hgb = _result_by_code(results, "HGB")
+    ggt = _result_by_code(results, "GGT")
+    assert hgb.status == "risk"
+    assert hgb.note == "빈혈 의심"
+    assert ggt.status == "risk"
+    assert ggt.matched_rule == "female GGT > 35"
+
+
+def test_unknown_metric_returns_unknown_item() -> None:
+    request = HealthMetricEvaluationRequest(
+        metrics=[_metric("지원안함", 1.0)],
+    )
+
+    result = HealthMetricService().evaluate_metrics(request)[0]
+
+    assert result.status == "unknown"
+    assert result.status_label == "판정불가"
+    assert result.canonical_test_code is None
+
+
+def test_endpoint_returns_structured_evaluation_response(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "openai_api_key", None)
+
+    with TestClient(fastapi_app) as client:
+        response = client.post(
+            "/api/v1/health-metrics/evaluate",
+            json={
+                "sex": "male",
+                "metrics": [
+                    {"label": "공복혈당", "value": 126},
+                    {"label": "PHQ9", "value": 8},
+                ],
+            },
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["success"] is True
+    results = body["data"]["results"]
+    assert results[0]["canonical_test_code"] == "FPG"
+    assert results[0]["status"] == "risk"
+    assert results[1]["canonical_test_code"] == "PHQ9"
+    assert results[1]["status"] == "caution"
+    assert body["data"]["explanation"]["status"] == "fallback"
+    assert body["data"]["explanation"]["summary"]
+    assert body["data"]["explanation"]["item_explanations"]
+    assert body["data"]["ui"]["summary"]["cards"]
+    assert body["data"]["ui"]["details"]
+
+
+def test_evaluate_endpoint_rate_limit(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "openai_api_key", None)
+    monkeypatch.setattr(settings, "health_metric_evaluate_rate_limit_per_minute", 1)
+
+    with TestClient(fastapi_app) as client:
+        first = client.post(
+            "/api/v1/health-metrics/evaluate",
+            json={"metrics": [{"label": "LDL", "value": 130}]},
+        )
+        second = client.post(
+            "/api/v1/health-metrics/evaluate",
+            json={"metrics": [{"label": "LDL", "value": 130}]},
+        )
+
+    assert first.status_code == 200
+    assert second.status_code == 429
+    assert second.json()["error_code"] == "RATE_LIMIT_EXCEEDED"
+    assert second.json()["data"]["retry_after_seconds"] > 0
+
+
+def test_builds_summary_and_detail_view_models() -> None:
+    request = HealthMetricEvaluationRequest(
+        sex="male",
+        metrics=[
+            _metric("LDL", 190),
+            _metric("공복혈당", 110),
+        ],
+    )
+    results = HealthMetricService().evaluate_metrics(request)
+    explanation = HealthMetricExplanationService(api_key=None)._fallback(results)
+
+    summary = build_summary_view(results, explanation, analysis_id=10)
+    details = build_detail_views(results, explanation, analysis_id=10)
+
+    assert summary.analysis_id == 10
+    assert summary.overall.title == "관리가 필요해요"
+    assert summary.overall.counts["risk"] == 1
+    assert summary.cards[0].range_bar is not None
+    assert details[0].metric.code == "LDL"
+    assert details[0].meaning.body
+    assert details[0].recommendations.items
+
+
+def test_create_analysis_requires_authentication(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "openai_api_key", None)
+
+    with TestClient(fastapi_app) as client:
+        response = client.post(
+            "/api/v1/health-metrics/analyses",
+            json={"metrics": [{"label": "LDL", "value": 150}]},
+        )
+
+    assert response.status_code == 401
+    assert response.json()["error_code"] == "AUTH_REQUIRED"
+
+
+def test_create_analysis_rate_limit(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "openai_api_key", None)
+    monkeypatch.setattr(settings, "health_metric_analysis_rate_limit_per_minute", 1)
+    engine = create_engine(
+        "sqlite+pysqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    Base.metadata.create_all(bind=engine)
+
+    def override_get_db():
+        db = TestingSessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    previous_override = fastapi_app.dependency_overrides.get(get_db)
+    previous_user_override = fastapi_app.dependency_overrides.get(get_current_user)
+    fastapi_app.dependency_overrides[get_db] = override_get_db
+    fastapi_app.dependency_overrides[get_current_user] = lambda: CurrentUser(id=1)
+    try:
+        with TestClient(fastapi_app) as client:
+            first = client.post(
+                "/api/v1/health-metrics/analyses",
+                json={"metrics": [{"label": "LDL", "value": 150}]},
+            )
+            second = client.post(
+                "/api/v1/health-metrics/analyses",
+                json={"metrics": [{"label": "LDL", "value": 150}]},
+            )
+
+        assert first.status_code == 200
+        assert second.status_code == 429
+        assert second.json()["error_code"] == "RATE_LIMIT_EXCEEDED"
+    finally:
+        if previous_override is None:
+            fastapi_app.dependency_overrides.pop(get_db, None)
+        else:
+            fastapi_app.dependency_overrides[get_db] = previous_override
+        if previous_user_override is None:
+            fastapi_app.dependency_overrides.pop(get_current_user, None)
+        else:
+            fastapi_app.dependency_overrides[get_current_user] = previous_user_override
+
+
+@pytest.mark.parametrize("bad_value", [float("nan"), float("inf"), float("-inf")])
+def test_non_finite_value_rejected_by_schema(bad_value: float) -> None:
+    from pydantic import ValidationError
+
+    from app.domains.health_metric.schemas import HealthMetricInput
+
+    with pytest.raises(ValidationError):
+        HealthMetricInput(label="LDL", value=bad_value)
+
+
+def test_explanation_service_uses_openai_structured_response(monkeypatch) -> None:
+    async def fake_call_openai(self, payload):
+        assert payload["model"] == "test-model"
+        assert payload["text"]["format"]["type"] == "json_schema"
+        assert "Do not diagnose disease" in payload["input"][0]["content"]
+        return {
+            "output_text": """
+            {
+              "summary": "LDL 수치가 높아 주의 깊게 볼 필요가 있습니다.",
+              "highlights": ["LDL은 위험으로 분류되었습니다."],
+              "item_explanations": [
+                {
+                  "canonical_test_code": "LDL",
+                  "input_label": "LDL",
+                  "title": "LDL",
+                  "explanation": "LDL은 혈관 건강과 관련해 확인하는 콜레스테롤입니다.",
+                  "status_label": "위험"
+                }
+              ],
+              "disclaimer": "진단이나 치료 지시가 아닙니다."
+            }
+            """
+        }
+
+    monkeypatch.setattr(HealthMetricExplanationService, "_call_openai", fake_call_openai)
+    request = HealthMetricEvaluationRequest(
+        sex="male",
+        metrics=[_metric("LDL", 190)],
+    )
+    results = HealthMetricService().evaluate_metrics(request)
+
+    import asyncio
+
+    explanation = asyncio.run(
+        HealthMetricExplanationService(
+            api_key="test-key",
+            model="test-model",
+        ).build_explanation(request, results)
+    )
+
+    assert explanation.status == "generated"
+    assert explanation.summary == "LDL 수치가 높아 주의 깊게 볼 필요가 있습니다."
+    assert explanation.item_explanations[0].canonical_test_code == "LDL"
+
+
+def test_explanation_service_falls_back_on_openai_failure(monkeypatch) -> None:
+    async def fake_call_openai(self, payload):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(HealthMetricExplanationService, "_call_openai", fake_call_openai)
+    request = HealthMetricEvaluationRequest(
+        sex="male",
+        metrics=[_metric("중성지방", 510)],
+    )
+    results = HealthMetricService().evaluate_metrics(request)
+
+    import asyncio
+
+    explanation = asyncio.run(
+        HealthMetricExplanationService(api_key="test-key").build_explanation(
+            request,
+            results,
+        )
+    )
+
+    assert explanation.status == "fallback"
+    assert "위험" in explanation.highlights[0]
+    assert explanation.item_explanations[0].status_label == "위험"

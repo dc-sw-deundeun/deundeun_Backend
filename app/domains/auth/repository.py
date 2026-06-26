@@ -1,6 +1,8 @@
 from datetime import datetime
+from typing import Any, cast
 
 from sqlalchemy import delete, select
+from sqlalchemy.engine import CursorResult
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -131,4 +133,5 @@ class AuthRepository:
         result = self.db.execute(
             delete(AccessTokenBlacklist).where(AccessTokenBlacklist.expires_at < now)
         )
-        return result.rowcount or 0
+        cursor_result = cast(CursorResult[Any], result)
+        return cursor_result.rowcount or 0

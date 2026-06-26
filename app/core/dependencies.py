@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.core.exceptions import AuthException
 from app.core.security import decode_token
-from app.database.session import get_db
+from app.database.session import get_db, session_scope
 from app.domains.auth.repository import AuthRepository
 from app.domains.auth.service import AuthService
 from app.domains.user.models import User, UserStatus
@@ -74,15 +74,21 @@ def _authenticate(credentials: HTTPAuthorizationCredentials | None, db: Session)
 
 def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
-    db: Session = Depends(get_db),
 ) -> CurrentUser:
     """Bearer access token을 검증하고 CurrentUser를 반환합니다."""
-    return CurrentUser(id=_authenticate(credentials, db).id)
+    if credentials is None:
+        raise AuthException()
+
+    with session_scope() as db:
+        return CurrentUser(id=_authenticate(credentials, db).id)
 
 
 def get_current_user_model(
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
-    db: Session = Depends(get_db),
 ) -> User:
     """Bearer access token을 검증하고 사용자 ORM 엔티티를 반환합니다."""
-    return _authenticate(credentials, db)
+    if credentials is None:
+        raise AuthException()
+
+    with session_scope() as db:
+        return _authenticate(credentials, db)

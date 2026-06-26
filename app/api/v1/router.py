@@ -4,6 +4,7 @@ from app.api.v1 import (
     analysis_router,
     auth_router,
     character_router,
+    health_metric_router,
     home_router,
     mission_router,
     my_router,
@@ -24,6 +25,9 @@ api_router.include_router(ocr_router.router, prefix="/ocr", tags=["OCR"])
 api_router.include_router(analysis_router.router, prefix="/analysis", tags=["Analysis"])
 api_router.include_router(character_router.router, prefix="/characters", tags=["Character"])
 api_router.include_router(my_router.router, prefix="/my", tags=["My"])
+api_router.include_router(
+    health_metric_router.router, prefix="/health-metrics", tags=["HealthMetric"]
+)
 api_router.include_router(
     notification_router.router, prefix="/notifications", tags=["Notification"]
 )
