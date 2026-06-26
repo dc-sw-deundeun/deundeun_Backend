@@ -1,3 +1,4 @@
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -33,6 +34,15 @@ class Settings(BaseSettings):
 
     # X-Forwarded-For를 신뢰할 리버스 프록시(nginx 등) 뒤에 배포될 때 True로 설정
     trusted_proxy: bool = False
+    # 요청 source IP가 이 CIDR에 포함될 때만 X-Forwarded-For를 신뢰합니다.
+    trusted_proxy_cidrs: list[str] = []
+
+    @field_validator("trusted_proxy_cidrs", mode="before")
+    @classmethod
+    def parse_trusted_proxy_cidrs(cls, value):
+        if isinstance(value, str):
+            return [cidr.strip() for cidr in value.split(",") if cidr.strip()]
+        return value
 
 
 settings = Settings()

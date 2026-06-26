@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
+from app.core.client_ip import resolve_client_ip
 from app.core.config import settings
 from app.core.dependencies import get_current_user
 from app.core.rate_limit import rate_limiter
@@ -73,11 +74,12 @@ async def create_health_metric_analysis(
 
 
 def _client_ip(request: Request) -> str:
-    if settings.trusted_proxy:
-        forwarded_for = request.headers.get("X-Forwarded-For")
-        if forwarded_for:
-            return forwarded_for.split(",")[0].strip()
-    return request.client.host if request.client else "unknown"
+    return resolve_client_ip(
+        direct_client_host=request.client.host if request.client else None,
+        forwarded_for=request.headers.get("X-Forwarded-For"),
+        trusted_proxy=settings.trusted_proxy,
+        trusted_proxy_cidrs=settings.trusted_proxy_cidrs,
+    )
 
 
 def _check_evaluate_rate_limit(request: Request) -> None:
@@ -106,4 +108,3 @@ def _parse_measured_at(value: str | None) -> datetime | None:
     if parsed.tzinfo is None:
         return parsed.replace(tzinfo=UTC)
     return parsed
-
