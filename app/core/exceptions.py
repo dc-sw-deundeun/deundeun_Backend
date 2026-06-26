@@ -1,4 +1,7 @@
+from typing import Any
+
 from fastapi import FastAPI, Request
+from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
@@ -88,6 +91,20 @@ class InvalidImageCountException(AppException):
         super().__init__(status_code=400, message=message, error_code=error_code)
 
 
+def _sanitize_validation_errors(errors: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    sanitized: list[dict[str, Any]] = []
+    for error in errors:
+        item = dict(error)
+        ctx = item.get("ctx")
+        if isinstance(ctx, dict):
+            item["ctx"] = {
+                key: str(value) if isinstance(value, Exception) else value
+                for key, value in ctx.items()
+            }
+        sanitized.append(item)
+    return sanitized
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(
@@ -110,12 +127,14 @@ def register_exception_handlers(app: FastAPI) -> None:
                 )
         return JSONResponse(
             status_code=422,
-            content={
-                "success": False,
-                "message": "입력값이 올바르지 않습니다.",
-                "data": {"detail": exc.errors()},
-                "error_code": "VALIDATION_ERROR",
-            },
+            content=jsonable_encoder(
+                {
+                    "success": False,
+                    "message": "입력값이 올바르지 않습니다.",
+                    "data": {"detail": _sanitize_validation_errors(exc.errors())},
+                    "error_code": "VALIDATION_ERROR",
+                }
+            ),
         )
 
     @app.exception_handler(AppException)
