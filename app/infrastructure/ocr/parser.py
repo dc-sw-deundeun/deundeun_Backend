@@ -3,12 +3,22 @@ import statistics
 
 from pydantic import BaseModel
 
-from app.infrastructure.ocr.metric_dictionary import MetricSpec, find_best_alias_match
+from app.infrastructure.ocr.metric_dictionary import (
+    METRIC_SPECS,
+    MetricSpec,
+    find_best_alias_match,
+    normalize_label,
+)
 from app.infrastructure.ocr.ocr_dto import OcrFieldDTO, OcrResultDTO
 
 _NUMBER_RE = re.compile(r"^\d+(\.\d+)?$")
 _REFERENCE_MARKERS = ("정상", "미만", "이하", "이상", "~", "범위", "음성±")
-_MAX_LABEL_WINDOW = 5
+# alias 중 가장 긴 것의 문자 수 = 글자별 토큰 분리 시 필요한 최대 윈도우 크기
+_MAX_LABEL_WINDOW: int = max(
+    len(normalize_label(alias))
+    for spec in METRIC_SPECS
+    for alias in spec.aliases
+)
 
 
 class ParsedMetric(BaseModel):

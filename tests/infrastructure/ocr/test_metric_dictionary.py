@@ -99,3 +99,39 @@ def test_egfr_case_insensitive():
         result = find_best_alias_match(token)
         assert result is not None, f"{token!r} should match egfr spec"
         assert result[0].code == "egfr", f"{token!r} matched {result[0].code} instead of egfr"
+
+
+def test_gokhyeolap_alias_matches_blood_pressure():
+    # '고혈압' 행에서 수축기/이완기 혈압 값을 잡을 수 있어야 함
+    result = find_best_alias_match("고혈압")
+    assert result is not None
+    spec, _ = result
+    assert spec.code == "blood_pressure"
+    assert spec.kind == "bp_pair"
+
+
+def test_unit_suffix_stripped_before_matching():
+    # '허리들례(cm)' → strip → '허리들례' → alias '허리둘레'와 ≤2자 typo → waist
+    result = find_best_alias_match("허리들례(cm)")
+    assert result is not None
+    assert result[0].code == "waist"
+
+
+def test_two_char_ocr_typo_matches_bmi():
+    # '제질랑지수' — 체→제(1), 량→랑(1) — ≤2자 허용
+    result = find_best_alias_match("제질랑지수")
+    assert result is not None
+    assert result[0].code == "bmi"
+
+
+def test_one_char_typo_fasting_glucose_with_unit():
+    # '공복혈담(mg/dL)' → strip → '공복혈담' → alias '공복혈당' 1자 typo
+    result = find_best_alias_match("공복혈담(mg/dL)")
+    assert result is not None
+    assert result[0].code == "fasting_glucose"
+
+
+def test_gokhyeolap_jeondan_does_not_match():
+    # '고혈압전단계' (6자) 는 어떤 alias와도 일치하지 않아야 함
+    result = find_best_alias_match("고혈압전단계")
+    assert result is None or result[0].code not in {"blood_pressure", "systolic_bp", "diastolic_bp"}
