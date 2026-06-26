@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.domains.auth.models import (
     AccessTokenBlacklist,
+    ConsentHistory,
     EmailVerification,
     RefreshToken,
     VerificationPurpose,
@@ -45,6 +46,20 @@ class AuthRepository:
 
     def increment_token_version(self, user: User) -> None:
         user.token_version += 1
+
+    # --- ConsentHistory ---
+    def add_consent_history(
+        self, user_id: int, consent_type: str, version: str, agreed: bool
+    ) -> ConsentHistory:
+        history = ConsentHistory(
+            user_id=user_id,
+            consent_type=consent_type,
+            version=version,
+            agreed=agreed,
+        )
+        self.db.add(history)
+        self.db.flush()
+        return history
 
     # --- EmailVerification ---
     def create_email_verification(self, verification: EmailVerification) -> EmailVerification:

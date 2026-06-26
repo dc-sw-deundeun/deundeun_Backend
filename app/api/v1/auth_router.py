@@ -7,7 +7,7 @@ from app.core.dependencies import (
     get_current_user,
     get_current_user_model,
 )
-from app.core.response import not_implemented_response, success_response
+from app.core.response import success_response
 from app.domains.auth.schemas import (
     EmailVerifyConfirmRequest,
     EmailVerifyRequest,
@@ -15,6 +15,7 @@ from app.domains.auth.schemas import (
     LogoutRequest,
     PasswordResetConfirmRequest,
     PasswordResetRequest,
+    PoliciesAgreeRequest,
     SignupRequest,
     TokenRefreshRequest,
 )
@@ -125,9 +126,22 @@ def confirm_password_reset(
     return success_response(message="비밀번호가 재설정되었습니다.")
 
 
-@router.post("/policies/agree")
-async def agree_policies():
-    return not_implemented_response()
+@router.post(
+    "/policies/agree",
+    summary="온보딩 약관 동의",
+    description=(
+        "필수 약관(이용약관·개인정보·민감 건강정보)에 모두 동의하면 온보딩 단계가 "
+        "CONSENT → WEARABLE로 전이됩니다. Authorization 헤더 필요."
+    ),
+    dependencies=[Security(bearer_scheme)],
+)
+def agree_policies(
+    body: PoliciesAgreeRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+    service: AuthService = Depends(get_auth_service),
+):
+    result = service.agree_policies(current_user.id, body)
+    return success_response(message="약관에 동의했습니다.", data=result.model_dump())
 
 
 @router.get(
