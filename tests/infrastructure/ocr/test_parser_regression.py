@@ -45,7 +45,7 @@ def _load_fixture(path: Path) -> OcrResultDTO:
 
 def test_samsung2019_parser_regression():
     if not _FIXTURE.exists():
-        pytest.fail(
+        pytest.skip(
             f"회귀 픽스처 없음: {_FIXTURE} — scripts/real_clova_test.py --save-json 로 생성하세요"
         )
 
