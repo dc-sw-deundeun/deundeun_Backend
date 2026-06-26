@@ -1,11 +1,11 @@
-from fastapi.testclient import TestClient
 import pytest
+from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-import app.domains.health_metric.models  # noqa: F401
 import app.domains.auth.models  # noqa: F401
+import app.domains.health_metric.models  # noqa: F401
 import app.domains.user.models  # noqa: F401
 from app.core.config import settings
 from app.core.dependencies import get_current_user
@@ -53,6 +53,26 @@ def test_evaluate_metrics_classifies_normal_caution_and_risk() -> None:
     assert tg.status == "risk"
     assert tg.note == "매우 높음"
     assert _result_by_code(results, "WAIST").status == "risk"
+
+
+@pytest.mark.parametrize(
+    ("value", "expected_status"),
+    [
+        (24.9, "normal"),
+        (24.91, "caution"),
+        (25.0, "caution"),
+        (29.99, "caution"),
+        (30.0, "risk"),
+    ],
+)
+def test_bmi_boundary_has_no_gap(value: float, expected_status: str) -> None:
+    request = HealthMetricEvaluationRequest(
+        metrics=[{"label": "BMI", "value": value}],
+    )
+
+    result = HealthMetricService().evaluate_metrics(request)[0]
+
+    assert result.status == expected_status
 
 
 def test_sex_specific_metric_aliases_override_request_sex() -> None:

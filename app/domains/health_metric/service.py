@@ -86,8 +86,8 @@ def _unknown(rule: str, note: str | None = None) -> Evaluation:
 def _bmi(value: float, _: EvaluationContext) -> Evaluation:
     if _range(value, 18.5, 24.9):
         return _normal("18.5 <= BMI <= 24.9")
-    if value < 18.5 or _range(value, 25, 29.9):
-        return _caution("BMI < 18.5 or 25 <= BMI <= 29.9")
+    if value < 18.5 or value < 30:
+        return _caution("BMI < 18.5 or 24.9 < BMI < 30")
     return _risk("BMI >= 30")
 
 
@@ -416,7 +416,7 @@ RANGE_BAR_CONFIGS: dict[str, tuple[float, float, list[tuple[str, float, float, s
         [
             ("주의 <18.5", 10, 18.4, "yellow"),
             ("정상 18.5~24.9", 18.5, 24.9, "green"),
-            ("주의 25~29.9", 25, 29.9, "yellow"),
+            ("주의 24.9~29.9", 24.9, 29.9, "yellow"),
             ("위험 30~", 30, 35, "red"),
         ],
     ),
