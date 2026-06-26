@@ -23,9 +23,7 @@ class OnboardingRepository:
             )
         )
 
-    def find_wearable_connection(
-        self, user_id: int, provider: str
-    ) -> WearableConnection | None:
+    def find_wearable_connection(self, user_id: int, provider: str) -> WearableConnection | None:
         return self.db.scalar(
             select(WearableConnection).where(
                 WearableConnection.user_id == user_id,

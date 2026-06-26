@@ -221,9 +221,7 @@ class AuthService:
         self.repo.db.commit()
 
     # --- 온보딩 약관 동의 ---
-    def agree_policies(
-        self, user_id: int, request: PoliciesAgreeRequest
-    ) -> PoliciesAgreeResponse:
+    def agree_policies(self, user_id: int, request: PoliciesAgreeRequest) -> PoliciesAgreeResponse:
         user = self.repo.get_user_by_id(user_id)
         if user is None or user.status != UserStatus.ACTIVE:
             raise InvalidTokenException()

@@ -58,9 +58,7 @@ class WearableConnection(Base):
         nullable=False,
     )
     scopes: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
-    last_synced_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    last_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

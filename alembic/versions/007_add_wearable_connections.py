@@ -62,9 +62,7 @@ def upgrade() -> None:
             server_default=sa.func.now(),
             nullable=False,
         ),
-        sa.UniqueConstraint(
-            "user_id", "provider", name="uq_wearable_connections_user_provider"
-        ),
+        sa.UniqueConstraint("user_id", "provider", name="uq_wearable_connections_user_provider"),
     )
     op.create_index(
         "ix_wearable_connections_user_id",

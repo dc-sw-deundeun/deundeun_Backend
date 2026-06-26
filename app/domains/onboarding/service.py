@@ -36,9 +36,7 @@ class OnboardingService:
         return OnboardingStatusResponse(
             onboarding_step=user.onboarding_step,
             is_completed=user.onboarding_step == OnboardingStep.COMPLETED.value,
-            wearable_connections=[
-                WearableConnectionItem.model_validate(c) for c in connections
-            ],
+            wearable_connections=[WearableConnectionItem.model_validate(c) for c in connections],
         )
 
     async def connect_wearable(
@@ -56,9 +54,7 @@ class OnboardingService:
                 provider=request.provider.value,
                 scopes=request.scopes,
             )
-            status = (
-                WearableStatus.CONNECTED if result.connected else WearableStatus.ERROR
-            )
+            status = WearableStatus.CONNECTED if result.connected else WearableStatus.ERROR
             connection = self.repo.upsert_wearable_connection(
                 user_id=user_id,
                 provider=request.provider.value,

@@ -40,9 +40,7 @@ def test_agree_policies_advances_to_wearable(
 ) -> None:
     headers = _auth_headers(client, email_client, "consent@example.com")
 
-    res = client.post(
-        f"{AUTH}/policies/agree", json={"consents": _FULL_CONSENTS}, headers=headers
-    )
+    res = client.post(f"{AUTH}/policies/agree", json={"consents": _FULL_CONSENTS}, headers=headers)
     assert res.status_code == 200
     assert res.json()["data"]["onboarding_step"] == "WEARABLE"
 
@@ -104,9 +102,7 @@ def test_agree_policies_twice_returns_409_invalid_step(
         ).status_code
         == 200
     )
-    res = client.post(
-        f"{AUTH}/policies/agree", json={"consents": _FULL_CONSENTS}, headers=headers
-    )
+    res = client.post(f"{AUTH}/policies/agree", json={"consents": _FULL_CONSENTS}, headers=headers)
     assert res.status_code == 409
     assert res.json()["error_code"] == "INVALID_ONBOARDING_STEP"
 

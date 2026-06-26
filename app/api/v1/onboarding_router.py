@@ -48,7 +48,9 @@ async def connect_wearable(
     service: OnboardingService = Depends(get_onboarding_service),
 ):
     result = await service.connect_wearable(current_user.id, body)
-    return success_response(message="웨어러블 단계를 처리했습니다.", data=result.model_dump(mode="json"))
+    return success_response(
+        message="웨어러블 단계를 처리했습니다.", data=result.model_dump(mode="json")
+    )
 
 
 @router.post(
