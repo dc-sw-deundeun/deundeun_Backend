@@ -12,6 +12,7 @@ from app.domains.health_metric.models import (  # noqa: F401
     HealthMetricReference,
 )
 from app.domains.ocr.models import OcrJob  # noqa: F401
+from app.domains.onboarding.models import WearableConnection  # noqa: F401
 from app.domains.record.models import (  # noqa: F401
     CheckupFile,
     CheckupMetricResult,
