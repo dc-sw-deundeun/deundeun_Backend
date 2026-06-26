@@ -1,6 +1,6 @@
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
-from app.domains.auth.models import VerificationPurpose
+from app.domains.auth.models import ConsentType, VerificationPurpose
 from app.domains.auth.validators import validate_password_policy
 from app.domains.user.schemas import UserSummaryResponse
 
@@ -77,3 +77,26 @@ class PasswordResetConfirmRequest(BaseModel):
     @classmethod
     def _validate_password(cls, value: str) -> str:
         return validate_password_policy(value)
+
+
+class ConsentItem(BaseModel):
+    consent_type: ConsentType
+    version: str = Field(min_length=1, max_length=20)
+    agreed: bool
+
+
+class PoliciesAgreeRequest(BaseModel):
+    """온보딩 약관 동의 (CONSENT 단계)."""
+
+    consents: list[ConsentItem] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def _validate_unique_consent_types(self) -> "PoliciesAgreeRequest":
+        consent_types = [item.consent_type for item in self.consents]
+        if len(consent_types) != len(set(consent_types)):
+            raise ValueError("consent_type은 중복될 수 없습니다.")
+        return self
+
+
+class PoliciesAgreeResponse(BaseModel):
+    onboarding_step: str

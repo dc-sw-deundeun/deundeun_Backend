@@ -29,7 +29,7 @@ _OPENAPI_TAGS = [
     },
     {
         "name": "Onboarding",
-        "description": "온보딩·약관·웨어러블 (Phase 2 예정)",
+        "description": "온보딩·약관·웨어러블 (Phase 2, iOS Apple Health / Android Health Connect)",
     },
     {
         "name": "Home",

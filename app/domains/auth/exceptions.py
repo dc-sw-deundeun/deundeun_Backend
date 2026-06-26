@@ -38,7 +38,16 @@ class NotVerifiedException(AppException):
 class ConsentRequiredException(AppException):
     def __init__(self) -> None:
         super().__init__(
-            status_code=403, message="필수 약관 동의가 필요합니다.", error_code="CONSENT_REQUIRED"
+            status_code=400, message="필수 약관 동의가 필요합니다.", error_code="CONSENT_REQUIRED"
+        )
+
+
+class PolicyVersionMismatchException(AppException):
+    def __init__(self) -> None:
+        super().__init__(
+            status_code=400,
+            message="동의한 약관 버전이 최신이 아닙니다. 최신 약관을 다시 확인해 주세요.",
+            error_code="POLICY_VERSION_MISMATCH",
         )
 
 

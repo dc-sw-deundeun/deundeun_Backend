@@ -15,11 +15,13 @@ from app.core.security import (
 from app.domains.auth import policy
 from app.domains.auth.exceptions import (
     AccountLockedException,
+    ConsentRequiredException,
     EmailAlreadyExistsException,
     InvalidCredentialsException,
     InvalidTokenException,
     InvalidVerificationCodeException,
     NotVerifiedException,
+    PolicyVersionMismatchException,
     ResendTooSoonException,
     VerificationAttemptsExceededException,
     VerificationCodeExpiredException,
@@ -30,10 +32,13 @@ from app.domains.auth.schemas import (
     AccessTokenResponse,
     EmailVerifyConfirmResponse,
     LoginRequest,
+    PoliciesAgreeRequest,
+    PoliciesAgreeResponse,
     SignupRequest,
     TokenResponse,
 )
-from app.domains.user.models import User, UserStatus
+from app.domains.onboarding import policy as onboarding_policy
+from app.domains.user.models import OnboardingStep, User, UserStatus
 from app.domains.user.schemas import UserSummaryResponse
 from app.infrastructure.email.email_client import EmailClient
 
@@ -214,6 +219,39 @@ class AuthService:
         self.repo.revoke_all_user_refresh_tokens(user.id, now)
         self.repo.increment_token_version(user)
         self.repo.db.commit()
+
+    # --- 온보딩 약관 동의 ---
+    def agree_policies(self, user_id: int, request: PoliciesAgreeRequest) -> PoliciesAgreeResponse:
+        user = self.repo.get_user_by_id(user_id)
+        if user is None or user.status != UserStatus.ACTIVE:
+            raise InvalidTokenException()
+
+        onboarding_policy.ensure_step(user.onboarding_step, OnboardingStep.CONSENT)
+
+        consent_types = [item.consent_type for item in request.consents]
+        required_types = set(policy.REQUIRED_CONSENT_TYPES)
+        if len(consent_types) != len(set(consent_types)) or set(consent_types) != required_types:
+            raise ConsentRequiredException()
+
+        provided = {item.consent_type: item for item in request.consents}
+        for required in policy.REQUIRED_CONSENT_TYPES:
+            item = provided.get(required)
+            if item is None or not item.agreed:
+                raise ConsentRequiredException()
+            if item.version != policy.CURRENT_POLICY_VERSIONS[required]:
+                raise PolicyVersionMismatchException()
+
+        for item in request.consents:
+            self.repo.add_consent_history(
+                user_id=user.id,
+                consent_type=item.consent_type.value,
+                version=item.version,
+                agreed=item.agreed,
+            )
+
+        user.onboarding_step = OnboardingStep.WEARABLE
+        self.repo.db.commit()
+        return PoliciesAgreeResponse(onboarding_step=OnboardingStep.WEARABLE.value)
 
     # --- 내부 헬퍼 ---
     def _generate_code(self) -> str:

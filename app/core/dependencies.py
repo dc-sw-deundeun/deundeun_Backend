@@ -7,11 +7,15 @@ from app.core.security import decode_token
 from app.database.session import get_db, session_scope
 from app.domains.auth.repository import AuthRepository
 from app.domains.auth.service import AuthService
+from app.domains.onboarding.repository import OnboardingRepository
+from app.domains.onboarding.service import OnboardingService
 from app.domains.user.models import User, UserStatus
 from app.domains.user.repository import UserRepository
 from app.domains.user.schemas import CurrentUser
 from app.infrastructure.email.email_client import EmailClient
 from app.infrastructure.email.factory import get_email_client
+from app.infrastructure.wearable.factory import get_wearable_client
+from app.infrastructure.wearable.wearable_client import WearableClient
 
 bearer_scheme = HTTPBearer(
     auto_error=False,
@@ -33,6 +37,17 @@ def get_auth_service(
 
 def get_user_repository(db: Session = Depends(get_db)) -> UserRepository:
     return UserRepository(db)
+
+
+def get_wearable_client_dep() -> WearableClient:
+    return get_wearable_client()
+
+
+def get_onboarding_service(
+    db: Session = Depends(get_db),
+    wearable_client: WearableClient = Depends(get_wearable_client_dep),
+) -> OnboardingService:
+    return OnboardingService(OnboardingRepository(db), wearable_client)
 
 
 def _authenticate(credentials: HTTPAuthorizationCredentials | None, db: Session) -> User:

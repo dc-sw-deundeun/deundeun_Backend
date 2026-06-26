@@ -15,6 +15,7 @@ _APP_TABLES = (
     "refresh_tokens",
     "email_verifications",
     "consent_histories",
+    "wearable_connections",
     "users",
     "ocr_jobs",
     "checkup_metric_results",
