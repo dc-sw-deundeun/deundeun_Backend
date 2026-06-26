@@ -163,7 +163,7 @@ def test_wearable_connect_same_provider_updates_existing_connection(
     email = "reconnect@example.com"
     headers = _auth_headers(client, email_client, email)
     client.post(f"{AUTH}/policies/agree", json={"consents": _FULL_CONSENTS}, headers=headers)
-    client.post(
+    first_res = client.post(
         f"{ONB}/wearable",
         json={
             "action": "CONNECT",
@@ -172,6 +172,8 @@ def test_wearable_connect_same_provider_updates_existing_connection(
         },
         headers=headers,
     )
+    assert first_res.status_code == 200
+    assert first_res.json()["data"]["connection"]["scopes"] == ["steps"]
     _set_step(db_session, email, OnboardingStep.WEARABLE)
 
     res = client.post(
