@@ -44,7 +44,7 @@ class OcrParser:
         if not result.fields:
             return []
         heights = [f.y_height for f in result.fields if f.y_height > 0]
-        row_tolerance = max(20.0, statistics.median(heights) * 1.5) if heights else 20.0
+        row_tolerance = max(15.0, statistics.median(heights) * 1.0) if heights else 20.0
         rows = self._cluster_rows(result.fields, row_tolerance)
         metrics: list[ParsedMetric] = []
         seen: set[str] = set()
@@ -55,7 +55,7 @@ class OcrParser:
             spec, label_end = found
             right = [f for f in row[label_end:] if not _is_reference(f.text)]
             extracted = self._extract(spec, right)
-            if not extracted and spec.kind == "hw_pair" and row_index + 1 < len(rows):
+            if not extracted and spec.kind in ("hw_pair", "bp_pair") and row_index + 1 < len(rows):
                 extracted = self._extract(
                     spec,
                     [f for f in rows[row_index + 1] if not _is_reference(f.text)],
@@ -82,7 +82,7 @@ class OcrParser:
             if (
                 row_y is not None
                 and abs(fld.y_center - row_y) <= tolerance
-                and candidate_span <= tolerance * 1.1
+                and candidate_span <= tolerance
             ):
                 rows[-1].append(fld)
             else:
