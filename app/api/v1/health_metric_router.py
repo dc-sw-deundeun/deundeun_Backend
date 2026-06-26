@@ -95,6 +95,7 @@ def _check_analysis_rate_limit(user_id: int) -> None:
         limit=settings.health_metric_analysis_rate_limit_per_minute,
     )
 
+
 def _parse_measured_at(value: str | None) -> datetime | None:
     if value is None:
         return None

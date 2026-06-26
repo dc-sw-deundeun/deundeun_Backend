@@ -30,9 +30,7 @@ class HealthMetricInput(BaseModel):
     label: str = Field(..., max_length=200, description="OCR 또는 클라이언트가 전달한 항목명")
     value: float = Field(..., description="검진 수치")
     unit: str | None = Field(default=None, max_length=20, description="선택 입력 단위")
-    item9_positive: bool | None = Field(
-        default=None, description="PHQ-9 9번 문항 양성 여부"
-    )
+    item9_positive: bool | None = Field(default=None, description="PHQ-9 9번 문항 양성 여부")
 
     @field_validator("value")
     @classmethod

@@ -14,7 +14,9 @@ from app.domains.health_metric.schemas import (
 
 logger = logging.getLogger(__name__)
 
-DISCLAIMER = "이 설명은 건강검진 결과를 쉽게 이해하기 위한 참고 정보이며, 진단이나 치료 지시가 아닙니다."
+DISCLAIMER = (
+    "이 설명은 건강검진 결과를 쉽게 이해하기 위한 참고 정보이며, 진단이나 치료 지시가 아닙니다."
+)
 
 
 class HealthMetricExplanationService:
@@ -27,9 +29,7 @@ class HealthMetricExplanationService:
         self.api_key = api_key if api_key is not None else settings.openai_api_key
         self.model = model or settings.openai_model
         self.timeout_seconds = (
-            timeout_seconds
-            if timeout_seconds is not None
-            else settings.openai_timeout_seconds
+            timeout_seconds if timeout_seconds is not None else settings.openai_timeout_seconds
         )
 
     async def build_explanation(
@@ -119,9 +119,7 @@ class HealthMetricExplanationService:
                     return content["text"]
         return None
 
-    def _fallback(
-        self, results: list[HealthMetricEvaluationItem]
-    ) -> HealthMetricExplanation:
+    def _fallback(self, results: list[HealthMetricEvaluationItem]) -> HealthMetricExplanation:
         risk_items = [item for item in results if item.status == "risk"]
         caution_items = [item for item in results if item.status == "caution"]
         unknown_items = [item for item in results if item.status == "unknown"]
@@ -136,8 +134,7 @@ class HealthMetricExplanationService:
             summary = "제공된 기준으로는 대부분 정상 범위에 해당합니다."
 
         highlights = [
-            self._highlight(item)
-            for item in [*risk_items, *caution_items, *unknown_items][:5]
+            self._highlight(item) for item in [*risk_items, *caution_items, *unknown_items][:5]
         ]
         if not highlights:
             highlights = ["현재 입력된 항목에는 주의나 위험으로 분류된 값이 없습니다."]

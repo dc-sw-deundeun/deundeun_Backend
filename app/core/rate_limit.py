@@ -49,9 +49,7 @@ class FixedWindowRateLimiter:
             self._buckets.clear()
 
     def _cleanup(self, now: float) -> None:
-        expired_keys = [
-            key for key, bucket in self._buckets.items() if bucket.reset_at <= now
-        ]
+        expired_keys = [key for key, bucket in self._buckets.items() if bucket.reset_at <= now]
         for key in expired_keys:
             self._buckets.pop(key, None)
 
