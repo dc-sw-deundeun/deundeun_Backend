@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from typing import Any
 
 from fastapi import FastAPI, Request
@@ -91,9 +92,12 @@ class InvalidImageCountException(AppException):
         super().__init__(status_code=400, message=message, error_code=error_code)
 
 
-def _sanitize_validation_errors(errors: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    sanitized: list[dict[str, Any]] = []
+def _sanitize_validation_errors(errors: Sequence[Any]) -> list[Any]:
+    sanitized: list[Any] = []
     for error in errors:
+        if not isinstance(error, dict):
+            sanitized.append(error)
+            continue
         item = dict(error)
         ctx = item.get("ctx")
         if isinstance(ctx, dict):
