@@ -7,7 +7,7 @@ import httpx
 from app.core.exceptions import OcrBusyException, OcrFailedException
 from app.domains.ocr.models import OcrJob
 from app.domains.ocr.repository import OcrRepository
-from app.domains.ocr.status import MetricSource, OcrStatus, VerificationStatus
+from app.domains.ocr.status import MetricSource, OcrStatus
 from app.domains.record.models import CheckupMetricResult
 from app.domains.record.repository import RecordRepository
 from app.infrastructure.ocr.format import detect_image_format
@@ -24,6 +24,7 @@ class UploadOutcome:
     failed_pages: list[int]
     metrics: list[ParsedMetric]
     ocr_status: str
+    content_hash: str
 
 
 @dataclass(frozen=True)
@@ -43,6 +44,7 @@ class CommitOutcome:
     record_id: int
     metrics: list[CheckupMetricResult]
     verification_status: str
+    is_duplicate: bool = False
 
 
 class OcrService:
@@ -72,7 +74,9 @@ class OcrService:
     def get_job(self, job_id: int) -> OcrJob | None:
         return self._ocr_repo.get_job(job_id)
 
-    async def process_upload(self, user_id: int, images: list[bytes]) -> UploadOutcome:
+    async def process_upload(
+        self, user_id: int, images: list[bytes], *, content_hash: str
+    ) -> UploadOutcome:
         semaphore = asyncio.Semaphore(self._concurrency)
         pairs: list[tuple[int, OcrResultDTO | BaseException]] = list(
             await asyncio.gather(
@@ -129,6 +133,7 @@ class OcrService:
             failed_pages=failed_pages,
             metrics=merged,
             ocr_status=ocr_status,
+            content_hash=content_hash,
         )
 
     def commit_upload(
@@ -138,9 +143,26 @@ class OcrService:
         ocr_status: str,
         failed_pages: list[int],
         metrics: list[FinalMetric],
+        content_hash: str | None = None,
     ) -> CommitOutcome:
+        if content_hash:
+            existing = self._record_repo.find_by_user_and_hash(user_id, content_hash)
+            if existing is not None:
+                persisted = self._record_repo.list_metrics(existing.id)
+                return CommitOutcome(
+                    record_id=existing.id,
+                    metrics=persisted,
+                    verification_status=existing.verification_status,
+                    is_duplicate=True,
+                )
+
         try:
-            record = self._record_repo.create_record(user_id, "UPLOAD", ocr_status=ocr_status)
+            record = self._record_repo.create_record(
+                user_id,
+                "UPLOAD",
+                file_hash=content_hash,
+                ocr_status=ocr_status,
+            )
             rows = [
                 CheckupMetricResult(
                     record_id=record.id,
@@ -167,7 +189,6 @@ class OcrService:
                 parsed_field_count=parsed_count,
                 error_message=error_message,
             )
-            self._record_repo.set_verified(record)
             self._ocr_repo.commit()
         except Exception:
             self._ocr_repo.rollback()
@@ -186,7 +207,7 @@ class OcrService:
         return CommitOutcome(
             record_id=record.id,
             metrics=persisted_metrics,
-            verification_status=record.verification_status or VerificationStatus.VERIFIED.value,
+            verification_status=record.verification_status,
         )
 
     async def _call_one(

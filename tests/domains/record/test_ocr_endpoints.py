@@ -187,7 +187,7 @@ def test_upload_returns_429_when_ocr_capacity_is_busy(api):
     client, _ = api
 
     class _BusyOcrService:
-        async def process_upload(self, user_id, images):
+        async def process_upload(self, user_id, images, *, content_hash=""):
             raise OcrBusyException(retry_after_seconds=10)
 
         def get_job(self, job_id):
@@ -238,7 +238,7 @@ def test_commit_checkup_persists_record_metrics_and_audit_job(api):
     assert resp.status_code == 200
     data = resp.json()["data"]
     assert data["record_id"] is not None
-    assert data["verification_status"] == "VERIFIED"
+    assert data["verification_status"] == "UNVERIFIED"
     assert len(data["metrics"]) == 1
 
     record = db.get(CheckupRecord, data["record_id"])
@@ -246,7 +246,7 @@ def test_commit_checkup_persists_record_metrics_and_audit_job(api):
     assert record.file_url is None
     assert record.file_hash is None
     assert record.ocr_status == "PARTIAL"
-    assert record.verification_status == "VERIFIED"
+    assert record.verification_status == "UNVERIFIED"
     metric = RecordRepository(db).list_metrics(record.id)[0]
     assert metric.value == "105"
     assert metric.is_edited is True

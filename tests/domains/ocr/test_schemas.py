@@ -75,6 +75,7 @@ def test_record_request_schemas_parse_nested_metric_updates():
         failed_pages=[],
         ocr_status="COMPLETED",
         metrics=[],
+        content_hash="a" * 64,
     )
     commit_request = CommitCheckupRequest(
         ocr_status="COMPLETED",

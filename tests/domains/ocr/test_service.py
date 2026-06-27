@@ -84,12 +84,13 @@ def _make_service(db, client, *, max_retries: int = 0, concurrency: int = 5) -> 
 
 
 _PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 32
+_HASH = "a" * 64
 
 
 @pytest.mark.asyncio
 async def test_process_upload_single_image_preview_success_without_db_write(db_session):
     service = _make_service(db_session, _SyncClient(result=_glucose_result()))
-    outcome = await service.process_upload(user_id=1, images=[_PNG])
+    outcome = await service.process_upload(user_id=1, images=[_PNG], content_hash=_HASH)
 
     assert isinstance(outcome, UploadOutcome)
     assert outcome.page_count == 1
@@ -105,7 +106,7 @@ async def test_process_upload_single_image_preview_success_without_db_write(db_s
 @pytest.mark.asyncio
 async def test_process_upload_ten_images_creates_merged_preview_metrics(db_session):
     service = _make_service(db_session, _SyncClient(result=_glucose_result()))
-    outcome = await service.process_upload(user_id=1, images=[_PNG] * 10)
+    outcome = await service.process_upload(user_id=1, images=[_PNG] * 10, content_hash=_HASH)
 
     assert outcome.page_count == 10
     assert outcome.failed_pages == []
@@ -118,7 +119,7 @@ async def test_process_upload_ten_images_creates_merged_preview_metrics(db_sessi
 async def test_process_upload_partial_failure_preview(db_session):
     client = _PerPageClient([_glucose_result(), RuntimeError("clova timeout"), _bmi_result()])
     service = _make_service(db_session, client)
-    outcome = await service.process_upload(user_id=1, images=[_PNG, _PNG, _PNG])
+    outcome = await service.process_upload(user_id=1, images=[_PNG, _PNG, _PNG], content_hash=_HASH)
 
     assert outcome.page_count == 3
     assert outcome.failed_pages == [1]
@@ -134,7 +135,7 @@ async def test_process_upload_all_fail_raises_ocr_failed_without_db_write(db_ses
     service = _make_service(db_session, _SyncClient(error=RuntimeError("clova down")))
 
     with pytest.raises(OcrFailedException):
-        await service.process_upload(user_id=1, images=[_PNG, _PNG])
+        await service.process_upload(user_id=1, images=[_PNG, _PNG], content_hash=_HASH)
 
     assert db_session.query(CheckupRecord).filter(CheckupRecord.user_id == 1).all() == []
     assert db_session.query(OcrJob).all() == []
@@ -159,7 +160,7 @@ async def test_merge_higher_confidence_wins(db_session):
         ]
     )
     service = _make_service(db_session, client)
-    outcome = await service.process_upload(user_id=1, images=[_PNG, _PNG])
+    outcome = await service.process_upload(user_id=1, images=[_PNG, _PNG], content_hash=_HASH)
 
     glucose = next(metric for metric in outcome.metrics if metric.metric_code == "fasting_glucose")
     assert glucose.value == "109"
@@ -185,7 +186,7 @@ async def test_merge_tie_first_page_wins(db_session):
         ]
     )
     service = _make_service(db_session, client)
-    outcome = await service.process_upload(user_id=1, images=[_PNG, _PNG])
+    outcome = await service.process_upload(user_id=1, images=[_PNG, _PNG], content_hash=_HASH)
 
     glucose = next(metric for metric in outcome.metrics if metric.metric_code == "fasting_glucose")
     assert glucose.value == "80"
@@ -219,7 +220,7 @@ def test_commit_upload_writes_record_metrics_and_audit_job(db_session):
     assert jobs[0].completed_at is not None
     record = db_session.get(CheckupRecord, outcome.record_id)
     assert record is not None
-    assert record.verification_status == "VERIFIED"
+    assert record.verification_status == "UNVERIFIED"
     assert outcome.metrics[0].value == "105"
     assert outcome.metrics[0].is_edited is True
 
@@ -237,7 +238,7 @@ async def test_retry_on_transient_error(db_session):
             return _glucose_result()
 
     service = _make_service(db_session, _RetryClient(), max_retries=1)
-    outcome = await service.process_upload(user_id=1, images=[_PNG])
+    outcome = await service.process_upload(user_id=1, images=[_PNG], content_hash=_HASH)
 
     assert outcome.failed_pages == []
     assert call_count == 2
@@ -248,7 +249,7 @@ async def test_process_upload_respects_concurrency_limit(db_session):
     client = _DelayedClient()
     service = _make_service(db_session, client, concurrency=2)
 
-    await service.process_upload(user_id=1, images=[_PNG] * 5)
+    await service.process_upload(user_id=1, images=[_PNG] * 5, content_hash=_HASH)
 
     assert client.max_in_flight == 2
 
@@ -270,7 +271,7 @@ async def test_process_upload_raises_ocr_busy_when_global_capacity_full(db_sessi
     )
 
     with pytest.raises(OcrBusyException) as exc_info:
-        await service.process_upload(user_id=1, images=[_PNG])
+        await service.process_upload(user_id=1, images=[_PNG], content_hash=_HASH)
 
     limiter.release()
     assert exc_info.value.retry_after_seconds == 10
