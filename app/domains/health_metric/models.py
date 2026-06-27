@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import JSON, Column, DateTime, Float, ForeignKey, Integer, String, Text, func
+from sqlalchemy import JSON, DateTime, Float, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 import app.domains.auth.models  # noqa: F401

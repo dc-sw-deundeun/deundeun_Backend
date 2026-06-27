@@ -6,7 +6,10 @@ from sqlalchemy.orm import Session
 
 from app.domains.health_metric.explanation_service import HealthMetricExplanationService
 from app.domains.health_metric.models import HealthMetricAnalysis
-from app.domains.health_metric.repository import HealthMetricAnalysisRepository, HealthMetricRepository
+from app.domains.health_metric.repository import (
+    HealthMetricAnalysisRepository,
+    HealthMetricRepository,
+)
 from app.domains.health_metric.schemas import (
     HealthMetricDetailView,
     HealthMetricEvaluationItem,

@@ -1,10 +1,10 @@
 from sqlalchemy.orm import Session
 
 from app.domains.health_metric.repository import HealthMetricRepository
-from app.domains.onboarding.repository import OnboardingRepository
 from app.domains.ocr.repository import OcrRepository
 from app.domains.ocr.service import FinalMetric, OcrService
 from app.domains.ocr.status import OcrStatus
+from app.domains.onboarding.repository import OnboardingRepository
 from app.domains.record.repository import RecordRepository
 from app.domains.record.schemas import CommitMetricRequest, ManualCheckupRequest
 from app.domains.record.service import RecordService

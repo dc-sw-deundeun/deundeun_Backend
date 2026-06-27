@@ -81,9 +81,7 @@ async def preview_checkup_ocr(
         )
 
     content_hash = compute_content_hash(images)
-    outcome = await ocr_service.process_upload(
-        current_user.id, images, content_hash=content_hash
-    )
+    outcome = await ocr_service.process_upload(current_user.id, images, content_hash=content_hash)
 
     metrics = [
         PreviewMetricResponse.from_parsed(metric, settings.ocr_min_confidence)
@@ -132,9 +130,7 @@ def commit_checkup(
         ],
     )
     message = (
-        "이미 업로드된 검진 결과지입니다."
-        if outcome.is_duplicate
-        else "검진 기록을 저장했습니다."
+        "이미 업로드된 검진 결과지입니다." if outcome.is_duplicate else "검진 기록을 저장했습니다."
     )
     return success_response(
         message=message,

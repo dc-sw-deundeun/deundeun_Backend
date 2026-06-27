@@ -2,8 +2,8 @@
 
 from app.domains.health_metric.service import (
     METRIC_RULES,
-    EvaluationContext,
     STATUS_LABELS,
+    EvaluationContext,
 )
 
 OCR_CODE_TO_CANONICAL: dict[str, str] = {

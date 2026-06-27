@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from app.core.exceptions import (
     ConflictException,
     ForbiddenException,
@@ -7,9 +5,9 @@ from app.core.exceptions import (
 )
 from app.domains.health_metric.metric_evaluator import evaluate_metric_status
 from app.domains.health_metric.repository import HealthMetricRepository
+from app.domains.ocr.status import MetricSource, OcrStatus
 from app.domains.onboarding.hooks import advance_to_checkup_verified
 from app.domains.onboarding.repository import OnboardingRepository
-from app.domains.ocr.status import MetricSource, OcrStatus
 from app.domains.record.models import CheckupMetricResult, CheckupRecord
 from app.domains.record.repository import RecordRepository
 from app.domains.record.schemas import (
@@ -24,7 +22,6 @@ from app.domains.record.schemas import (
     MetricUpdateItem,
     TrendPoint,
 )
-
 
 _OVERALL_PRIORITY = {"RISK": 3, "CAUTION": 2, "UNKNOWN": 1, "NORMAL": 0}
 

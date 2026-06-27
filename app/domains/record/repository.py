@@ -99,7 +99,7 @@ class RecordRepository:
             )
             .order_by(CheckupRecord.created_at.asc(), CheckupMetricResult.metric_code.asc())
         )
-        return list(self._db.execute(stmt).all())
+        return [(record, metric) for record, metric in self._db.execute(stmt).all()]
 
     def get_record_fresh(self, record_id: int) -> CheckupRecord | None:
         stmt = (

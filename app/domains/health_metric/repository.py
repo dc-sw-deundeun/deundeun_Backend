@@ -14,7 +14,9 @@ class HealthMetricRepository:
         )
 
     def find_all(self) -> list[HealthMetricReference]:
-        return list(self.db.scalars(select(HealthMetricReference).order_by(HealthMetricReference.id)))
+        return list(
+            self.db.scalars(select(HealthMetricReference).order_by(HealthMetricReference.id))
+        )
 
     def save(self, reference: HealthMetricReference) -> HealthMetricReference:
         self.db.add(reference)
