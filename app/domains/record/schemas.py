@@ -1,4 +1,4 @@
-from typing import Literal
+from datetime import datetime
 
 from pydantic import BaseModel, Field
 
@@ -10,13 +10,23 @@ class MetricResponse(BaseModel):
     value: str | None
     unit: str | None
     status: str | None
+    reference_min: float | None = None
+    reference_max: float | None = None
     confidence: float | None
     low_confidence: bool
     source: str
     is_edited: bool
 
     @classmethod
-    def from_model(cls, metric, min_confidence: float) -> "MetricResponse":
+    def from_model(
+        cls,
+        metric,
+        min_confidence: float,
+        *,
+        reference_min: float | None = None,
+        reference_max: float | None = None,
+        status: str | None = None,
+    ) -> "MetricResponse":
         low_confidence = metric.confidence is not None and metric.confidence < min_confidence
         return cls(
             metric_id=metric.id,
@@ -24,7 +34,9 @@ class MetricResponse(BaseModel):
             metric_name=metric.metric_name,
             value=metric.value,
             unit=metric.unit,
-            status=metric.status,
+            status=status if status is not None else metric.status,
+            reference_min=reference_min if reference_min is not None else metric.reference_min,
+            reference_max=reference_max if reference_max is not None else metric.reference_max,
             confidence=metric.confidence,
             low_confidence=low_confidence,
             source=metric.source,
@@ -65,6 +77,7 @@ class UploadResponse(BaseModel):
     page_count: int
     failed_pages: list[int]
     ocr_status: str
+    content_hash: str
     metrics: list[PreviewMetricResponse]
 
 
@@ -80,8 +93,14 @@ class CommitMetricRequest(BaseModel):
 
 
 class CommitCheckupRequest(BaseModel):
-    ocr_status: Literal["COMPLETED", "PARTIAL", "FAILED"]
+    ocr_status: str = Field(pattern=r"^(COMPLETED|PARTIAL|FAILED)$")
     failed_pages: list[int] = Field(default_factory=list)
+    metrics: list[CommitMetricRequest] = Field(min_length=1)
+    content_hash: str | None = Field(default=None, min_length=64, max_length=64)
+
+
+class ManualCheckupRequest(BaseModel):
+    measured_at: datetime | None = None
     metrics: list[CommitMetricRequest] = Field(min_length=1)
 
 
@@ -89,6 +108,55 @@ class CommitCheckupResponse(BaseModel):
     record_id: int
     verification_status: str
     metrics: list[MetricResponse]
+
+
+class CheckupListItem(BaseModel):
+    record_id: int
+    source_type: str
+    verification_status: str
+    analysis_status: str | None
+    ocr_status: str | None
+    measured_at: datetime | None
+    created_at: datetime
+    metric_count: int
+
+
+class CheckupListResponse(BaseModel):
+    items: list[CheckupListItem]
+    page: int
+    size: int
+    total: int
+
+
+class CheckupDetailResponse(BaseModel):
+    record_id: int
+    source_type: str
+    verification_status: str
+    analysis_status: str | None
+    ocr_status: str | None
+    measured_at: datetime | None
+    verified_at: datetime | None
+    created_at: datetime
+    overall_status: str
+    metrics: list[MetricResponse]
+
+
+class TrendPoint(BaseModel):
+    record_id: int
+    date: str
+    value: str
+    unit: str | None
+
+
+class MetricTrendSeries(BaseModel):
+    metric_code: str
+    metric_name: str
+    points: list[TrendPoint]
+
+
+class CheckupTrendsResponse(BaseModel):
+    record_id: int
+    trends: list[MetricTrendSeries]
 
 
 class MetricUpdateRequest(BaseModel):
