@@ -5,6 +5,8 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.database.session import get_db
+from app.domains.health_metric.repository import HealthMetricRepository
+from app.domains.onboarding.repository import OnboardingRepository
 from app.domains.ocr.repository import OcrRepository
 from app.domains.ocr.service import OcrService
 from app.domains.record.repository import RecordRepository
@@ -45,4 +47,8 @@ def get_ocr_service(db: Session = Depends(get_db)) -> OcrService:
 
 
 def get_record_service(db: Session = Depends(get_db)) -> RecordService:
-    return RecordService(RecordRepository(db))
+    return RecordService(
+        RecordRepository(db),
+        OnboardingRepository(db),
+        HealthMetricRepository(db),
+    )

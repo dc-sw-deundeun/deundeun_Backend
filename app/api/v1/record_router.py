@@ -1,6 +1,6 @@
 import base64
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 
 from app.core.config import settings
 from app.core.dependencies import get_current_user
@@ -13,9 +13,11 @@ from app.core.exceptions import (
 from app.core.response import not_implemented_response, success_response
 from app.domains.ocr.dependencies import get_ocr_service, get_record_service
 from app.domains.ocr.service import FinalMetric, OcrService
+from app.domains.record.content_hash import compute_content_hash
 from app.domains.record.schemas import (
     CommitCheckupRequest,
     CommitCheckupResponse,
+    ManualCheckupRequest,
     MetricBulkUpdateRequest,
     MetricResponse,
     MetricUpdateRequest,
@@ -33,7 +35,7 @@ router = APIRouter()
 
 def _metric_list(service: RecordService, user_id: int, record_id: int) -> list[dict]:
     metrics = service.get_metrics(user_id, record_id)
-    return [MetricResponse.from_model(m, settings.ocr_min_confidence).model_dump() for m in metrics]
+    return [m.model_dump() for m in metrics]
 
 
 @router.post("/checkups/upload", status_code=200)
@@ -78,7 +80,10 @@ async def preview_checkup_ocr(
             message=f"전체 이미지 합계가 {max_total_mb}MB를 초과했습니다."
         )
 
-    outcome = await ocr_service.process_upload(current_user.id, images)
+    content_hash = compute_content_hash(images)
+    outcome = await ocr_service.process_upload(
+        current_user.id, images, content_hash=content_hash
+    )
 
     metrics = [
         PreviewMetricResponse.from_parsed(metric, settings.ocr_min_confidence)
@@ -95,6 +100,7 @@ async def preview_checkup_ocr(
             page_count=outcome.page_count,
             failed_pages=outcome.failed_pages,
             ocr_status=outcome.ocr_status,
+            content_hash=outcome.content_hash,
             metrics=metrics,
         ).model_dump(),
     )
@@ -110,6 +116,7 @@ def commit_checkup(
         current_user.id,
         ocr_status=body.ocr_status,
         failed_pages=body.failed_pages,
+        content_hash=body.content_hash,
         metrics=[
             FinalMetric(
                 metric_code=metric.metric_code,
@@ -124,8 +131,13 @@ def commit_checkup(
             for metric in body.metrics
         ],
     )
+    message = (
+        "이미 업로드된 검진 결과지입니다."
+        if outcome.is_duplicate
+        else "검진 기록을 저장했습니다."
+    )
     return success_response(
-        message="검진 기록을 저장했습니다.",
+        message=message,
         data=CommitCheckupResponse(
             record_id=outcome.record_id,
             verification_status=outcome.verification_status,
@@ -137,14 +149,53 @@ def commit_checkup(
     )
 
 
+@router.post("/checkups/manual", status_code=201)
+def create_manual_checkup(
+    body: ManualCheckupRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+    service: RecordService = Depends(get_record_service),
+):
+    record = service.create_manual(current_user.id, body)
+    metrics = service.get_metrics(current_user.id, record.id)
+    return success_response(
+        message="검진 기록을 저장했습니다.",
+        data={
+            "record_id": record.id,
+            "verification_status": record.verification_status,
+            "metrics": [m.model_dump() for m in metrics],
+        },
+    )
+
+
 @router.get("/checkups")
-async def list_checkups(current_user: CurrentUser = Depends(get_current_user)):
-    return not_implemented_response()
+def list_checkups(
+    page: int = Query(1, ge=1),
+    size: int = Query(20, ge=1, le=100),
+    current_user: CurrentUser = Depends(get_current_user),
+    service: RecordService = Depends(get_record_service),
+):
+    result = service.list_checkups(current_user.id, page=page, size=size)
+    return success_response(data=result.model_dump())
 
 
 @router.get("/checkups/{record_id}")
-async def get_checkup(record_id: int, current_user: CurrentUser = Depends(get_current_user)):
-    return not_implemented_response()
+def get_checkup(
+    record_id: int,
+    current_user: CurrentUser = Depends(get_current_user),
+    service: RecordService = Depends(get_record_service),
+):
+    detail = service.get_checkup(current_user.id, record_id)
+    return success_response(data=detail.model_dump())
+
+
+@router.get("/checkups/{record_id}/trends")
+def get_checkup_trends(
+    record_id: int,
+    current_user: CurrentUser = Depends(get_current_user),
+    service: RecordService = Depends(get_record_service),
+):
+    trends = service.get_trends(current_user.id, record_id)
+    return success_response(data=trends.model_dump())
 
 
 @router.get("/checkups/{record_id}/metrics")
@@ -167,7 +218,7 @@ def update_metric(
     metric = service.update_metric(current_user.id, record_id, metric_id, body.value, body.unit)
     return success_response(
         message="수치를 수정했습니다.",
-        data=MetricResponse.from_model(metric, settings.ocr_min_confidence).model_dump(),
+        data=metric.model_dump(),
     )
 
 
@@ -178,10 +229,10 @@ def bulk_update_metrics(
     current_user: CurrentUser = Depends(get_current_user),
     service: RecordService = Depends(get_record_service),
 ):
-    service.bulk_update_metrics(current_user.id, record_id, body.metrics)
+    metrics = service.bulk_update_metrics(current_user.id, record_id, body.metrics)
     return success_response(
         message="수치를 일괄 수정했습니다.",
-        data=_metric_list(service, current_user.id, record_id),
+        data=[m.model_dump() for m in metrics],
     )
 
 
