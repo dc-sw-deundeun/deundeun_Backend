@@ -57,10 +57,12 @@ class OcrParser:
             right = [f for f in row[label_end:] if not _is_reference(f.text)]
             extracted = self._extract(spec, right)
             if not extracted and spec.kind in ("hw_pair", "bp_pair") and row_index + 1 < len(rows):
-                extracted = self._extract(
-                    spec,
-                    [f for f in rows[row_index + 1] if not _is_reference(f.text)],
-                )
+                next_row = rows[row_index + 1]
+                if self._find_label_in_row(next_row) is None:
+                    extracted = self._extract(
+                        spec,
+                        [f for f in next_row if not _is_reference(f.text)],
+                    )
             if not extracted and spec.code == "alt" and row_index > 0:
                 extracted = self._extract_alt_from_previous_ast_row(rows[row_index - 1])
             for m in extracted:

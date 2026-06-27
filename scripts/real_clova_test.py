@@ -10,6 +10,7 @@ import base64
 import os
 import time
 import uuid
+from pathlib import Path
 
 import httpx
 
@@ -67,6 +68,10 @@ def main():
 
     if not (settings.clova_ocr_invoke_url and settings.clova_ocr_secret_key):
         ap.error("Clova 설정 누락(.env): CLOVA_OCR_INVOKE_URL / CLOVA_OCR_SECRET_KEY 필요")
+    if args.save_json:
+        save_path = Path(args.save_json)
+        if not save_path.parent.exists():
+            ap.error(f"--save-json 상위 디렉터리 없음: {save_path.parent}")
     print(f"[IMG]  {args.image}")
     print(f"[API]  {settings.clova_ocr_invoke_url[:60]}...")
 
