@@ -32,6 +32,20 @@ class Settings(BaseSettings):
     health_metric_evaluate_rate_limit_per_minute: int = 20
     health_metric_analysis_rate_limit_per_minute: int = 10
 
+    cors_allow_origins: list[str] = []
+    cors_allow_credentials: bool = True
+    cors_allow_methods: list[str] = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+    cors_allow_headers: list[str] = ["Authorization", "Content-Type"]
+
+    @field_validator(
+        "cors_allow_origins", "cors_allow_methods", "cors_allow_headers", mode="before"
+    )
+    @classmethod
+    def parse_csv_list(cls, value):
+        if isinstance(value, str):
+            return [item.strip() for item in value.split(",") if item.strip()]
+        return value
+
     # X-Forwarded-For를 신뢰할 리버스 프록시(nginx 등) 뒤에 배포될 때 True로 설정
     trusted_proxy: bool = False
     # 요청 source IP가 이 CIDR에 포함될 때만 X-Forwarded-For를 신뢰합니다.
@@ -40,9 +54,7 @@ class Settings(BaseSettings):
     @field_validator("trusted_proxy_cidrs", mode="before")
     @classmethod
     def parse_trusted_proxy_cidrs(cls, value):
-        if isinstance(value, str):
-            return [cidr.strip() for cidr in value.split(",") if cidr.strip()]
-        return value
+        return cls.parse_csv_list(value)
 
     clova_ocr_invoke_url: str | None = None
     clova_ocr_secret_key: str | None = None

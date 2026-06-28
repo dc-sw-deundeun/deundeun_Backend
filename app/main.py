@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.core.config import settings
+from app.core.cors import configure_cors
 from app.core.exceptions import register_exception_handlers
 from app.core.openapi import _OPENAPI_TAGS, configure_openapi
 
@@ -52,6 +53,7 @@ app = FastAPI(
 )
 
 configure_openapi(app)
+configure_cors(app, settings)
 register_exception_handlers(app)
 
 
