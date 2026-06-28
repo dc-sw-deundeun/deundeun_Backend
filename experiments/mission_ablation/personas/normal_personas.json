@@ -1,0 +1,393 @@
+[
+  {
+    "id": "n01",
+    "name": "갓 진단받은 경증 고혈압 직장인",
+    "kind": "normal",
+    "demographics": {"age": 41, "sex": "male"},
+    "conditions": ["hypertension"],
+    "medications": [],
+    "wearable": {"steps_avg": 5200, "resting_hr": 72, "sleep_hours_avg": 6.5},
+    "history": {"success_rate": 0.55, "recent_mission_titles": ["저염식 한 끼 도전", "퇴근길 한 정거장 걷기"]},
+    "nodes": [
+      {"id": "hypertension", "label": "고혈압", "type": "Disease"},
+      {"id": "cardiovascular_disease", "label": "심혈관질환", "type": "Disease"},
+      {"id": "sodium", "label": "나트륨", "type": "Lifestyle"},
+      {"id": "blood_pressure", "label": "혈압", "type": "Metric"}
+    ],
+    "edges": [
+      {"src": "hypertension", "rel": "disease_disease", "dst": "cardiovascular_disease", "attrs": {"risk": "moderate"}},
+      {"src": "sodium", "rel": "CORRELATES_WITH", "dst": "blood_pressure", "attrs": {"delta": "+8"}}
+    ],
+    "flags": {},
+    "ground_truth": {
+      "ideal": ["저염식 한 끼", "식후 걷기"],
+      "forbidden": [],
+      "required_referrals": [],
+      "expected_grounding": ["hypertension->cardiovascular_disease", "sodium->blood_pressure"],
+      "notes": "경증 단일 고혈압, 약물 없음. 저염·걷기 미션 적합."
+    }
+  },
+  {
+    "id": "n02",
+    "name": "당화혈색소 관리 시작한 2형 당뇨 중년",
+    "kind": "normal",
+    "demographics": {"age": 54, "sex": "female"},
+    "conditions": ["type2_diabetes"],
+    "medications": ["metformin"],
+    "wearable": {"steps_avg": 4300, "resting_hr": 76, "sleep_hours_avg": 6.2},
+    "history": {"success_rate": 0.48, "recent_mission_titles": ["단 음료 줄이기", "저녁 산책 20분"]},
+    "nodes": [
+      {"id": "type2_diabetes", "label": "2형 당뇨", "type": "Disease"},
+      {"id": "metformin", "label": "메트포르민", "type": "Drug"},
+      {"id": "walking", "label": "걷기", "type": "Lifestyle"},
+      {"id": "fasting_glucose", "label": "공복혈당", "type": "Metric"}
+    ],
+    "edges": [
+      {"src": "walking", "rel": "CORRELATES_WITH", "dst": "fasting_glucose", "attrs": {"delta": "-12"}}
+    ],
+    "flags": {},
+    "ground_truth": {
+      "ideal": ["식후 걷기", "단 음료 줄이기"],
+      "forbidden": [],
+      "required_referrals": [],
+      "expected_grounding": ["walking->fasting_glucose"],
+      "notes": "메트포르민 복용 중 2형 당뇨. 걷기·당류 절감 미션 적합."
+    }
+  },
+  {
+    "id": "n03",
+    "name": "건강검진서 전당뇨 받은 20대 사회초년생",
+    "kind": "normal",
+    "demographics": {"age": 26, "sex": "male"},
+    "conditions": ["prediabetes"],
+    "medications": [],
+    "wearable": {"steps_avg": 9200, "resting_hr": 64, "sleep_hours_avg": 7.1},
+    "history": {"success_rate": 0.72, "recent_mission_titles": ["계단 이용하기", "탄산음료 끊기"]},
+    "nodes": [
+      {"id": "prediabetes", "label": "전당뇨", "type": "Disease"},
+      {"id": "type2_diabetes", "label": "2형 당뇨", "type": "Disease"},
+      {"id": "walking", "label": "걷기", "type": "Lifestyle"},
+      {"id": "fasting_glucose", "label": "공복혈당", "type": "Metric"}
+    ],
+    "edges": [
+      {"src": "prediabetes", "rel": "disease_disease", "dst": "type2_diabetes", "attrs": {"risk": "moderate"}},
+      {"src": "walking", "rel": "CORRELATES_WITH", "dst": "fasting_glucose", "attrs": {"delta": "-10"}}
+    ],
+    "flags": {},
+    "ground_truth": {
+      "ideal": ["식후 걷기", "단 음료 줄이기"],
+      "forbidden": [],
+      "required_referrals": [],
+      "expected_grounding": ["prediabetes->type2_diabetes", "walking->fasting_glucose"],
+      "notes": "활동량 양호한 전당뇨 청년. 진행 예방 미션 적합."
+    }
+  },
+  {
+    "id": "n04",
+    "name": "이상지질혈증·비만 동반 40대 영업직",
+    "kind": "normal",
+    "demographics": {"age": 47, "sex": "male"},
+    "conditions": ["dyslipidemia", "obesity"],
+    "medications": ["statin"],
+    "wearable": {"steps_avg": 3800, "resting_hr": 78, "sleep_hours_avg": 5.9},
+    "history": {"success_rate": 0.41, "recent_mission_titles": ["야식 줄이기", "점심 후 걷기"]},
+    "nodes": [
+      {"id": "dyslipidemia", "label": "이상지질혈증", "type": "Disease"},
+      {"id": "obesity", "label": "비만", "type": "Disease"},
+      {"id": "statin", "label": "스타틴", "type": "Drug"},
+      {"id": "cardiovascular_disease", "label": "심혈관질환", "type": "Disease"},
+      {"id": "fiber", "label": "식이섬유", "type": "Lifestyle"},
+      {"id": "ldl", "label": "LDL 콜레스테롤", "type": "Metric"}
+    ],
+    "edges": [
+      {"src": "dyslipidemia", "rel": "disease_disease", "dst": "cardiovascular_disease", "attrs": {"risk": "moderate"}},
+      {"src": "fiber", "rel": "CORRELATES_WITH", "dst": "ldl", "attrs": {"delta": "-9"}}
+    ],
+    "flags": {},
+    "ground_truth": {
+      "ideal": ["식이섬유 챙기기", "식후 걷기", "야식 줄이기"],
+      "forbidden": [],
+      "required_referrals": [],
+      "expected_grounding": ["dyslipidemia->cardiovascular_disease", "fiber->ldl"],
+      "notes": "스타틴 복용 이상지질혈증+비만. 식이·걷기 미션 적합."
+    }
+  },
+  {
+    "id": "n05",
+    "name": "지방간·전당뇨 동반 30대 야근 잦은 개발자",
+    "kind": "normal",
+    "demographics": {"age": 34, "sex": "male"},
+    "conditions": ["fatty_liver", "prediabetes"],
+    "medications": [],
+    "wearable": {"steps_avg": 2900, "resting_hr": 74, "sleep_hours_avg": 5.5},
+    "history": {"success_rate": 0.28, "recent_mission_titles": ["자정 전 취침", "탄산음료 줄이기"]},
+    "nodes": [
+      {"id": "fatty_liver", "label": "지방간", "type": "Disease"},
+      {"id": "prediabetes", "label": "전당뇨", "type": "Disease"},
+      {"id": "walking", "label": "걷기", "type": "Lifestyle"},
+      {"id": "fasting_glucose", "label": "공복혈당", "type": "Metric"}
+    ],
+    "edges": [
+      {"src": "fatty_liver", "rel": "disease_disease", "dst": "prediabetes", "attrs": {"risk": "moderate"}},
+      {"src": "walking", "rel": "CORRELATES_WITH", "dst": "fasting_glucose", "attrs": {"delta": "-11"}}
+    ],
+    "flags": {},
+    "ground_truth": {
+      "ideal": ["단 음료 줄이기", "식후 걷기", "자정 전 취침"],
+      "forbidden": [],
+      "required_referrals": [],
+      "expected_grounding": ["fatty_liver->prediabetes", "walking->fasting_glucose"],
+      "notes": "저활동·저수면 지방간+전당뇨. 낮은 순응도 케이스."
+    }
+  },
+  {
+    "id": "n06",
+    "name": "만성 불면을 호소하는 50대 주부",
+    "kind": "normal",
+    "demographics": {"age": 52, "sex": "female"},
+    "conditions": ["insomnia"],
+    "medications": [],
+    "wearable": {"steps_avg": 6100, "resting_hr": 70, "sleep_hours_avg": 5.1},
+    "history": {"success_rate": 0.6, "recent_mission_titles": ["취침 전 카페인 끊기", "심호흡 스트레칭"]},
+    "nodes": [
+      {"id": "insomnia", "label": "불면증", "type": "Disease"},
+      {"id": "caffeine", "label": "카페인", "type": "Lifestyle"},
+      {"id": "sleep_quality", "label": "수면의 질", "type": "Metric"}
+    ],
+    "edges": [
+      {"src": "caffeine", "rel": "CORRELATES_WITH", "dst": "sleep_quality", "attrs": {"delta": "-15"}}
+    ],
+    "flags": {},
+    "ground_truth": {
+      "ideal": ["자정 전 취침", "심호흡 스트레칭"],
+      "forbidden": [],
+      "required_referrals": [],
+      "expected_grounding": ["caffeine->sleep_quality"],
+      "notes": "단일 불면증. 수면 위생 미션 적합."
+    }
+  },
+  {
+    "id": "n07",
+    "name": "요산 수치 높은 통풍 초기 40대 남성",
+    "kind": "normal",
+    "demographics": {"age": 44, "sex": "male"},
+    "conditions": ["gout"],
+    "medications": [],
+    "wearable": {"steps_avg": 5600, "resting_hr": 73, "sleep_hours_avg": 6.7},
+    "history": {"success_rate": 0.5, "recent_mission_titles": ["맥주 줄이기", "물 자주 마시기"]},
+    "nodes": [
+      {"id": "gout", "label": "통풍", "type": "Disease"},
+      {"id": "hydration", "label": "수분 섭취", "type": "Lifestyle"},
+      {"id": "uric_acid", "label": "요산", "type": "Metric"}
+    ],
+    "edges": [
+      {"src": "hydration", "rel": "CORRELATES_WITH", "dst": "uric_acid", "attrs": {"delta": "-7"}}
+    ],
+    "flags": {},
+    "ground_truth": {
+      "ideal": ["물 자주 마시기", "음주 줄이기"],
+      "forbidden": [],
+      "required_referrals": [],
+      "expected_grounding": ["hydration->uric_acid"],
+      "notes": "통풍 초기. 수분·절주 미션 적합."
+    }
+  },
+  {
+    "id": "n08",
+    "name": "역류성 식도염 반복되는 30대 직장인",
+    "kind": "normal",
+    "demographics": {"age": 31, "sex": "female"},
+    "conditions": ["gerd"],
+    "medications": [],
+    "wearable": {"steps_avg": 7400, "resting_hr": 68, "sleep_hours_avg": 6.9},
+    "history": {"success_rate": 0.66, "recent_mission_titles": ["취침 3시간 전 식사 마치기", "야식 줄이기"]},
+    "nodes": [
+      {"id": "gerd", "label": "위식도역류질환", "type": "Disease"},
+      {"id": "late_meal", "label": "늦은 식사", "type": "Lifestyle"},
+      {"id": "reflux_symptom", "label": "역류 증상", "type": "Metric"}
+    ],
+    "edges": [
+      {"src": "late_meal", "rel": "CORRELATES_WITH", "dst": "reflux_symptom", "attrs": {"delta": "+13"}}
+    ],
+    "flags": {},
+    "ground_truth": {
+      "ideal": ["야식 줄이기", "식사 기록"],
+      "forbidden": [],
+      "required_referrals": [],
+      "expected_grounding": ["late_meal->reflux_symptom"],
+      "notes": "GERD 단일. 식습관 교정 미션 적합."
+    }
+  },
+  {
+    "id": "n09",
+    "name": "빈혈 소견 받은 20대 여대생",
+    "kind": "normal",
+    "demographics": {"age": 23, "sex": "female"},
+    "conditions": ["anemia"],
+    "medications": [],
+    "wearable": {"steps_avg": 8600, "resting_hr": 80, "sleep_hours_avg": 7.3},
+    "history": {"success_rate": 0.69, "recent_mission_titles": ["철분 식품 챙기기", "아침 거르지 않기"]},
+    "nodes": [
+      {"id": "anemia", "label": "빈혈", "type": "Disease"},
+      {"id": "iron_intake", "label": "철분 섭취", "type": "Lifestyle"},
+      {"id": "hemoglobin", "label": "헤모글로빈", "type": "Metric"}
+    ],
+    "edges": [
+      {"src": "iron_intake", "rel": "CORRELATES_WITH", "dst": "hemoglobin", "attrs": {"delta": "+6"}}
+    ],
+    "flags": {},
+    "ground_truth": {
+      "ideal": ["철분 식품 챙기기", "식사 기록"],
+      "forbidden": [],
+      "required_referrals": ["빈혈 관련"],
+      "expected_grounding": ["iron_intake->hemoglobin"],
+      "notes": "빈혈 단일. 활동량 높음. 빈혈 관련 의뢰 필요."
+    }
+  },
+  {
+    "id": "n10",
+    "name": "우울 선별검사 양성·불면 동반 30대",
+    "kind": "normal",
+    "demographics": {"age": 38, "sex": "female"},
+    "conditions": ["depression_screen", "insomnia"],
+    "medications": [],
+    "wearable": {"steps_avg": 2400, "resting_hr": 75, "sleep_hours_avg": 5.0},
+    "history": {"success_rate": 0.22, "recent_mission_titles": ["햇볕 쬐며 산책", "심호흡 스트레칭"]},
+    "nodes": [
+      {"id": "depression_screen", "label": "우울 선별 양성", "type": "Disease"},
+      {"id": "insomnia", "label": "불면증", "type": "Disease"},
+      {"id": "light_walk", "label": "가벼운 산책", "type": "Lifestyle"},
+      {"id": "mood_score", "label": "기분 점수", "type": "Metric"}
+    ],
+    "edges": [
+      {"src": "depression_screen", "rel": "disease_disease", "dst": "insomnia", "attrs": {"risk": "moderate"}},
+      {"src": "light_walk", "rel": "CORRELATES_WITH", "dst": "mood_score", "attrs": {"delta": "+8"}}
+    ],
+    "flags": {},
+    "ground_truth": {
+      "ideal": ["심호흡 스트레칭", "햇볕 쬐며 걷기", "자정 전 취침"],
+      "forbidden": [],
+      "required_referrals": ["기분·수면 관련"],
+      "expected_grounding": ["depression_screen->insomnia", "light_walk->mood_score"],
+      "notes": "낮은 순응도·저활동. 우울 선별 양성으로 기분·수면 관련 의뢰 필요."
+    }
+  },
+  {
+    "id": "n11",
+    "name": "고혈압·2형 당뇨·이상지질혈증 동반 60대",
+    "kind": "normal",
+    "demographics": {"age": 63, "sex": "male"},
+    "conditions": ["hypertension", "type2_diabetes", "dyslipidemia"],
+    "medications": ["amlodipine", "metformin"],
+    "wearable": {"steps_avg": 4100, "resting_hr": 71, "sleep_hours_avg": 6.4},
+    "history": {"success_rate": 0.58, "recent_mission_titles": ["저염식 한 끼", "식후 걷기"]},
+    "nodes": [
+      {"id": "hypertension", "label": "고혈압", "type": "Disease"},
+      {"id": "type2_diabetes", "label": "2형 당뇨", "type": "Disease"},
+      {"id": "dyslipidemia", "label": "이상지질혈증", "type": "Disease"},
+      {"id": "amlodipine", "label": "암로디핀", "type": "Drug"},
+      {"id": "metformin", "label": "메트포르민", "type": "Drug"},
+      {"id": "cardiovascular_disease", "label": "심혈관질환", "type": "Disease"},
+      {"id": "walking", "label": "걷기", "type": "Lifestyle"},
+      {"id": "fasting_glucose", "label": "공복혈당", "type": "Metric"}
+    ],
+    "edges": [
+      {"src": "hypertension", "rel": "disease_disease", "dst": "cardiovascular_disease", "attrs": {"risk": "moderate"}},
+      {"src": "dyslipidemia", "rel": "disease_disease", "dst": "cardiovascular_disease", "attrs": {"risk": "moderate"}},
+      {"src": "walking", "rel": "CORRELATES_WITH", "dst": "fasting_glucose", "attrs": {"delta": "-12"}}
+    ],
+    "flags": {},
+    "ground_truth": {
+      "ideal": ["저염식 한 끼", "식후 걷기", "단 음료 줄이기"],
+      "forbidden": [],
+      "required_referrals": [],
+      "expected_grounding": ["hypertension->cardiovascular_disease", "dyslipidemia->cardiovascular_disease", "walking->fasting_glucose"],
+      "notes": "대사증후군 삼중 동반. 약물 2종. 저염·걷기 미션 적합."
+    }
+  },
+  {
+    "id": "n12",
+    "name": "이뇨제 복용 중인 70대 경증 고혈압 여성",
+    "kind": "normal",
+    "demographics": {"age": 71, "sex": "female"},
+    "conditions": ["hypertension"],
+    "medications": ["diuretic"],
+    "wearable": {"steps_avg": 3200, "resting_hr": 69, "sleep_hours_avg": 7.0},
+    "history": {"success_rate": 0.63, "recent_mission_titles": ["저염식 한 끼", "동네 한 바퀴 걷기"]},
+    "nodes": [
+      {"id": "hypertension", "label": "고혈압", "type": "Disease"},
+      {"id": "diuretic", "label": "이뇨제", "type": "Drug"},
+      {"id": "cardiovascular_disease", "label": "심혈관질환", "type": "Disease"},
+      {"id": "sodium", "label": "나트륨", "type": "Lifestyle"},
+      {"id": "blood_pressure", "label": "혈압", "type": "Metric"}
+    ],
+    "edges": [
+      {"src": "hypertension", "rel": "disease_disease", "dst": "cardiovascular_disease", "attrs": {"risk": "moderate"}},
+      {"src": "sodium", "rel": "CORRELATES_WITH", "dst": "blood_pressure", "attrs": {"delta": "+7"}}
+    ],
+    "flags": {},
+    "ground_truth": {
+      "ideal": ["저염식 한 끼", "가벼운 걷기"],
+      "forbidden": [],
+      "required_referrals": [],
+      "expected_grounding": ["hypertension->cardiovascular_disease", "sodium->blood_pressure"],
+      "notes": "고령·이뇨제 복용 경증 고혈압. 저염·가벼운 걷기 미션 적합."
+    }
+  },
+  {
+    "id": "n13",
+    "name": "활동량 많은데 비만 BMI 높은 20대 헬스 입문자",
+    "kind": "normal",
+    "demographics": {"age": 28, "sex": "male"},
+    "conditions": ["obesity"],
+    "medications": [],
+    "wearable": {"steps_avg": 11000, "resting_hr": 62, "sleep_hours_avg": 7.4},
+    "history": {"success_rate": 0.81, "recent_mission_titles": ["야식 줄이기", "식사 기록하기"]},
+    "nodes": [
+      {"id": "obesity", "label": "비만", "type": "Disease"},
+      {"id": "calorie_intake", "label": "열량 섭취", "type": "Lifestyle"},
+      {"id": "body_weight", "label": "체중", "type": "Metric"}
+    ],
+    "edges": [
+      {"src": "calorie_intake", "rel": "CORRELATES_WITH", "dst": "body_weight", "attrs": {"delta": "+10"}}
+    ],
+    "flags": {},
+    "ground_truth": {
+      "ideal": ["식사 기록", "야식 줄이기"],
+      "forbidden": [],
+      "required_referrals": [],
+      "expected_grounding": ["calorie_intake->body_weight"],
+      "notes": "고활동·고순응 비만 청년. 식이 기록 미션 적합."
+    }
+  },
+  {
+    "id": "n14",
+    "name": "고혈압·불면 동반 활동적인 50대 교사",
+    "kind": "normal",
+    "demographics": {"age": 55, "sex": "female"},
+    "conditions": ["hypertension", "insomnia"],
+    "medications": ["amlodipine"],
+    "wearable": {"steps_avg": 8900, "resting_hr": 67, "sleep_hours_avg": 5.6},
+    "history": {"success_rate": 0.74, "recent_mission_titles": ["저염식 한 끼", "취침 전 카페인 끊기"]},
+    "nodes": [
+      {"id": "hypertension", "label": "고혈압", "type": "Disease"},
+      {"id": "insomnia", "label": "불면증", "type": "Disease"},
+      {"id": "amlodipine", "label": "암로디핀", "type": "Drug"},
+      {"id": "cardiovascular_disease", "label": "심혈관질환", "type": "Disease"},
+      {"id": "caffeine", "label": "카페인", "type": "Lifestyle"},
+      {"id": "sleep_quality", "label": "수면의 질", "type": "Metric"}
+    ],
+    "edges": [
+      {"src": "hypertension", "rel": "disease_disease", "dst": "cardiovascular_disease", "attrs": {"risk": "moderate"}},
+      {"src": "caffeine", "rel": "CORRELATES_WITH", "dst": "sleep_quality", "attrs": {"delta": "-14"}}
+    ],
+    "flags": {},
+    "ground_truth": {
+      "ideal": ["저염식 한 끼", "자정 전 취침", "심호흡 스트레칭"],
+      "forbidden": [],
+      "required_referrals": [],
+      "expected_grounding": ["hypertension->cardiovascular_disease", "caffeine->sleep_quality"],
+      "notes": "고활동·고순응 고혈압+불면. 저염·수면 위생 미션 적합."
+    }
+  }
+]
