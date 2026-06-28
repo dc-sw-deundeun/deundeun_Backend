@@ -54,9 +54,7 @@ class OcrParser:
         rows = self._cluster_rows(result.fields, row_tolerance)
 
         form_x_max = max((f.x_max for f in result.fields), default=0.0)
-        ref_x_threshold = (
-            form_x_max * _REF_COL_RATIO if form_x_max >= _MIN_FORM_WIDTH else None
-        )
+        ref_x_threshold = form_x_max * _REF_COL_RATIO if form_x_max >= _MIN_FORM_WIDTH else None
 
         metrics: list[ParsedMetric] = []
         seen: set[str] = set()
@@ -88,7 +86,11 @@ class OcrParser:
                     )
                 ]
                 extracted = self._extract(spec, right, ref_x_threshold)
-                if not extracted and spec.kind in ("hw_pair", "bp_pair") and row_index + 1 < len(rows):
+                if (
+                    not extracted
+                    and spec.kind in ("hw_pair", "bp_pair")
+                    and row_index + 1 < len(rows)
+                ):
                     next_row = rows[row_index + 1]
                     if self._find_first_label_from(next_row, 0) is None:
                         extracted = self._extract(
@@ -226,8 +228,7 @@ class OcrParser:
         numbers = [
             f
             for f in right
-            if _is_number(f.text)
-            and (ref_x_threshold is None or f.x_min < ref_x_threshold)
+            if _is_number(f.text) and (ref_x_threshold is None or f.x_min < ref_x_threshold)
         ]
         if len(numbers) < 2:
             return []
@@ -287,7 +288,9 @@ class OcrParser:
         ]
 
     def _extract_hw(
-        self, right: list[OcrFieldDTO], ref_x_threshold: float | None = None  # noqa: ARG002
+        self,
+        right: list[OcrFieldDTO],
+        ref_x_threshold: float | None = None,  # noqa: ARG002
     ) -> list[ParsedMetric]:
         # hw_pair 라벨("키(cm) 및 몸무게(kg)")은 길어서 값이 폼 우측에 위치함.
         # 빈 서식에서는 hw_pair 행에 숫자가 없으므로 x 필터를 적용하지 않는다.
