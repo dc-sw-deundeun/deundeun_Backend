@@ -113,3 +113,15 @@ def check_mission(mission: GeneratedMission, pkg: PKG) -> list[str]:
 
 def is_safe(mission: GeneratedMission, pkg: PKG) -> bool:
     return not check_mission(mission, pkg)
+
+
+def has_active_constraints(pkg: PKG) -> bool:
+    """PKG 내용만으로 '위험군'인지 판정(오라클 라벨 없이) — 라우팅용.
+
+    금기(타입/개념 제외)가 활성이거나, 병원상담이 필요하거나, 위험 플래그가 있으면 True.
+    """
+    if _active_type_exclusions(pkg) or _active_concept_exclusions(pkg):
+        return True
+    if referral_topics(pkg):
+        return True
+    return bool(pkg.flags.get("cardiovascular_risk") or pkg.flags.get("exercise_prohibited"))
