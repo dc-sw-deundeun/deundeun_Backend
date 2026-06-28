@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from typing import cast
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
@@ -78,7 +79,7 @@ def _client_ip(request: Request) -> str:
         direct_client_host=request.client.host if request.client else None,
         forwarded_for=request.headers.get("X-Forwarded-For"),
         trusted_proxy=settings.trusted_proxy,
-        trusted_proxy_cidrs=settings.trusted_proxy_cidrs,
+        trusted_proxy_cidrs=cast(list[str], settings.trusted_proxy_cidrs),
     )
 
 
