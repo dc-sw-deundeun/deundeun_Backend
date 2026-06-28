@@ -29,6 +29,13 @@ class Settings(BaseSettings):
     openai_model: str = "gpt-4.1-mini"
     openai_timeout_seconds: float = 20.0
 
+    # 미션 생성/실험용 LLM provider 선택: "openai" | "clova"
+    llm_provider: str = "openai"
+    clova_studio_api_key: str | None = None
+    clova_studio_base_url: str = "https://clovastudio.stream.ntruss.com/v1/openai"
+    clova_studio_model: str = "HCX-005"
+    clova_studio_timeout_seconds: float = 30.0
+
     health_metric_evaluate_rate_limit_per_minute: int = 20
     health_metric_analysis_rate_limit_per_minute: int = 10
 
