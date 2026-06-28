@@ -137,7 +137,11 @@ Thumbs.db
 docs/
 !docs/
 docs/*
+!docs/README.md
+!docs/architecture.md
 !docs/deployment-onprem.md
+!docs/development-environment.md
+!docs/implementation-status.md
 .github/ISSUE_TEMPLATE/config.yml
 .github/ISSUE_TEMPLATE/phase-*.yml
 

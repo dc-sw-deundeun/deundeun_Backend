@@ -1,10 +1,10 @@
 # deundeun 온프레미스 배포·CD 가이드
 
-> 마지막 업데이트: 2026-06-28  
+> 마지막 업데이트: 2026-06-29  
 > 대상: Rocky Linux 10.1 단일 서버 · Cloudflare DNS only · `develop` 브랜치 스테이징 배포
 
 이 문서는 **deundeun 백엔드**를 온프레미스(홈) 서버에 배포하고 GitHub Actions CD와 연결하기 위한 **팀 공유 설정서**입니다.  
-레포의 workflow·스크립트 계약은 [README.md](../README.md#cicd-파이프라인)와 동일합니다.
+레포의 workflow·스크립트 계약은 [README.md](../README.md#배포)와 동일합니다.
 
 ---
 
@@ -14,7 +14,7 @@
 |------|-----------|
 | 배포 대상 | **`develop` 브랜치 → 스테이징** (`deploy-develop.yml`) |
 | 프로덕션 (`main`) | **아직 사용하지 않음** — `ENABLE_PRODUCTION_DEPLOY` 미설정 또는 `false` |
-| API 도메인 | **`api.deundeun.xyz`** (Nginx 구성 후) |
+| API 도메인 | **`api.deundeun.xyz`** |
 | SSH 도메인 | **`deundeun.xyz`** (공유기 포트포워딩용) |
 | 서버 | **1대** (스테이징/프로덕션 분리 없음) |
 
@@ -36,7 +36,7 @@
 | Cloudflare Tunnel | **미사용** |
 | Reverse proxy | **Compose nginx** (`deundeun-nginx`, :80 → api:8000) |
 | Database | **Compose Postgres** (`deundeun-postgres`, api 컨테이너는 `postgres:5432`로 접속) |
-| 방화벽 (서버) | **22**(ssh), **80**, **443** |
+| 방화벽 (서버) | **22**(ssh), **80** 운영 중 · **443** 추후 HTTPS |
 | Docker Hub | `deundeun/backend` |
 | Docker Engine | Rocky 공식 repo 아님 → [Docker CE `rhel` repo](#61-docker-ce-rocky-linux-101) |
 
@@ -61,11 +61,12 @@
 | `~/.ssh/homeserver_ed25519` | `jangwoojung` | 사람이 서버 관리 | **있음** |
 | `~/.ssh/deundeun_deploy` | `deploy` | GitHub Actions CD | **없음** |
 
-### 아직 미정
+### 아직 미정/후속
 
 | 항목 | 메모 |
 |------|------|
-| **SMTP·Clova OCR** | 스테이징 `/opt/deundeun/.env`에 실제 secret 주입 |
+| **HTTPS** | certbot 또는 Cloudflare/Tunnel 방식 결정 필요 |
+| **운영 프로덕션** | `main` 배포는 아직 비활성 |
 
 ---
 
@@ -403,7 +404,7 @@ API_HOST_PORT=8000
 DATABASE_URL=postgresql+psycopg2://deundeun:<POSTGRES_PASSWORD>@postgres:5432/deundeun
 JWT_SECRET_KEY=<openssl rand -hex 32>
 
-CORS_ALLOW_ORIGINS=["https://<frontend-domain>"]
+CORS_ALLOW_ORIGINS=["https://www.deundeun.xyz","http://localhost:5173","http://localhost:3000"]
 TRUSTED_PROXY=true
 TRUSTED_PROXY_CIDRS=["172.16.0.0/12","10.0.0.0/8"]
 
@@ -416,7 +417,7 @@ CLOVA_OCR_SECRET_KEY=...
 > `/opt/deundeun/.env`는 서버에만 두고 Git에 커밋하지 않습니다.
 > 로컬 저장소의 `.env`, `.env.server`는 `.gitignore` 대상입니다. 실제 secret이 들어간 파일은 문서나 커밋에 포함하지 않습니다.
 > `.env.server.example`의 `change-me`·빈 Clova 값은 의도적으로 앱 기동 검증을 실패시키는 기본값입니다. 실제 값으로 바꾼 뒤 배포합니다.
-> `CORS_ALLOW_ORIGINS`에는 API 주소가 아니라 브라우저가 열린 프론트엔드 origin을 JSON 배열로 넣습니다. 예: `["https://app.deundeun.xyz","http://localhost:5173"]`.
+> `CORS_ALLOW_ORIGINS`에는 API 주소가 아니라 브라우저가 열린 프론트엔드 origin을 JSON 배열로 넣습니다. 예: `["https://www.deundeun.xyz","http://localhost:5173"]`.
 
 서버에서 compose 렌더링 확인:
 
