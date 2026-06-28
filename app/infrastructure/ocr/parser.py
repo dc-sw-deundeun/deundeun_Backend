@@ -68,7 +68,12 @@ class OcrParser:
                     break
                 spec, label_start, label_end = found
                 next_label = self._find_first_label_from(row, label_end)
-                value_end = next_label[1] if next_label else len(row)
+                # hw_pair("키 및 몸무게" 형태)는 weight 라벨이 value 앞에 오므로
+                # next_label 경계로 잘리지 않도록 row 끝까지 탐색한다.
+                if spec.kind == "hw_pair":
+                    value_end = len(row)
+                else:
+                    value_end = next_label[1] if next_label else len(row)
 
                 right_raw = row[label_end:value_end]
                 right = [
@@ -142,7 +147,7 @@ class OcrParser:
                 if start + window > len(row):
                     break
                 combined = "".join(f.text for f in row[start : start + window])
-                match = find_best_alias_match(combined)
+                match = find_best_alias_match(combined, max_typos=(2 if window == 1 else 1))
                 if match:
                     alias_len = len(match[1])
                     is_earlier = best_start is None or start < best_start
@@ -170,7 +175,7 @@ class OcrParser:
                 if start + window > len(row):
                     break
                 combined = "".join(f.text for f in row[start : start + window])
-                match = find_best_alias_match(combined)
+                match = find_best_alias_match(combined, max_typos=(2 if window == 1 else 1))
                 if match and len(match[1]) > best_alias_len:
                     best_spec = match[0]
                     best_alias_len = len(match[1])
