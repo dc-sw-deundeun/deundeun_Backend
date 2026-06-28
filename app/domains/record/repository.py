@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.domains.ocr.models import OcrJob
@@ -43,6 +43,68 @@ class RecordRepository:
 
     def get_record(self, record_id: int) -> CheckupRecord | None:
         return self._db.get(CheckupRecord, record_id)
+
+    def find_by_user_and_hash(self, user_id: int, file_hash: str) -> CheckupRecord | None:
+        return self._db.scalar(
+            select(CheckupRecord).where(
+                CheckupRecord.user_id == user_id,
+                CheckupRecord.file_hash == file_hash,
+            )
+        )
+
+    def list_checkups_by_user(
+        self, user_id: int, *, offset: int, limit: int
+    ) -> tuple[list[CheckupRecord], int]:
+        total = (
+            self._db.scalar(
+                select(func.count())
+                .select_from(CheckupRecord)
+                .where(CheckupRecord.user_id == user_id)
+            )
+            or 0
+        )
+        rows = self._db.scalars(
+            select(CheckupRecord)
+            .where(CheckupRecord.user_id == user_id)
+            .order_by(CheckupRecord.created_at.desc())
+            .offset(offset)
+            .limit(limit)
+        ).all()
+        return list(rows), total
+
+    def count_metrics(self, record_id: int) -> int:
+        return (
+            self._db.scalar(
+                select(func.count())
+                .select_from(CheckupMetricResult)
+                .where(CheckupMetricResult.record_id == record_id)
+            )
+            or 0
+        )
+
+    def list_trend_series(
+        self, user_id: int, metric_codes: list[str]
+    ) -> list[tuple[CheckupRecord, CheckupMetricResult]]:
+        if not metric_codes:
+            return []
+        event_at = func.coalesce(CheckupRecord.measured_at, CheckupRecord.created_at)
+        stmt = (
+            select(CheckupRecord, CheckupMetricResult)
+            .join(
+                CheckupMetricResult,
+                CheckupMetricResult.record_id == CheckupRecord.id,
+            )
+            .where(
+                CheckupRecord.user_id == user_id,
+                CheckupMetricResult.metric_code.in_(metric_codes),
+            )
+            .order_by(
+                event_at.asc(),
+                CheckupRecord.id.asc(),
+                CheckupMetricResult.metric_code.asc(),
+            )
+        )
+        return [(record, metric) for record, metric in self._db.execute(stmt).all()]
 
     def get_record_fresh(self, record_id: int) -> CheckupRecord | None:
         stmt = (

@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import JSON, Column, DateTime, ForeignKey, Integer, String, func
+from sqlalchemy import JSON, DateTime, Float, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 import app.domains.auth.models  # noqa: F401
@@ -11,9 +11,13 @@ from app.domains.user.models import User  # noqa: F401
 class HealthMetricReference(Base):
     __tablename__ = "health_metric_references"
 
-    id = Column(Integer, primary_key=True)
-    # metric_code, metric_name, description, reference_min, reference_max, unit
-    # recommendations, avoidances
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    metric_code: Mapped[str] = mapped_column(String(50), nullable=False, unique=True)
+    metric_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    reference_min: Mapped[float | None] = mapped_column(Float, nullable=True)
+    reference_max: Mapped[float | None] = mapped_column(Float, nullable=True)
+    unit: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
 
 class HealthMetricAnalysis(Base):

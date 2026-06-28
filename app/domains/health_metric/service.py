@@ -6,7 +6,10 @@ from sqlalchemy.orm import Session
 
 from app.domains.health_metric.explanation_service import HealthMetricExplanationService
 from app.domains.health_metric.models import HealthMetricAnalysis
-from app.domains.health_metric.repository import HealthMetricAnalysisRepository
+from app.domains.health_metric.repository import (
+    HealthMetricAnalysisRepository,
+    HealthMetricRepository,
+)
 from app.domains.health_metric.schemas import (
     HealthMetricDetailView,
     HealthMetricEvaluationItem,
@@ -339,13 +342,26 @@ def _canonical_label(label: str) -> str | None:
 
 
 class HealthMetricService:
+    def __init__(self, db: Session | None = None) -> None:
+        self._db = db
+
     def get_reference(self, metric_code: str):
         """건강 항목 기준값·설명을 조회합니다."""
-        raise NotImplementedError
+        if self._db is None:
+            raise RuntimeError("HealthMetricService requires a DB session for reference lookup")
+        return HealthMetricRepository(self._db).find_by_metric_code(metric_code)
 
-    def build_metric_detail(self, record_id: int, metric_code: str):
-        """CheckupMetricResult + HealthMetricReference + AnalysisSummary를 조합합니다."""
-        raise NotImplementedError
+    def build_metric_detail(self, record_id: int, metric_code: str) -> dict:
+        """CheckupMetricResult + HealthMetricReference 조합 (분석 요약은 Phase 4)."""
+        if self._db is None:
+            raise RuntimeError("HealthMetricService requires a DB session for metric detail")
+        reference = self.get_reference(metric_code)
+        return {
+            "record_id": record_id,
+            "metric_code": metric_code,
+            "reference": reference,
+            "analysis_summary": None,
+        }
 
     def evaluate_metrics(
         self, request: HealthMetricEvaluationRequest

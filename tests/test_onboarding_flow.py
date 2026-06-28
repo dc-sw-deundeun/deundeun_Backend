@@ -244,6 +244,42 @@ def test_complete_before_checkup_verified_returns_409(
     assert res.json()["error_code"] == "ONBOARDING_INCOMPLETE"
 
 
+def test_complete_after_checkup_verified_via_manual_verify(
+    client: TestClient, email_client: CapturingEmailClient, db_session: Session
+) -> None:
+    email = "verify-flow@example.com"
+    headers = _auth_headers(client, email_client, email)
+    client.post(f"{AUTH}/policies/agree", json={"consents": _FULL_CONSENTS}, headers=headers)
+    client.post(f"{ONB}/wearable", json={"action": "SKIP"}, headers=headers)
+
+    manual = client.post(
+        "/api/v1/records/checkups/manual",
+        json={
+            "metrics": [
+                {
+                    "metric_code": "bmi",
+                    "metric_name": "체질량지수",
+                    "value": "22.0",
+                    "unit": "kg/m2",
+                }
+            ]
+        },
+        headers=headers,
+    )
+    assert manual.status_code == 201
+    record_id = manual.json()["data"]["record_id"]
+
+    verify = client.post(f"/api/v1/records/checkups/{record_id}/verify", json={}, headers=headers)
+    assert verify.status_code == 200
+
+    status = client.get(f"{ONB}/status", headers=headers).json()["data"]
+    assert status["onboarding_step"] == "CHECKUP_VERIFIED"
+
+    complete = client.post(f"{ONB}/complete", headers=headers)
+    assert complete.status_code == 200
+    assert complete.json()["data"]["onboarding_step"] == "COMPLETED"
+
+
 def test_complete_after_checkup_verified(
     client: TestClient, email_client: CapturingEmailClient, db_session: Session
 ) -> None:

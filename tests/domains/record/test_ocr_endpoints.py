@@ -187,7 +187,7 @@ def test_upload_returns_429_when_ocr_capacity_is_busy(api):
     client, _ = api
 
     class _BusyOcrService:
-        async def process_upload(self, user_id, images):
+        async def process_upload(self, user_id, images, *, content_hash=""):
             raise OcrBusyException(retry_after_seconds=10)
 
         def get_job(self, job_id):
@@ -214,12 +214,14 @@ def test_ocr_preview_does_not_persist_db_rows(api):
 
 def test_commit_checkup_persists_record_metrics_and_audit_job(api):
     client, db = api
+    content_hash = "c" * 64
 
     resp = client.post(
         "/api/v1/records/checkups",
         json={
             "ocr_status": "PARTIAL",
             "failed_pages": [1],
+            "content_hash": content_hash,
             "metrics": [
                 {
                     "metric_code": "fasting_glucose",
@@ -238,15 +240,15 @@ def test_commit_checkup_persists_record_metrics_and_audit_job(api):
     assert resp.status_code == 200
     data = resp.json()["data"]
     assert data["record_id"] is not None
-    assert data["verification_status"] == "VERIFIED"
+    assert data["verification_status"] == "UNVERIFIED"
     assert len(data["metrics"]) == 1
 
     record = db.get(CheckupRecord, data["record_id"])
     assert record is not None
     assert record.file_url is None
-    assert record.file_hash is None
+    assert record.file_hash == content_hash
     assert record.ocr_status == "PARTIAL"
-    assert record.verification_status == "VERIFIED"
+    assert record.verification_status == "UNVERIFIED"
     metric = RecordRepository(db).list_metrics(record.id)[0]
     assert metric.value == "105"
     assert metric.is_edited is True
@@ -263,6 +265,7 @@ def test_commit_checkup_returns_422_on_invalid_ocr_status(api):
         json={
             "ocr_status": "INVALID_STATUS",
             "failed_pages": [],
+            "content_hash": "d" * 64,
             "metrics": [
                 {
                     "metric_code": "fasting_glucose",
@@ -290,6 +293,7 @@ def test_commit_checkup_returns_422_on_metric_name_too_long(api):
         json={
             "ocr_status": "COMPLETED",
             "failed_pages": [],
+            "content_hash": "e" * 64,
             "metrics": [
                 {
                     "metric_code": "fasting_glucose",
