@@ -615,6 +615,70 @@
           "rejected": []
         }
       },
+      "gen_only(M1+M3+M5)": {
+        "persona_id": "t01_ckd_anemia",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": false,
+          "M3_kag": true,
+          "M4_verify_gate": false,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "오늘 한 끼 저염식 하기",
+            "rationale": "저염식은 고혈압 및 만성신장질환 관리에 도움을 줄 수 있습니다.",
+            "grounded_on": [
+              "고혈압->심혈관질환"
+            ],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "diet",
+            "template_id": "low_sodium_meal",
+            "source": "generated"
+          },
+          {
+            "title": "가까운 시일 내 병원에서 신장 기능 관련 상담받기",
+            "rationale": "만성신장질환 관리를 위해 전문의와 상담하는 것은 매우 중요합니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "checkup_followup",
+            "template_id": "clinic_followup",
+            "source": "generated"
+          },
+          {
+            "title": "식후 15분 걷기",
+            "rationale": "걷기는 신체 활동을 증가시켜 혈압을 조절하고 전반적인 건강을 개선할 수 있습니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "식후",
+              "duration_min": 15
+            },
+            "difficulty": 2,
+            "mission_type": "exercise",
+            "template_id": "walk_after_meal",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 3723.300875048153,
+          "prompt_tokens": 432,
+          "completion_tokens": 146,
+          "total_tokens": 578,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
+        }
+      },
       "full": {
         "persona_id": "t01_ckd_anemia",
         "config": {
@@ -674,6 +738,138 @@
           "prompt_tokens": 432,
           "completion_tokens": 143,
           "total_tokens": 575,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
+        }
+      },
+      "risk_routed": {
+        "persona_id": "t01_ckd_anemia",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": true,
+          "M3_kag": true,
+          "M4_verify_gate": true,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "오늘 한 끼 저염식 하기",
+            "rationale": "저염식은 고혈압과 만성신장질환 관리에 도움이 됩니다.",
+            "grounded_on": [
+              "고혈압->심혈관질환"
+            ],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "diet",
+            "template_id": "low_sodium_meal",
+            "source": "generated"
+          },
+          {
+            "title": "가까운 시일 내 병원에서 신장 기능 관련 상담받기",
+            "rationale": "신장 기능 상담을 통해 질환 관리를 위한 전문적인 조언을 받을 수 있습니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "checkup_followup",
+            "template_id": "clinic_followup",
+            "source": "generated"
+          },
+          {
+            "title": "식후 15분 걷기",
+            "rationale": "걷기는 심혈관 건강을 개선하고 체중 관리에도 도움을 줍니다.",
+            "grounded_on": [
+              "고혈압->심혈관질환"
+            ],
+            "execution": {
+              "when": "식후",
+              "duration_min": 15
+            },
+            "difficulty": 2,
+            "mission_type": "exercise",
+            "template_id": "walk_after_meal",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 3680.0067080184817,
+          "prompt_tokens": 432,
+          "completion_tokens": 149,
+          "total_tokens": 581,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
+        }
+      },
+      "adaptive": {
+        "persona_id": "t01_ckd_anemia",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": true,
+          "M3_kag": true,
+          "M4_verify_gate": true,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "오늘 한 끼 저염식 하기",
+            "rationale": "저염식은 고혈압과 만성신장질환 관리에 도움을 줍니다.",
+            "grounded_on": [
+              "고혈압->심혈관질환"
+            ],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "diet",
+            "template_id": "low_sodium_meal",
+            "source": "generated"
+          },
+          {
+            "title": "가까운 시일 내 병원에서 신장 기능 관련 상담받기",
+            "rationale": "신장 기능 상담을 통해 질환 관리를 위한 전문적인 조언을 받을 수 있습니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "checkup_followup",
+            "template_id": "clinic_followup",
+            "source": "generated"
+          },
+          {
+            "title": "식후 15분 걷기",
+            "rationale": "걷기는 심혈관 건강을 개선하고 체중 관리를 돕습니다.",
+            "grounded_on": [
+              "고혈압->심혈관질환"
+            ],
+            "execution": {
+              "when": "식후",
+              "duration_min": 15
+            },
+            "difficulty": 2,
+            "mission_type": "exercise",
+            "template_id": "walk_after_meal",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 3479.643791972194,
+          "prompt_tokens": 432,
+          "completion_tokens": 148,
+          "total_tokens": 580,
           "llm_calls": 1,
           "regenerations": 0,
           "rejected": []
@@ -1259,6 +1455,72 @@
           "rejected": []
         }
       },
+      "gen_only(M1+M3+M5)": {
+        "persona_id": "t02_warfarin",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": false,
+          "M3_kag": true,
+          "M4_verify_gate": false,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "식후 20분 걷기",
+            "rationale": "식사 후 가벼운 산책은 혈압을 낮추고 지질 수치를 개선하는 데 도움이 됩니다.",
+            "grounded_on": [
+              "이상지질혈증->심혈관질환"
+            ],
+            "execution": {
+              "when": "식후",
+              "duration_min": 20
+            },
+            "difficulty": 2,
+            "mission_type": "exercise",
+            "template_id": "walk_after_meal",
+            "source": "generated"
+          },
+          {
+            "title": "가벼운 스쿼트 10회 하기",
+            "rationale": "스쿼트와 같은 근력 운동은 고혈압 관리에 도움을 줄 수 있습니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "낮 시간",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "exercise",
+            "template_id": "light_strength",
+            "source": "generated"
+          },
+          {
+            "title": "오늘 한 끼 저염식 하기",
+            "rationale": "저염식은 고혈압 및 이상지질혈증 관리에 중요한 역할을 합니다.",
+            "grounded_on": [
+              "이상지질혈증->심혈관질환"
+            ],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "diet",
+            "template_id": "low_sodium_meal",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 3811.40254199272,
+          "prompt_tokens": 460,
+          "completion_tokens": 163,
+          "total_tokens": 623,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
+        }
+      },
       "full": {
         "persona_id": "t02_warfarin",
         "config": {
@@ -1318,6 +1580,138 @@
           "prompt_tokens": 460,
           "completion_tokens": 193,
           "total_tokens": 653,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
+        }
+      },
+      "risk_routed": {
+        "persona_id": "t02_warfarin",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": true,
+          "M3_kag": true,
+          "M4_verify_gate": true,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "식후 20분 걷기",
+            "rationale": "식사 후 가벼운 산책은 혈당 조절에 도움을 줄 수 있으며, 이상지질혈증과 고혈압 관리에도 긍정적인 영향을 미칩니다.",
+            "grounded_on": [
+              "이상지질혈증->심혈관질환"
+            ],
+            "execution": {
+              "when": "식후",
+              "duration_min": 20
+            },
+            "difficulty": 2,
+            "mission_type": "exercise",
+            "template_id": "walk_after_meal",
+            "source": "generated"
+          },
+          {
+            "title": "가벼운 스쿼트 10회 하기",
+            "rationale": "스쿼트와 같은 근력 운동은 근육을 강화하고 기초 대사량을 높여주어 체중 관리 및 지질 수치 개선에 도움이 됩니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "낮 시간",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "exercise",
+            "template_id": "light_strength",
+            "source": "generated"
+          },
+          {
+            "title": "오늘 한 끼 저염식 하기",
+            "rationale": "저염식은 고혈압 환자의 혈압 조절에 중요한 역할을 하며, 이상지질혈증의 위험도 감소시킬 수 있습니다.",
+            "grounded_on": [
+              "이상지질혈증->심혈관질환"
+            ],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "diet",
+            "template_id": "low_sodium_meal",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 4655.700666015036,
+          "prompt_tokens": 460,
+          "completion_tokens": 198,
+          "total_tokens": 658,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
+        }
+      },
+      "adaptive": {
+        "persona_id": "t02_warfarin",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": true,
+          "M3_kag": true,
+          "M4_verify_gate": true,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "식후 20분 걷기",
+            "rationale": "규칙적인 걷기는 고혈압과 이상지질혈증을 관리하는 데 도움이 되며, 식후 혈당 상승을 억제하는 효과도 있습니다.",
+            "grounded_on": [
+              "이상지질혈증->심혈관질환"
+            ],
+            "execution": {
+              "when": "식후",
+              "duration_min": 20
+            },
+            "difficulty": 2,
+            "mission_type": "exercise",
+            "template_id": "walk_after_meal",
+            "source": "generated"
+          },
+          {
+            "title": "가벼운 스쿼트 10회 하기",
+            "rationale": "스쿼트와 같은 가벼운 근력 운동은 근육량을 유지하고 기초대사량을 높이는데 도움을 줍니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "낮 시간",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "exercise",
+            "template_id": "light_strength",
+            "source": "generated"
+          },
+          {
+            "title": "오늘 한 끼 저염식 하기",
+            "rationale": "저염식은 고혈압 관리에 중요하며, 체내 나트륨 농도를 조절하여 혈압을 안정시키는 역할을 합니다.",
+            "grounded_on": [
+              "이상지질혈증->심혈관질환"
+            ],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "diet",
+            "template_id": "low_sodium_meal",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 4591.107375046704,
+          "prompt_tokens": 460,
+          "completion_tokens": 189,
+          "total_tokens": 649,
           "llm_calls": 1,
           "regenerations": 0,
           "rejected": []
@@ -1938,6 +2332,72 @@
           "rejected": []
         }
       },
+      "gen_only(M1+M3+M5)": {
+        "persona_id": "t03_ankle_edema",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": false,
+          "M3_kag": true,
+          "M4_verify_gate": false,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "식후 10분 걷기",
+            "rationale": "식사 후 바로 걷기를 통해 혈당 상승을 억제하고 체중 증가를 예방할 수 있으며, 고혈압으로 인한 심혈관 질환 위험도 감소시킬 수 있습니다.",
+            "grounded_on": [
+              "고혈압->심혈관질환"
+            ],
+            "execution": {
+              "when": "식후",
+              "duration_min": 10
+            },
+            "difficulty": 1,
+            "mission_type": "exercise",
+            "template_id": "walk_after_meal",
+            "source": "generated"
+          },
+          {
+            "title": "가벼운 스쿼트 10회 하기",
+            "rationale": "스쿼트는 하체 근력을 강화하는 운동으로 비만과 고혈압 관리에 도움이 됩니다. 또한 암로디핀 복용 시 발생할 수 있는 발목 부종을 완화하기 위해 혈액 순환 개선에도 기여합니다.",
+            "grounded_on": [
+              "암로디핀->발목 부종"
+            ],
+            "execution": {
+              "when": "낮 시간",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "exercise",
+            "template_id": "light_strength",
+            "source": "generated"
+          },
+          {
+            "title": "오늘 한 끼 저염식 하기",
+            "rationale": "저염식은 고혈압 환자에게 필수적인 식습관으로, 나트륨 섭취를 줄여 혈압을 안정시키는 데 도움을 줍니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "diet",
+            "template_id": "low_sodium_meal",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 5089.25816701958,
+          "prompt_tokens": 452,
+          "completion_tokens": 217,
+          "total_tokens": 669,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
+        }
+      },
       "full": {
         "persona_id": "t03_ankle_edema",
         "config": {
@@ -1999,6 +2459,143 @@
           "prompt_tokens": 452,
           "completion_tokens": 191,
           "total_tokens": 643,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
+        }
+      },
+      "risk_routed": {
+        "persona_id": "t03_ankle_edema",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": true,
+          "M3_kag": true,
+          "M4_verify_gate": true,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "오늘 한 끼 저염식 하기",
+            "rationale": "저염식은 고혈압과 심혈관 질환의 위험을 줄이는데 기여합니다.",
+            "grounded_on": [
+              "고혈압->심혈관질환"
+            ],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "diet",
+            "template_id": "low_sodium_meal",
+            "source": "generated"
+          },
+          {
+            "title": "식후 10분 걷기",
+            "rationale": "식사 후 바로 앉아있지 않고 걷기를 하면 혈당 상승을 억제하고 고혈압으로 인한 심혈관 질환 위험을 줄일 수 있습니다.",
+            "grounded_on": [
+              "고혈압->심혈관질환"
+            ],
+            "execution": {
+              "when": "식후",
+              "duration_min": 10
+            },
+            "difficulty": 1,
+            "mission_type": "exercise",
+            "template_id": "walk_after_meal",
+            "source": "generated"
+          },
+          {
+            "title": "가벼운 스쿼트 10회 하기",
+            "rationale": "스쿼트는 하체 근육을 강화하여 혈액 순환에 도움을 주고 암로디핀 복용으로 인해 발생할 수 있는 발목 부종을 예방할 수 있습니다.",
+            "grounded_on": [
+              "암로디핀->발목 부종"
+            ],
+            "execution": {
+              "when": "낮 시간",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "exercise",
+            "template_id": "light_strength",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 22988.34479204379,
+          "prompt_tokens": 886,
+          "completion_tokens": 309,
+          "total_tokens": 1195,
+          "llm_calls": 2,
+          "regenerations": 1,
+          "rejected": [
+            "식후 10분 걷기",
+            "가벼운 스쿼트 10회 하기"
+          ]
+        }
+      },
+      "adaptive": {
+        "persona_id": "t03_ankle_edema",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": true,
+          "M3_kag": true,
+          "M4_verify_gate": true,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "식후 10분 걷기",
+            "rationale": "식사 후 짧은 시간 동안의 걷기는 혈압을 낮추는 데 도움을 줄 수 있으며 비만과 고혈압 관리에 도움이 됩니다.",
+            "grounded_on": [
+              "고혈압->심혈관질환"
+            ],
+            "execution": {
+              "when": "식후",
+              "duration_min": 10
+            },
+            "difficulty": 1,
+            "mission_type": "exercise",
+            "template_id": "walk_after_meal",
+            "source": "generated"
+          },
+          {
+            "title": "가벼운 스쿼트 10회 하기",
+            "rationale": "스쿼트와 같은 가벼운 근력 운동은 체중 감량 및 근육 강화에 도움이 되며 이는 비만을 관리하는데 유용합니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "낮 시간",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "exercise",
+            "template_id": "light_strength",
+            "source": "generated"
+          },
+          {
+            "title": "오늘 한 끼 저염식 하기",
+            "rationale": "저염식은 고혈압 환자에게 권장되며 나트륨 섭취를 줄임으로써 혈압 조절에 도움을 줍니다.",
+            "grounded_on": [
+              "고혈압->심혈관질환"
+            ],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "diet",
+            "template_id": "low_sodium_meal",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 4403.193083999213,
+          "prompt_tokens": 452,
+          "completion_tokens": 184,
+          "total_tokens": 636,
           "llm_calls": 1,
           "regenerations": 0,
           "rejected": []
@@ -2571,6 +3168,72 @@
           "rejected": []
         }
       },
+      "gen_only(M1+M3+M5)": {
+        "persona_id": "t04_exercise_prohibited",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": false,
+          "M3_kag": true,
+          "M4_verify_gate": false,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "오늘 한 끼 저염식 하기",
+            "rationale": "저염식은 고혈압 및 심혈관 질환의 위험을 줄이는 데 도움이 됩니다.",
+            "grounded_on": [
+              "고혈압->심혈관질환"
+            ],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "diet",
+            "template_id": "low_sodium_meal",
+            "source": "generated"
+          },
+          {
+            "title": "24시 전에 잠자리에 들기",
+            "rationale": "충분한 수면은 혈압 조절에 도움을 주고 심장 건강에도 긍정적인 영향을 미칩니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "취침 전",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "sleep",
+            "template_id": "sleep_routine",
+            "source": "generated"
+          },
+          {
+            "title": "10분 심호흡·가벼운 스트레칭 하기",
+            "rationale": "스트레칭과 같은 가벼운 운동은 혈액 순환 개선에 도움을 주며, 이는 고혈압이나 심혈관 질환 예방에 좋습니다.",
+            "grounded_on": [
+              "고혈압->심혈관질환"
+            ],
+            "execution": {
+              "when": "",
+              "duration_min": 10
+            },
+            "difficulty": 1,
+            "mission_type": "stress",
+            "template_id": "breathing_stretch",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 4066.874042036943,
+          "prompt_tokens": 424,
+          "completion_tokens": 169,
+          "total_tokens": 593,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
+        }
+      },
       "full": {
         "persona_id": "t04_exercise_prohibited",
         "config": {
@@ -2632,6 +3295,136 @@
           "prompt_tokens": 424,
           "completion_tokens": 168,
           "total_tokens": 592,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
+        }
+      },
+      "risk_routed": {
+        "persona_id": "t04_exercise_prohibited",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": true,
+          "M3_kag": true,
+          "M4_verify_gate": true,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "오늘 한 끼 저염식 하기",
+            "rationale": "저염식은 고혈압 및 심혈관 질환의 위험을 줄이는 데 도움이 됩니다.",
+            "grounded_on": [
+              "고혈압->심혈관질환"
+            ],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "diet",
+            "template_id": "low_sodium_meal",
+            "source": "generated"
+          },
+          {
+            "title": "24시 전에 잠자리에 들기",
+            "rationale": "충분한 수면은 심장 건강에 중요하며, 일찍 자는 습관은 전반적인 건강을 개선할 수 있습니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "취침 전",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "sleep",
+            "template_id": "sleep_routine",
+            "source": "generated"
+          },
+          {
+            "title": "10분 심호흡·가벼운 스트레칭 하기",
+            "rationale": "스트레칭과 심호흡은 혈압을 낮추는데 도움을 주고, 심혈관 질환 예방에도 효과적입니다.",
+            "grounded_on": [
+              "고혈압->심혈관질환"
+            ],
+            "execution": {
+              "when": "",
+              "duration_min": 10
+            },
+            "difficulty": 1,
+            "mission_type": "stress",
+            "template_id": "breathing_stretch",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 4069.9342919979244,
+          "prompt_tokens": 424,
+          "completion_tokens": 172,
+          "total_tokens": 596,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
+        }
+      },
+      "adaptive": {
+        "persona_id": "t04_exercise_prohibited",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": true,
+          "M3_kag": true,
+          "M4_verify_gate": true,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "오늘 한 끼 저염식 하기",
+            "rationale": "저염식은 고혈압 및 이로 인한 심혈관 질환의 위험을 줄이는 데 도움이 됩니다.",
+            "grounded_on": [
+              "고혈압->심혈관질환"
+            ],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "diet",
+            "template_id": "low_sodium_meal",
+            "source": "generated"
+          },
+          {
+            "title": "24시 전에 잠자리에 들기",
+            "rationale": "충분한 수면은 혈압 조절에 중요하며, 심혈관 건강을 유지하는데 필수적입니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "취침 전",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "sleep",
+            "template_id": "sleep_routine",
+            "source": "generated"
+          },
+          {
+            "title": "10분 심호흡·가벼운 스트레칭 하기",
+            "rationale": "규칙적인 운동과 스트레칭은 심장 건강 증진 및 스트레스 감소에 도움을 줍니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "",
+              "duration_min": 10
+            },
+            "difficulty": 1,
+            "mission_type": "stress",
+            "template_id": "breathing_stretch",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 3764.1827919869684,
+          "prompt_tokens": 424,
+          "completion_tokens": 157,
+          "total_tokens": 581,
           "llm_calls": 1,
           "regenerations": 0,
           "rejected": []
@@ -3173,6 +3966,74 @@
           "rejected": []
         }
       },
+      "gen_only(M1+M3+M5)": {
+        "persona_id": "t05_cvd_intense",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": false,
+          "M3_kag": true,
+          "M4_verify_gate": false,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "식후 15분 걷기",
+            "rationale": "식사 후 바로 앉아있지 않고 걷기를 하면 혈당 상승을 억제하고 체중 관리에 도움이 됩니다.",
+            "grounded_on": [
+              "제2형 당뇨->심혈관질환"
+            ],
+            "execution": {
+              "when": "식후",
+              "duration_min": 15
+            },
+            "difficulty": 2,
+            "mission_type": "exercise",
+            "template_id": "walk_after_meal",
+            "source": "generated"
+          },
+          {
+            "title": "가벼운 스쿼트 10회 하기",
+            "rationale": "스쿼트는 하체 근력을 강화하는 운동으로 기초대사량을 높이고 인슐린 저항성을 개선할 수 있습니다.",
+            "grounded_on": [
+              "제2형 당뇨->심혈관질환"
+            ],
+            "execution": {
+              "when": "낮 시간",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "exercise",
+            "template_id": "light_strength",
+            "source": "generated"
+          },
+          {
+            "title": "오늘 한 끼 저염식 하기",
+            "rationale": "저염식은 고혈압 예방과 관리를 돕고, 이는 심혈관 질환의 위험도 줄여줍니다.",
+            "grounded_on": [
+              "제2형 당뇨->심혈관질환"
+            ],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "diet",
+            "template_id": "low_sodium_meal",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 4425.192584050819,
+          "prompt_tokens": 432,
+          "completion_tokens": 191,
+          "total_tokens": 623,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
+        }
+      },
       "full": {
         "persona_id": "t05_cvd_intense",
         "config": {
@@ -3236,6 +4097,140 @@
           "prompt_tokens": 432,
           "completion_tokens": 258,
           "total_tokens": 690,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
+        }
+      },
+      "risk_routed": {
+        "persona_id": "t05_cvd_intense",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": true,
+          "M3_kag": true,
+          "M4_verify_gate": true,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "식후 15분 걷기",
+            "rationale": "식사 후 바로 앉거나 눕지 않고 가벼운 산책을 하면 혈당 상승을 억제하고 심혈관 건강에 도움이 됩니다.",
+            "grounded_on": [
+              "제2형 당뇨->심혈관질환"
+            ],
+            "execution": {
+              "when": "식후",
+              "duration_min": 15
+            },
+            "difficulty": 2,
+            "mission_type": "exercise",
+            "template_id": "walk_after_meal",
+            "source": "generated"
+          },
+          {
+            "title": "가벼운 스쿼트 10회 하기",
+            "rationale": "스쿼트는 하체 근육 강화와 함께 기초 대사량을 높여주어 제2형 당뇨 관리 및 심혈관 질환 예방에 효과적입니다.",
+            "grounded_on": [
+              "제2형 당뇨->심혈관질환"
+            ],
+            "execution": {
+              "when": "낮 시간",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "exercise",
+            "template_id": "light_strength",
+            "source": "generated"
+          },
+          {
+            "title": "오늘 한 끼 저염식 하기",
+            "rationale": "저염식은 고혈압을 예방하며, 이는 심혈관 질환의 위험을 줄이는 데 도움을 줍니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "diet",
+            "template_id": "low_sodium_meal",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 20106.327417015564,
+          "prompt_tokens": 432,
+          "completion_tokens": 191,
+          "total_tokens": 623,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
+        }
+      },
+      "adaptive": {
+        "persona_id": "t05_cvd_intense",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": true,
+          "M3_kag": true,
+          "M4_verify_gate": true,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "식후 15분 걷기",
+            "rationale": "식사 후 바로 앉거나 눕지 않고 가볍게 걸으면 혈당 상승을 억제할 수 있습니다.",
+            "grounded_on": [
+              "제2형 당뇨->심혈관질환"
+            ],
+            "execution": {
+              "when": "식후",
+              "duration_min": 15
+            },
+            "difficulty": 2,
+            "mission_type": "exercise",
+            "template_id": "walk_after_meal",
+            "source": "generated"
+          },
+          {
+            "title": "가벼운 스쿼트 10회 하기",
+            "rationale": "스쿼트는 하체 근력을 강화하고 인슐린 민감도를 개선하는 데 도움이 됩니다.",
+            "grounded_on": [
+              "제2형 당뇨->심혈관질환"
+            ],
+            "execution": {
+              "when": "낮 시간",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "exercise",
+            "template_id": "light_strength",
+            "source": "generated"
+          },
+          {
+            "title": "오늘 한 끼 저염식 하기",
+            "rationale": "저염식은 고혈압 예방에 도움을 주며, 이는 제2형 당뇨와 심혈관 질환의 위험 요소입니다.",
+            "grounded_on": [
+              "제2형 당뇨->심혈관질환"
+            ],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "diet",
+            "template_id": "low_sodium_meal",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 4276.746208022814,
+          "prompt_tokens": 432,
+          "completion_tokens": 184,
+          "total_tokens": 616,
           "llm_calls": 1,
           "regenerations": 0,
           "rejected": []
@@ -3836,6 +4831,70 @@
           "rejected": []
         }
       },
+      "gen_only(M1+M3+M5)": {
+        "persona_id": "t06_osteoarthritis",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": false,
+          "M3_kag": true,
+          "M4_verify_gate": false,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "식후 20분 걷기",
+            "rationale": "체중 감소를 통해 비만을 개선하고, 이는 무릎에 가해지는 부담을 줄여줍니다.",
+            "grounded_on": [
+              "비만->무릎 부담"
+            ],
+            "execution": {
+              "when": "식후",
+              "duration_min": 20
+            },
+            "difficulty": 2,
+            "mission_type": "exercise",
+            "template_id": "walk_after_meal",
+            "source": "generated"
+          },
+          {
+            "title": "단 음료 대신 물·차 마시기",
+            "rationale": "당분이 많은 음료를 피함으로써 체중 관리와 혈당 조절을 돕습니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "diet",
+            "template_id": "reduce_sugar_drink",
+            "source": "generated"
+          },
+          {
+            "title": "가벼운 스쿼트 10회 하기",
+            "rationale": "근력 강화를 통해 관절의 부담을 덜어주고 전반적인 건강을 증진시킵니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "낮 시간",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "exercise",
+            "template_id": "light_strength",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 3920.260832994245,
+          "prompt_tokens": 428,
+          "completion_tokens": 159,
+          "total_tokens": 587,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
+        }
+      },
       "full": {
         "persona_id": "t06_osteoarthritis",
         "config": {
@@ -3897,6 +4956,134 @@
           "prompt_tokens": 428,
           "completion_tokens": 187,
           "total_tokens": 615,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
+        }
+      },
+      "risk_routed": {
+        "persona_id": "t06_osteoarthritis",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": true,
+          "M3_kag": true,
+          "M4_verify_gate": true,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "식후 20분 걷기",
+            "rationale": "체중 감소를 통해 비만을 개선하고, 이는 무릎에 가해지는 부담을 줄여줍니다.",
+            "grounded_on": [
+              "비만->무릎 부담"
+            ],
+            "execution": {
+              "when": "식후",
+              "duration_min": 20
+            },
+            "difficulty": 2,
+            "mission_type": "exercise",
+            "template_id": "walk_after_meal",
+            "source": "generated"
+          },
+          {
+            "title": "단 음료 대신 물·차 마시기",
+            "rationale": "당분이 많은 음료를 피하면 칼로리 섭취를 줄일 수 있어 체중 관리에 도움이 됩니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "diet",
+            "template_id": "reduce_sugar_drink",
+            "source": "generated"
+          },
+          {
+            "title": "가벼운 스쿼트 10회 하기",
+            "rationale": "근력 운동을 통해 근육을 강화하면 관절의 부담이 줄어듭니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "낮 시간",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "exercise",
+            "template_id": "light_strength",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 3947.0577080501243,
+          "prompt_tokens": 428,
+          "completion_tokens": 162,
+          "total_tokens": 590,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
+        }
+      },
+      "adaptive": {
+        "persona_id": "t06_osteoarthritis",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": true,
+          "M3_kag": true,
+          "M4_verify_gate": true,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "식후 20분 걷기",
+            "rationale": "체중 감량을 위해 식후에 가볍게 걷는 것은 비만을 개선하고 무릎 부담을 줄이는 데 도움이 됩니다.",
+            "grounded_on": [
+              "비만->무릎 부담"
+            ],
+            "execution": {
+              "when": "식후",
+              "duration_min": 20
+            },
+            "difficulty": 2,
+            "mission_type": "exercise",
+            "template_id": "walk_after_meal",
+            "source": "generated"
+          },
+          {
+            "title": "단 음료 대신 물·차 마시기",
+            "rationale": "당분이 많은 음료를 피하고 물이나 차를 마시면 체중 관리와 혈당 조절에 도움이 되어 prediabetes 상태 개선에도 기여할 수 있습니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "diet",
+            "template_id": "reduce_sugar_drink",
+            "source": "generated"
+          },
+          {
+            "title": "가벼운 스쿼트 10회 하기",
+            "rationale": "근력 운동은 근육을 강화하여 관절에 가해지는 부담을 줄이고 전반적인 신체 건강을 향상시키므로 가벼운 스쿼트를 통해 하체 근력을 키울 수 있습니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "낮 시간",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "exercise",
+            "template_id": "light_strength",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 20235.95366702648,
+          "prompt_tokens": 428,
+          "completion_tokens": 198,
+          "total_tokens": 626,
           "llm_calls": 1,
           "regenerations": 0,
           "rejected": []
@@ -4379,6 +5566,70 @@
           "rejected": []
         }
       },
+      "gen_only(M1+M3+M5)": {
+        "persona_id": "n01",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": false,
+          "M3_kag": true,
+          "M4_verify_gate": false,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "식후 20분 걷기",
+            "rationale": "식사 후 바로 앉아있거나 누워있는 것은 혈압 상승의 원인이 될 수 있습니다. 식후 20분 정도 가볍게 걸으면서 소화를 돕고 혈압을 관리하세요.",
+            "grounded_on": [
+              "고혈압->심혈관질환"
+            ],
+            "execution": {
+              "when": "식후",
+              "duration_min": 20
+            },
+            "difficulty": 2,
+            "mission_type": "exercise",
+            "template_id": "walk_after_meal",
+            "source": "generated"
+          },
+          {
+            "title": "오늘 한 끼 저염식 하기",
+            "rationale": "소금 섭취를 줄이는 저염식은 고혈압 환자에게 권장되는 식사 방법입니다. 하루 한 끼라도 저염식을 실천하여 혈압 조절에 도움을 주세요.",
+            "grounded_on": [],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "diet",
+            "template_id": "low_sodium_meal",
+            "source": "generated"
+          },
+          {
+            "title": "24시 전에 잠자리에 들기",
+            "rationale": "충분한 수면은 전반적인 건강 상태를 개선하고 스트레스를 감소시켜 혈압 조절에 도움이 됩니다. 밤 12시 이전에 잠자리에 들어 규칙적인 수면 패턴을 유지하세요.",
+            "grounded_on": [],
+            "execution": {
+              "when": "취침 전",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "sleep",
+            "template_id": "sleep_routine",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 4922.660749987699,
+          "prompt_tokens": 411,
+          "completion_tokens": 207,
+          "total_tokens": 618,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
+        }
+      },
       "full": {
         "persona_id": "n01",
         "config": {
@@ -4440,6 +5691,138 @@
           "prompt_tokens": 411,
           "completion_tokens": 190,
           "total_tokens": 601,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
+        }
+      },
+      "risk_routed": {
+        "persona_id": "n01",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": false,
+          "M3_kag": true,
+          "M4_verify_gate": false,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "식후 20분 걷기",
+            "rationale": "식사 후 바로 앉아 있지 않고 걷기를 통해 혈압 상승을 방지하고 전반적인 혈액 순환에 도움을 줄 수 있습니다.",
+            "grounded_on": [
+              "고혈압->심혈관질환"
+            ],
+            "execution": {
+              "when": "식후",
+              "duration_min": 20
+            },
+            "difficulty": 2,
+            "mission_type": "exercise",
+            "template_id": "walk_after_meal",
+            "source": "generated"
+          },
+          {
+            "title": "오늘 한 끼 저염식 하기",
+            "rationale": "소금 섭취를 줄임으로써 고혈압 관리와 함께 심혈관 질환의 위험도 낮출 수 있습니다.",
+            "grounded_on": [
+              "고혈압->심혈관질환"
+            ],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "diet",
+            "template_id": "low_sodium_meal",
+            "source": "generated"
+          },
+          {
+            "title": "24시 전에 잠자리에 들기",
+            "rationale": "충분한 수면은 혈압 조절에 중요하며, 특히 밤 12시 이전에 취침함으로써 신체 회복과 스트레스 감소가 가능합니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "취침 전",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "sleep",
+            "template_id": "sleep_routine",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 4403.394584020134,
+          "prompt_tokens": 411,
+          "completion_tokens": 181,
+          "total_tokens": 592,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
+        }
+      },
+      "adaptive": {
+        "persona_id": "n01",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": false,
+          "M3_kag": true,
+          "M4_verify_gate": false,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "식후 20분 걷기",
+            "rationale": "식사 후 바로 앉거나 눕지 않고 걷기를 통해 혈압 상승을 억제할 수 있습니다.",
+            "grounded_on": [
+              "고혈압->심혈관질환"
+            ],
+            "execution": {
+              "when": "식후",
+              "duration_min": 20
+            },
+            "difficulty": 2,
+            "mission_type": "exercise",
+            "template_id": "walk_after_meal",
+            "source": "generated"
+          },
+          {
+            "title": "오늘 한 끼 저염식 하기",
+            "rationale": "소금 섭취를 줄이는 것은 고혈압 관리에 중요한 역할을 합니다.",
+            "grounded_on": [
+              "고혈압->심혈관질환"
+            ],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "diet",
+            "template_id": "low_sodium_meal",
+            "source": "generated"
+          },
+          {
+            "title": "24시 전에 잠자리에 들기",
+            "rationale": "충분한 수면은 혈압 조절에 도움을 주며, 특히 밤 12시 이전에 잠들면 더 효과적입니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "취침 전",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "sleep",
+            "template_id": "sleep_routine",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 19584.312000020873,
+          "prompt_tokens": 411,
+          "completion_tokens": 166,
+          "total_tokens": 577,
           "llm_calls": 1,
           "regenerations": 0,
           "rejected": []
@@ -5036,6 +6419,68 @@
           "rejected": []
         }
       },
+      "gen_only(M1+M3+M5)": {
+        "persona_id": "n02",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": false,
+          "M3_kag": true,
+          "M4_verify_gate": false,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "식후 20분 걷기",
+            "rationale": "식사 후 바로 앉아있지 않고 가벼운 산책을 하면 혈당 상승을 억제할 수 있습니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "식후",
+              "duration_min": 20
+            },
+            "difficulty": 2,
+            "mission_type": "exercise",
+            "template_id": "walk_after_meal",
+            "source": "generated"
+          },
+          {
+            "title": "가벼운 스쿼트 10회 하기",
+            "rationale": "스쿼트와 같은 하체 근력 운동은 인슐린 저항성을 개선하는 데 도움이 됩니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "낮 시간",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "exercise",
+            "template_id": "light_strength",
+            "source": "generated"
+          },
+          {
+            "title": "끼니에 녹색잎채소 1가지 챙기기",
+            "rationale": "녹색 잎 채소는 식이섬유와 미네랄이 풍부하여 혈당을 안정시키는데 도움을 줍니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "diet",
+            "template_id": "leafy_greens",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 4042.0352920191363,
+          "prompt_tokens": 396,
+          "completion_tokens": 158,
+          "total_tokens": 554,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
+        }
+      },
       "full": {
         "persona_id": "n02",
         "config": {
@@ -5100,6 +6545,130 @@
             "가벼운 스쿼트 10회 하기",
             "끼니에 녹색잎채소 1가지 챙기기"
           ]
+        }
+      },
+      "risk_routed": {
+        "persona_id": "n02",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": false,
+          "M3_kag": true,
+          "M4_verify_gate": false,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "식후 20분 걷기",
+            "rationale": "식사 후 바로 앉거나 눕지 않고 가벼운 산책을 하면 혈당 상승을 완화할 수 있습니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "식후",
+              "duration_min": 20
+            },
+            "difficulty": 2,
+            "mission_type": "exercise",
+            "template_id": "walk_after_meal",
+            "source": "generated"
+          },
+          {
+            "title": "가벼운 스쿼트 10회 하기",
+            "rationale": "근력 운동은 근육의 당 흡수 능력을 향상시켜 혈당을 낮추는 데 도움을 줍니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "낮 시간",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "exercise",
+            "template_id": "light_strength",
+            "source": "generated"
+          },
+          {
+            "title": "끼니에 녹색잎채소 1가지 챙기기",
+            "rationale": "녹색 잎 채소는 식이섬유와 미네랄이 풍부하여 혈당 조절에 도움이 됩니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "diet",
+            "template_id": "leafy_greens",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 4277.385958004743,
+          "prompt_tokens": 396,
+          "completion_tokens": 153,
+          "total_tokens": 549,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
+        }
+      },
+      "adaptive": {
+        "persona_id": "n02",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": false,
+          "M3_kag": true,
+          "M4_verify_gate": false,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "식후 20분 걷기",
+            "rationale": "식사 후 바로 앉거나 눕지 않고 가벼운 산책을 하면 혈당 상승을 억제할 수 있습니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "식후",
+              "duration_min": 20
+            },
+            "difficulty": 2,
+            "mission_type": "exercise",
+            "template_id": "walk_after_meal",
+            "source": "generated"
+          },
+          {
+            "title": "가벼운 스쿼트 10회 하기",
+            "rationale": "스쿼트와 같은 하체 근력 운동은 인슐린 저항성을 개선하는 데 도움을 줄 수 있습니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "낮 시간",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "exercise",
+            "template_id": "light_strength",
+            "source": "generated"
+          },
+          {
+            "title": "끼니에 녹색잎채소 1가지 챙기기",
+            "rationale": "녹색 잎 채소는 식이섬유와 미네랄이 풍부하여 혈당 조절에 도움이 됩니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "diet",
+            "template_id": "leafy_greens",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 3701.25237503089,
+          "prompt_tokens": 396,
+          "completion_tokens": 158,
+          "total_tokens": 554,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
         }
       }
     }
@@ -5592,6 +7161,74 @@
           "rejected": []
         }
       },
+      "gen_only(M1+M3+M5)": {
+        "persona_id": "n03",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": false,
+          "M3_kag": true,
+          "M4_verify_gate": false,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "식후 30분 걷기",
+            "rationale": "식사 후 바로 앉아있지 않고 걷기를 통해 혈당을 조절할 수 있습니다.",
+            "grounded_on": [
+              "전당뇨->2형 당뇨"
+            ],
+            "execution": {
+              "when": "식후",
+              "duration_min": 30
+            },
+            "difficulty": 3,
+            "mission_type": "exercise",
+            "template_id": "walk_after_meal",
+            "source": "generated"
+          },
+          {
+            "title": "단 음료 대신 물·차 마시기",
+            "rationale": "단 음료를 줄이고 물이나 차를 마시는 것은 혈당 관리에 도움이 됩니다.",
+            "grounded_on": [
+              "전당뇨->2형 당뇨"
+            ],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "diet",
+            "template_id": "reduce_sugar_drink",
+            "source": "generated"
+          },
+          {
+            "title": "가벼운 스쿼트 10회 하기",
+            "rationale": "근력 운동은 인슐린 저항성을 개선하여 전당뇨에서 2형 당뇨로의 진행을 예방하는 데 도움을 줍니다.",
+            "grounded_on": [
+              "전당뇨->2형 당뇨"
+            ],
+            "execution": {
+              "when": "낮 시간",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "exercise",
+            "template_id": "light_strength",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 4256.620416010264,
+          "prompt_tokens": 416,
+          "completion_tokens": 178,
+          "total_tokens": 594,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
+        }
+      },
       "full": {
         "persona_id": "n03",
         "config": {
@@ -5653,6 +7290,138 @@
           "prompt_tokens": 416,
           "completion_tokens": 175,
           "total_tokens": 591,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
+        }
+      },
+      "risk_routed": {
+        "persona_id": "n03",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": false,
+          "M3_kag": true,
+          "M4_verify_gate": false,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "식후 30분 걷기",
+            "rationale": "식사 후 바로 앉아있지 않고 걷기를 통해 혈당을 조절할 수 있습니다.",
+            "grounded_on": [
+              "전당뇨->2형 당뇨"
+            ],
+            "execution": {
+              "when": "식후",
+              "duration_min": 30
+            },
+            "difficulty": 3,
+            "mission_type": "exercise",
+            "template_id": "walk_after_meal",
+            "source": "generated"
+          },
+          {
+            "title": "단 음료 대신 물·차 마시기",
+            "rationale": "단 음료를 줄이고 물이나 차를 마시는 것은 당 섭취를 감소시켜 전당뇨 관리에 도움이 됩니다.",
+            "grounded_on": [
+              "전당뇨->2형 당뇨"
+            ],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "diet",
+            "template_id": "reduce_sugar_drink",
+            "source": "generated"
+          },
+          {
+            "title": "가벼운 스쿼트 10회 하기",
+            "rationale": "간단한 근력 운동인 스쿼트를 통해 근육량을 늘리고 기초 대사량을 높여 혈당 관리를 할 수 있습니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "낮 시간",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "exercise",
+            "template_id": "light_strength",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 4210.306708002463,
+          "prompt_tokens": 416,
+          "completion_tokens": 173,
+          "total_tokens": 589,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
+        }
+      },
+      "adaptive": {
+        "persona_id": "n03",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": false,
+          "M3_kag": true,
+          "M4_verify_gate": false,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "식후 30분 걷기",
+            "rationale": "식사 후 바로 앉거나 눕지 않고 걷기를 통해 혈당을 조절할 수 있습니다.",
+            "grounded_on": [
+              "전당뇨->2형 당뇨"
+            ],
+            "execution": {
+              "when": "식후",
+              "duration_min": 30
+            },
+            "difficulty": 3,
+            "mission_type": "exercise",
+            "template_id": "walk_after_meal",
+            "source": "generated"
+          },
+          {
+            "title": "단 음료 대신 물·차 마시기",
+            "rationale": "단 음료는 혈당을 급격히 상승시킬 수 있으므로 이를 피하고 물을 마시거나 차를 마시는 것이 좋습니다.",
+            "grounded_on": [
+              "전당뇨->2형 당뇨"
+            ],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "diet",
+            "template_id": "reduce_sugar_drink",
+            "source": "generated"
+          },
+          {
+            "title": "가벼운 스쿼트 10회 하기",
+            "rationale": "근력 운동은 근육을 강화하여 혈당을 효과적으로 관리할 수 있도록 도와줍니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "낮 시간",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "exercise",
+            "template_id": "light_strength",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 3801.316166995093,
+          "prompt_tokens": 416,
+          "completion_tokens": 163,
+          "total_tokens": 579,
           "llm_calls": 1,
           "regenerations": 0,
           "rejected": []
@@ -6198,6 +7967,70 @@
           "rejected": []
         }
       },
+      "gen_only(M1+M3+M5)": {
+        "persona_id": "n04",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": false,
+          "M3_kag": true,
+          "M4_verify_gate": false,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "가벼운 스쿼트 10회 하기",
+            "rationale": "스쿼트는 하체 근육을 강화하고 관절의 유연성을 향상시키는 운동입니다. 가벼운 강도로 시작하여 점차 횟수를 늘려가는 것이 좋습니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "낮 시간",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "exercise",
+            "template_id": "light_strength",
+            "source": "generated"
+          },
+          {
+            "title": "끼니에 녹색잎채소 1가지 챙기기",
+            "rationale": "녹색 잎 채소는 다양한 비타민과 미네랄이 풍부하며 포화지방이 적어 체중 관리와 이상 지질 혈증 예방에 도움이 됩니다.",
+            "grounded_on": [
+              "이상지질혈증->심혈관질환"
+            ],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "diet",
+            "template_id": "leafy_greens",
+            "source": "generated"
+          },
+          {
+            "title": "식후 20분 걷기",
+            "rationale": "식사 후 바로 앉거나 누우면 소화가 느려지고 지방으로 쌓일 가능성이 높아집니다. 식후 가볍게 걸으면서 소화를 촉진시켜주는 것이 좋습니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "식후",
+              "duration_min": 20
+            },
+            "difficulty": 2,
+            "mission_type": "exercise",
+            "template_id": "walk_after_meal",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 5027.765500009991,
+          "prompt_tokens": 434,
+          "completion_tokens": 206,
+          "total_tokens": 640,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
+        }
+      },
       "full": {
         "persona_id": "n04",
         "config": {
@@ -6257,6 +8090,134 @@
           "prompt_tokens": 434,
           "completion_tokens": 177,
           "total_tokens": 611,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
+        }
+      },
+      "risk_routed": {
+        "persona_id": "n04",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": false,
+          "M3_kag": true,
+          "M4_verify_gate": false,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "가벼운 스쿼트 10회 하기",
+            "rationale": "스쿼트는 하체 근육을 강화하고, 기초 대사량을 높이는데 도움을 줍니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "낮 시간",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "exercise",
+            "template_id": "light_strength",
+            "source": "generated"
+          },
+          {
+            "title": "끼니에 녹색잎채소 1가지 챙기기",
+            "rationale": "녹색 잎 채소는 다양한 비타민과 미네랄이 풍부하며, 포화지방의 흡수를 줄여 비만 관리와 이상 지질 혈증 예방에 도움이 됩니다.",
+            "grounded_on": [
+              "이상지질혈증->심혈관질환"
+            ],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "diet",
+            "template_id": "leafy_greens",
+            "source": "generated"
+          },
+          {
+            "title": "식후 20분 걷기",
+            "rationale": "걷기는 심장 건강을 개선하고 체중 감량에 도움을 주며, 식후 즉시 걷기를 통해 급격한 혈당 상승을 방지할 수 있습니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "식후",
+              "duration_min": 20
+            },
+            "difficulty": 2,
+            "mission_type": "exercise",
+            "template_id": "walk_after_meal",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 4629.9295839853585,
+          "prompt_tokens": 434,
+          "completion_tokens": 190,
+          "total_tokens": 624,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
+        }
+      },
+      "adaptive": {
+        "persona_id": "n04",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": false,
+          "M3_kag": true,
+          "M4_verify_gate": false,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "가벼운 스쿼트 10회 하기",
+            "rationale": "스쿼트는 하체 근육을 강화하고 체중 조절에 도움을 줍니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "낮 시간",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "exercise",
+            "template_id": "light_strength",
+            "source": "generated"
+          },
+          {
+            "title": "끼니에 녹색잎채소 1가지 챙기기",
+            "rationale": "녹색 잎 채소는 다양한 비타민과 미네랄이 풍부하며 혈압 관리와 심장 건강에도 도움이 됩니다.",
+            "grounded_on": [
+              "이상지질혈증->심혈관질환"
+            ],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "diet",
+            "template_id": "leafy_greens",
+            "source": "generated"
+          },
+          {
+            "title": "식후 20분 걷기",
+            "rationale": "식사 후 가벼운 산책은 소화를 돕고 혈당 상승을 억제하는 효과가 있습니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "식후",
+              "duration_min": 20
+            },
+            "difficulty": 2,
+            "mission_type": "exercise",
+            "template_id": "walk_after_meal",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 3735.2638749871403,
+          "prompt_tokens": 434,
+          "completion_tokens": 158,
+          "total_tokens": 592,
           "llm_calls": 1,
           "regenerations": 0,
           "rejected": []
@@ -6856,6 +8817,72 @@
           "rejected": []
         }
       },
+      "gen_only(M1+M3+M5)": {
+        "persona_id": "n05",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": false,
+          "M3_kag": true,
+          "M4_verify_gate": false,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "식후 5분 걷기",
+            "rationale": "식사 후 바로 앉아있지 않고 걷기를 통해 혈당을 조절하고 지방간을 예방할 수 있습니다.",
+            "grounded_on": [
+              "지방간->전당뇨"
+            ],
+            "execution": {
+              "when": "식후",
+              "duration_min": 5
+            },
+            "difficulty": 1,
+            "mission_type": "exercise",
+            "template_id": "walk_after_meal",
+            "source": "generated"
+          },
+          {
+            "title": "단 음료 대신 물·차 마시기",
+            "rationale": "단 음료를 줄이고 물을 많이 마시면 체중 관리와 함께 인슐린 저항성을 개선하여 지방간과 당뇨병의 위험을 낮출 수 있습니다.",
+            "grounded_on": [
+              "지방간->전당뇨"
+            ],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "diet",
+            "template_id": "reduce_sugar_drink",
+            "source": "generated"
+          },
+          {
+            "title": "가벼운 스쿼트 7회 하기",
+            "rationale": "근력 운동은 근육량을 늘려 기초 대사량을 높이고, 이는 체중 감량 및 유지에 도움이 되어 지방간과 전당뇨를 관리하는 데 효과적입니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "낮 시간",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "exercise",
+            "template_id": "light_strength",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 5560.972124978434,
+          "prompt_tokens": 417,
+          "completion_tokens": 199,
+          "total_tokens": 616,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
+        }
+      },
       "full": {
         "persona_id": "n05",
         "config": {
@@ -6919,6 +8946,140 @@
           "prompt_tokens": 417,
           "completion_tokens": 227,
           "total_tokens": 644,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
+        }
+      },
+      "risk_routed": {
+        "persona_id": "n05",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": false,
+          "M3_kag": true,
+          "M4_verify_gate": false,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "식후 5분 걷기",
+            "rationale": "식사 후 바로 걷기는 혈당을 조절하고 지방간에서 당뇨병으로의 진행을 예방하는 데 도움이 됩니다.",
+            "grounded_on": [
+              "지방간->전당뇨"
+            ],
+            "execution": {
+              "when": "식후",
+              "duration_min": 5
+            },
+            "difficulty": 1,
+            "mission_type": "exercise",
+            "template_id": "walk_after_meal",
+            "source": "generated"
+          },
+          {
+            "title": "단 음료 대신 물·차 마시기",
+            "rationale": "단 음료를 줄이고 물이나 차를 마시는 것은 칼로리 섭취를 감소시키고 체중 관리를 돕습니다, 이는 지방간과 전당뇨 관리에 중요합니다.",
+            "grounded_on": [
+              "지방간->전당뇨"
+            ],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "diet",
+            "template_id": "reduce_sugar_drink",
+            "source": "generated"
+          },
+          {
+            "title": "가벼운 스쿼트 7회 하기",
+            "rationale": "가벼운 운동은 근육량을 유지하고 인슐린 감수성을 향상시켜 혈당 조절 및 지방간 개선에 도움을 줍니다.",
+            "grounded_on": [
+              "지방간->전당뇨"
+            ],
+            "execution": {
+              "when": "낮 시간",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "exercise",
+            "template_id": "light_strength",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 4736.3523750100285,
+          "prompt_tokens": 417,
+          "completion_tokens": 202,
+          "total_tokens": 619,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
+        }
+      },
+      "adaptive": {
+        "persona_id": "n05",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": false,
+          "M3_kag": true,
+          "M4_verify_gate": false,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "식후 5분 걷기",
+            "rationale": "식사 후 바로 앉거나 눕지 않고 가벼운 산책을 하면 혈당을 조절하는 데 도움이 됩니다.",
+            "grounded_on": [
+              "지방간->전당뇨"
+            ],
+            "execution": {
+              "when": "식후",
+              "duration_min": 5
+            },
+            "difficulty": 1,
+            "mission_type": "exercise",
+            "template_id": "walk_after_meal",
+            "source": "generated"
+          },
+          {
+            "title": "단 음료 대신 물·차 마시기",
+            "rationale": "단 음료를 줄이고 물이나 차를 마시면 당 섭취를 감소시켜 지방간과 전당뇨 예방에 도움을 줍니다.",
+            "grounded_on": [
+              "지방간->전당뇨"
+            ],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "diet",
+            "template_id": "reduce_sugar_drink",
+            "source": "generated"
+          },
+          {
+            "title": "가벼운 스쿼트 7회 하기",
+            "rationale": "근력 운동은 근육을 강화하고 기초 대사량을 높여 체중 관리와 인슐린 저항성 개선에 도움을 줍니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "낮 시간",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "exercise",
+            "template_id": "light_strength",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 4240.430167003069,
+          "prompt_tokens": 417,
+          "completion_tokens": 179,
+          "total_tokens": 596,
           "llm_calls": 1,
           "regenerations": 0,
           "rejected": []
@@ -7548,6 +9709,72 @@
           "rejected": []
         }
       },
+      "gen_only(M1+M3+M5)": {
+        "persona_id": "n06",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": false,
+          "M3_kag": true,
+          "M4_verify_gate": false,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "24시 전에 잠자리에 들기",
+            "rationale": "일정한 수면 시간을 유지하면 불면증을 완화하는 데 도움이 됩니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "취침 전",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "sleep",
+            "template_id": "sleep_routine",
+            "source": "generated"
+          },
+          {
+            "title": "10분 심호흡·가벼운 스트레칭 하기",
+            "rationale": "심호흡과 가벼운 스트레칭은 몸의 긴장을 풀어주고 마음을 안정시켜 수면을 촉진합니다.",
+            "grounded_on": [
+              "건강한 생활습관 유지"
+            ],
+            "execution": {
+              "when": "",
+              "duration_min": 10
+            },
+            "difficulty": 1,
+            "mission_type": "stress",
+            "template_id": "breathing_stretch",
+            "source": "generated"
+          },
+          {
+            "title": "식후 30분 걷기",
+            "rationale": "소화를 돕고 몸을 이완시켜 편안한 상태로 만들어주어 숙면에 도움을 줍니다.",
+            "grounded_on": [
+              "건강한 생활습관 유지"
+            ],
+            "execution": {
+              "when": "식후",
+              "duration_min": 30
+            },
+            "difficulty": 3,
+            "mission_type": "exercise",
+            "template_id": "walk_after_meal",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 3983.211792015936,
+          "prompt_tokens": 390,
+          "completion_tokens": 157,
+          "total_tokens": 547,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
+        }
+      },
       "full": {
         "persona_id": "n06",
         "config": {
@@ -7601,6 +9828,140 @@
             "10분 심호흡·가벼운 스트레칭 하기",
             "식후 30분 걷기"
           ]
+        }
+      },
+      "risk_routed": {
+        "persona_id": "n06",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": false,
+          "M3_kag": true,
+          "M4_verify_gate": false,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "24시 전에 잠자리에 들기",
+            "rationale": "일정한 시간에 잠자리에 드는 것은 수면 패턴을 정상화하는 데 도움이 됩니다.",
+            "grounded_on": [
+              "건강한 생활습관"
+            ],
+            "execution": {
+              "when": "취침 전",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "sleep",
+            "template_id": "sleep_routine",
+            "source": "generated"
+          },
+          {
+            "title": "10분 심호흡·가벼운 스트레칭 하기",
+            "rationale": "심호흡과 가벼운 스트레칭은 긴장을 풀고 수면을 유도하는 효과가 있습니다.",
+            "grounded_on": [
+              "스트레스 관리"
+            ],
+            "execution": {
+              "when": "",
+              "duration_min": 10
+            },
+            "difficulty": 1,
+            "mission_type": "stress",
+            "template_id": "breathing_stretch",
+            "source": "generated"
+          },
+          {
+            "title": "식후 30분 걷기",
+            "rationale": "소화를 돕고 몸을 이완시켜 숙면에 도움을 줄 수 있는 간단한 운동입니다.",
+            "grounded_on": [
+              "신체 활동 증가"
+            ],
+            "execution": {
+              "when": "식후",
+              "duration_min": 30
+            },
+            "difficulty": 3,
+            "mission_type": "exercise",
+            "template_id": "walk_after_meal",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 3678.7811249960214,
+          "prompt_tokens": 390,
+          "completion_tokens": 157,
+          "total_tokens": 547,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
+        }
+      },
+      "adaptive": {
+        "persona_id": "n06",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": false,
+          "M3_kag": true,
+          "M4_verify_gate": false,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "24시 전에 잠자리에 들기",
+            "rationale": "일정한 수면 시간을 유지하기 위해 밤 12시 이전에 잠자리에 드는 것이 좋습니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "취침 전",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "sleep",
+            "template_id": "sleep_routine",
+            "source": "generated"
+          },
+          {
+            "title": "10분 심호흡·가벼운 스트레칭 하기",
+            "rationale": "심호흡과 가벼운 스트레칭은 몸의 긴장을 풀어주고 마음을 안정시켜 수면을 유도합니다.",
+            "grounded_on": [
+              "건강한 생활습관"
+            ],
+            "execution": {
+              "when": "",
+              "duration_min": 10
+            },
+            "difficulty": 1,
+            "mission_type": "stress",
+            "template_id": "breathing_stretch",
+            "source": "generated"
+          },
+          {
+            "title": "식후 30분 걷기",
+            "rationale": "소화를 돕고 혈액 순환을 개선하여 편안한 상태로 만들어주어 불면증 완화에 도움을 줍니다.",
+            "grounded_on": [
+              "건강한 생활습관"
+            ],
+            "execution": {
+              "when": "식후",
+              "duration_min": 30
+            },
+            "difficulty": 3,
+            "mission_type": "exercise",
+            "template_id": "walk_after_meal",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 3829.3476249673404,
+          "prompt_tokens": 390,
+          "completion_tokens": 162,
+          "total_tokens": 552,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
         }
       }
     }
@@ -8124,6 +10485,70 @@
           "rejected": []
         }
       },
+      "gen_only(M1+M3+M5)": {
+        "persona_id": "n07",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": false,
+          "M3_kag": true,
+          "M4_verify_gate": false,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "오늘 고기·해산물 과식 피하기",
+            "rationale": "통풍 환자는 요산 수치를 높이기 때문에 육류와 해산물 섭취를 제한해야 합니다.",
+            "grounded_on": [
+              "조건"
+            ],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "diet",
+            "template_id": "purine_moderate",
+            "source": "generated"
+          },
+          {
+            "title": "물 8잔 마시기",
+            "rationale": "충분한 수분 섭취는 신체의 노폐물을 배출하는 데 도움을 줍니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "hydration",
+            "template_id": "hydration",
+            "source": "generated"
+          },
+          {
+            "title": "식후 20분 걷기",
+            "rationale": "식사 후 가벼운 운동은 혈당 조절에 도움이 됩니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "식후",
+              "duration_min": 20
+            },
+            "difficulty": 2,
+            "mission_type": "exercise",
+            "template_id": "walk_after_meal",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 3481.0520419850945,
+          "prompt_tokens": 384,
+          "completion_tokens": 141,
+          "total_tokens": 525,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
+        }
+      },
       "full": {
         "persona_id": "n07",
         "config": {
@@ -8177,6 +10602,134 @@
             "오늘 고기·해산물 과식 피하기",
             "오늘 고기·해산물 과식 피하기"
           ]
+        }
+      },
+      "risk_routed": {
+        "persona_id": "n07",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": false,
+          "M3_kag": true,
+          "M4_verify_gate": false,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "오늘 고기·해산물 과식 피하기",
+            "rationale": "통풍 환자는 요산 수치를 높이기 때문에 육류 및 해산물 섭취를 제한해야 합니다.",
+            "grounded_on": [
+              "조건"
+            ],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "diet",
+            "template_id": "purine_moderate",
+            "source": "generated"
+          },
+          {
+            "title": "물 8잔 마시기",
+            "rationale": "충분한 수분 섭취는 체내 요산 배출에 도움을 줍니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "hydration",
+            "template_id": "hydration",
+            "source": "generated"
+          },
+          {
+            "title": "식후 20분 걷기",
+            "rationale": "규칙적인 운동은 전반적인 건강 상태를 개선하고 통풍 발작을 예방하는 데 도움이 됩니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "식후",
+              "duration_min": 20
+            },
+            "difficulty": 2,
+            "mission_type": "exercise",
+            "template_id": "walk_after_meal",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 3489.392667019274,
+          "prompt_tokens": 384,
+          "completion_tokens": 145,
+          "total_tokens": 529,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
+        }
+      },
+      "adaptive": {
+        "persona_id": "n07",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": false,
+          "M3_kag": true,
+          "M4_verify_gate": false,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "오늘 고기·해산물 과식 피하기",
+            "rationale": "통풍 환자는 요산 수치를 높이기 때문에 육류와 해산물 섭취를 제한해야 합니다.",
+            "grounded_on": [
+              "조건"
+            ],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "diet",
+            "template_id": "purine_moderate",
+            "source": "generated"
+          },
+          {
+            "title": "물 8잔 마시기",
+            "rationale": "충분한 수분 섭취는 체내 노폐물을 배출하는 데 도움이 되므로 물을 자주 마시는 것이 좋습니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "hydration",
+            "template_id": "hydration",
+            "source": "generated"
+          },
+          {
+            "title": "식후 20분 걷기",
+            "rationale": "식사 후 가벼운 운동은 혈당 조절에 도움을 주고 전반적인 건강 상태를 개선할 수 있습니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "식후",
+              "duration_min": 20
+            },
+            "difficulty": 2,
+            "mission_type": "exercise",
+            "template_id": "walk_after_meal",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 3731.7262499709614,
+          "prompt_tokens": 384,
+          "completion_tokens": 155,
+          "total_tokens": 539,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
         }
       }
     }
@@ -8780,6 +11333,70 @@
           "rejected": []
         }
       },
+      "gen_only(M1+M3+M5)": {
+        "persona_id": "n08",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": false,
+          "M3_kag": true,
+          "M4_verify_gate": false,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "식후 30분 걷기",
+            "rationale": "식사 후 바로 눕지 않고 가벼운 운동을 함으로써 위 내용물이 식도로 역류하는 것을 방지할 수 있습니다.",
+            "grounded_on": [
+              "위식도역류질환"
+            ],
+            "execution": {
+              "when": "식후",
+              "duration_min": 30
+            },
+            "difficulty": 3,
+            "mission_type": "exercise",
+            "template_id": "walk_after_meal",
+            "source": "generated"
+          },
+          {
+            "title": "가벼운 스쿼트 10회 하기",
+            "rationale": "근력 운동은 소화기관의 움직임을 도와 소화를 촉진시키고 변비를 예방하며, 전반적인 건강 상태를 개선합니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "낮 시간",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "exercise",
+            "template_id": "light_strength",
+            "source": "generated"
+          },
+          {
+            "title": "오늘 한 끼 저염식 하기",
+            "rationale": "짠 음식을 피하고 건강한 식사를 통해 체내 나트륨 농도를 조절하여 혈압을 안정적으로 유지하고 부종을 줄일 수 있습니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "diet",
+            "template_id": "low_sodium_meal",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 4366.895792016294,
+          "prompt_tokens": 389,
+          "completion_tokens": 177,
+          "total_tokens": 566,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
+        }
+      },
       "full": {
         "persona_id": "n08",
         "config": {
@@ -8810,6 +11427,142 @@
             "가벼운 스쿼트 10회 하기",
             "오늘 한 끼 저염식 하기"
           ]
+        }
+      },
+      "risk_routed": {
+        "persona_id": "n08",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": false,
+          "M3_kag": true,
+          "M4_verify_gate": false,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "식후 30분 걷기",
+            "rationale": "식사 후 바로 눕지 않고 가벼운 운동을 함으로써 위 내용물이 식도로 역류하는 것을 방지할 수 있습니다.",
+            "grounded_on": [
+              "건강한 생활습관 유지"
+            ],
+            "execution": {
+              "when": "식후",
+              "duration_min": 30
+            },
+            "difficulty": 3,
+            "mission_type": "exercise",
+            "template_id": "walk_after_meal",
+            "source": "generated"
+          },
+          {
+            "title": "가벼운 스쿼트 10회 하기",
+            "rationale": "근력 운동은 소화 기능을 개선하고 체중 관리에 도움을 주어 위압을 감소시키는 효과가 있습니다.",
+            "grounded_on": [
+              "건강한 생활습관 유지"
+            ],
+            "execution": {
+              "when": "낮 시간",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "exercise",
+            "template_id": "light_strength",
+            "source": "generated"
+          },
+          {
+            "title": "오늘 한 끼 저염식 하기",
+            "rationale": "저염식은 고혈압 및 심혈관계 질환 예방뿐만 아니라 위 건강에도 도움이 됩니다.",
+            "grounded_on": [
+              "건강한 생활습관 유지"
+            ],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "diet",
+            "template_id": "low_sodium_meal",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 4363.288082997315,
+          "prompt_tokens": 389,
+          "completion_tokens": 177,
+          "total_tokens": 566,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
+        }
+      },
+      "adaptive": {
+        "persona_id": "n08",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": false,
+          "M3_kag": true,
+          "M4_verify_gate": false,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "식후 30분 걷기",
+            "rationale": "식사 후 바로 눕지 않고 가벼운 운동을 통해 위 내용물이 식도로 역류하는 것을 방지할 수 있습니다.",
+            "grounded_on": [
+              "건강한 생활습관 유지"
+            ],
+            "execution": {
+              "when": "식후",
+              "duration_min": 30
+            },
+            "difficulty": 3,
+            "mission_type": "exercise",
+            "template_id": "walk_after_meal",
+            "source": "generated"
+          },
+          {
+            "title": "가벼운 스쿼트 10회 하기",
+            "rationale": "근력 운동은 소화를 촉진하고 자세를 개선하여 위압을 줄여줍니다.",
+            "grounded_on": [
+              "건강한 생활습관 유지"
+            ],
+            "execution": {
+              "when": "낮 시간",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "exercise",
+            "template_id": "light_strength",
+            "source": "generated"
+          },
+          {
+            "title": "오늘 한 끼 저염식 하기",
+            "rationale": "저염식은 체내 수분 축적을 줄이고 혈압을 안정시켜 위식도역류 질환의 증상을 완화합니다.",
+            "grounded_on": [
+              "건강한 식단 관리"
+            ],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "diet",
+            "template_id": "low_sodium_meal",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 4361.180374980904,
+          "prompt_tokens": 389,
+          "completion_tokens": 179,
+          "total_tokens": 568,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
         }
       }
     }
@@ -9387,6 +12140,72 @@
           "rejected": []
         }
       },
+      "gen_only(M1+M3+M5)": {
+        "persona_id": "n09",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": false,
+          "M3_kag": true,
+          "M4_verify_gate": false,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "가까운 시일 내 병원에서 빈혈 관련 상담받기",
+            "rationale": "빈혈 증상이 있을 경우 전문의와 상담을 통해 정확한 진단과 치료 계획을 세우는 것이 중요합니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "checkup_followup",
+            "template_id": "clinic_followup",
+            "source": "generated"
+          },
+          {
+            "title": "식후 30분 걷기",
+            "rationale": "식사 후 가벼운 운동은 소화를 돕고 혈당 상승을 억제하는 데 도움이 됩니다.",
+            "grounded_on": [
+              "건강한 생활습관 유지"
+            ],
+            "execution": {
+              "when": "식후",
+              "duration_min": 30
+            },
+            "difficulty": 3,
+            "mission_type": "exercise",
+            "template_id": "walk_after_meal",
+            "source": "generated"
+          },
+          {
+            "title": "가벼운 스쿼트 10회 하기",
+            "rationale": "스쿼트는 하체 근력을 강화하고 전반적인 체력 향상에 도움을 줍니다.",
+            "grounded_on": [
+              "근력운동 포함하기"
+            ],
+            "execution": {
+              "when": "낮 시간",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "exercise",
+            "template_id": "light_strength",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 3749.8372920090333,
+          "prompt_tokens": 392,
+          "completion_tokens": 157,
+          "total_tokens": 549,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
+        }
+      },
       "full": {
         "persona_id": "n09",
         "config": {
@@ -9418,6 +12237,88 @@
           "prompt_tokens": 1134,
           "completion_tokens": 405,
           "total_tokens": 1539,
+          "llm_calls": 3,
+          "regenerations": 2,
+          "rejected": [
+            "식후 30분 걷기",
+            "가벼운 스쿼트 10회 하기",
+            "식후 30분 걷기",
+            "식후 30분 걷기"
+          ]
+        }
+      },
+      "risk_routed": {
+        "persona_id": "n09",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": true,
+          "M3_kag": true,
+          "M4_verify_gate": true,
+          "M5_structured": true
+        },
+        "status": "partial",
+        "missions": [
+          {
+            "title": "가까운 시일 내 병원에서 빈혈 관련 상담받기",
+            "rationale": "빈혈 증상에 대한 정확한 진단과 치료 계획을 위해 전문의와 상담하는 것이 중요합니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "checkup_followup",
+            "template_id": "clinic_followup",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 9316.921209043358,
+          "prompt_tokens": 1134,
+          "completion_tokens": 371,
+          "total_tokens": 1505,
+          "llm_calls": 3,
+          "regenerations": 2,
+          "rejected": [
+            "식후 30분 걷기",
+            "가벼운 스쿼트 10회 하기",
+            "식후 30분 걷기",
+            "식후 30분 걷기"
+          ]
+        }
+      },
+      "adaptive": {
+        "persona_id": "n09",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": true,
+          "M3_kag": true,
+          "M4_verify_gate": true,
+          "M5_structured": true
+        },
+        "status": "partial",
+        "missions": [
+          {
+            "title": "가까운 시일 내 병원에서 빈혈 관련 상담받기",
+            "rationale": "빈혈 증상을 관리하고 개선하기 위해 전문가의 조언을 받는 것이 중요합니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "checkup_followup",
+            "template_id": "clinic_followup",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 8643.48525000969,
+          "prompt_tokens": 1134,
+          "completion_tokens": 356,
+          "total_tokens": 1490,
           "llm_calls": 3,
           "regenerations": 2,
           "rejected": [
@@ -9986,6 +12887,70 @@
           "rejected": []
         }
       },
+      "gen_only(M1+M3+M5)": {
+        "persona_id": "n10",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": false,
+          "M3_kag": true,
+          "M4_verify_gate": false,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "24시 전에 잠자리에 들기",
+            "rationale": "규칙적인 수면 습관을 통해 우울과 불면증을 완화할 수 있습니다.",
+            "grounded_on": [
+              "우울 선별 양성->불면증"
+            ],
+            "execution": {
+              "when": "취침 전",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "sleep",
+            "template_id": "sleep_routine",
+            "source": "generated"
+          },
+          {
+            "title": "7분 심호흡·가벼운 스트레칭 하기",
+            "rationale": "심호흡 및 가벼운 스트레칭은 긴장을 풀고 마음을 안정시켜 수면의 질을 향상시킬 수 있습니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "",
+              "duration_min": 7
+            },
+            "difficulty": 1,
+            "mission_type": "stress",
+            "template_id": "breathing_stretch",
+            "source": "generated"
+          },
+          {
+            "title": "가까운 시일 내 병원에서 기분·수면 관련 상담받기",
+            "rationale": "전문가의 도움을 받아 우울과 불면증의 원인을 파악하고 적절한 치료를 받는 것이 중요합니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "checkup_followup",
+            "template_id": "clinic_followup",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 3845.124665996991,
+          "prompt_tokens": 440,
+          "completion_tokens": 160,
+          "total_tokens": 600,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
+        }
+      },
       "full": {
         "persona_id": "n10",
         "config": {
@@ -10047,6 +13012,136 @@
           "prompt_tokens": 440,
           "completion_tokens": 181,
           "total_tokens": 621,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
+        }
+      },
+      "risk_routed": {
+        "persona_id": "n10",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": true,
+          "M3_kag": true,
+          "M4_verify_gate": true,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "24시 전에 잠자리에 들기",
+            "rationale": "규칙적인 수면 습관을 형성하는 것은 우울 및 불면증 증상 완화에 도움이 됩니다.",
+            "grounded_on": [
+              "우울 선별 양성->불면증"
+            ],
+            "execution": {
+              "when": "취침 전",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "sleep",
+            "template_id": "sleep_routine",
+            "source": "generated"
+          },
+          {
+            "title": "7분 심호흡·가벼운 스트레칭 하기",
+            "rationale": "스트레칭과 깊은 호흡은 긴장을 완화하고 수면의 질을 향상시킬 수 있습니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "",
+              "duration_min": 7
+            },
+            "difficulty": 1,
+            "mission_type": "stress",
+            "template_id": "breathing_stretch",
+            "source": "generated"
+          },
+          {
+            "title": "가까운 시일 내 병원에서 기분·수면 관련 상담받기",
+            "rationale": "전문가의 도움을 받아 증상을 관리하는 것이 중요합니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "checkup_followup",
+            "template_id": "clinic_followup",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 3508.54149996303,
+          "prompt_tokens": 440,
+          "completion_tokens": 147,
+          "total_tokens": 587,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
+        }
+      },
+      "adaptive": {
+        "persona_id": "n10",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": true,
+          "M3_kag": true,
+          "M4_verify_gate": true,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "24시 전에 잠자리에 들기",
+            "rationale": "규칙적인 수면 습관을 형성하고 우울 및 불면 증상을 완화하는 데 도움이 됩니다.",
+            "grounded_on": [
+              "우울 선별 양성->불면증"
+            ],
+            "execution": {
+              "when": "취침 전",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "sleep",
+            "template_id": "sleep_routine",
+            "source": "generated"
+          },
+          {
+            "title": "7분 심호흡·가벼운 스트레칭 하기",
+            "rationale": "심호흡과 가벼운 스트레칭은 긴장을 풀고 수면의 질을 향상시킬 수 있습니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "",
+              "duration_min": 7
+            },
+            "difficulty": 1,
+            "mission_type": "stress",
+            "template_id": "breathing_stretch",
+            "source": "generated"
+          },
+          {
+            "title": "가까운 시일 내 병원에서 기분·수면 관련 상담받기",
+            "rationale": "전문가의 도움을 받아 우울 및 불면 문제를 효과적으로 관리할 방법을 찾을 수 있습니다.",
+            "grounded_on": [
+              "우울 선별 양성->불면증"
+            ],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "checkup_followup",
+            "template_id": "clinic_followup",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 4009.75704198936,
+          "prompt_tokens": 440,
+          "completion_tokens": 168,
+          "total_tokens": 608,
           "llm_calls": 1,
           "regenerations": 0,
           "rejected": []
@@ -10648,6 +13743,68 @@
           "rejected": []
         }
       },
+      "gen_only(M1+M3+M5)": {
+        "persona_id": "n11",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": false,
+          "M3_kag": true,
+          "M4_verify_gate": false,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "식후 20분 걷기",
+            "rationale": "식사 후 바로 앉거나 눕는 것을 피하고 가벼운 산책을 통해 혈당 상승을 억제할 수 있습니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "식후",
+              "duration_min": 20
+            },
+            "difficulty": 2,
+            "mission_type": "exercise",
+            "template_id": "walk_after_meal",
+            "source": "generated"
+          },
+          {
+            "title": "가벼운 스쿼트 10회 하기",
+            "rationale": "근력 운동은 인슐린 감수성을 향상시켜 혈당을 조절하는 데 도움을 줍니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "낮 시간",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "exercise",
+            "template_id": "light_strength",
+            "source": "generated"
+          },
+          {
+            "title": "끼니에 녹색잎채소 1가지 챙기기",
+            "rationale": "녹색 잎 채소는 식이섬유와 다양한 영양소를 제공하여 혈당과 콜레스테롤 관리에 도움이 됩니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "diet",
+            "template_id": "leafy_greens",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 3929.7313750139438,
+          "prompt_tokens": 476,
+          "completion_tokens": 160,
+          "total_tokens": 636,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
+        }
+      },
       "full": {
         "persona_id": "n11",
         "config": {
@@ -10705,6 +13862,139 @@
           "prompt_tokens": 476,
           "completion_tokens": 179,
           "total_tokens": 655,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
+        }
+      },
+      "risk_routed": {
+        "persona_id": "n11",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": false,
+          "M3_kag": true,
+          "M4_verify_gate": false,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "식후 20분 걷기",
+            "rationale": "식사 후 바로 앉거나 누우면 혈당이 급격히 상승할 수 있으므로, 식후 20분 정도 가볍게 걷는 것은 혈당 조절과 고혈압 관리에 도움이 됩니다.",
+            "grounded_on": [
+              "고혈압"
+            ],
+            "execution": {
+              "when": "식후",
+              "duration_min": 20
+            },
+            "difficulty": 2,
+            "mission_type": "exercise",
+            "template_id": "walk_after_meal",
+            "source": "generated"
+          },
+          {
+            "title": "가벼운 스쿼트 10회 하기",
+            "rationale": "스쿼트는 하체 근육을 강화하고 기초 대사량을 높이는 운동으로, 꾸준한 실천은 인슐린 저항성 개선 및 혈당 조절에 도움을 줄 수 있습니다.",
+            "grounded_on": [
+              "2형 당뇨"
+            ],
+            "execution": {
+              "when": "낮 시간",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "exercise",
+            "template_id": "light_strength",
+            "source": "generated"
+          },
+          {
+            "title": "끼니에 녹색잎채소 1가지 챙기기",
+            "rationale": "녹색 잎 채소는 다양한 비타민, 미네랄, 섬유질이 풍부하여 체내 콜레스테롤 흡수를 억제하고 지질 대사를 개선하는 데 도움을 줍니다.",
+            "grounded_on": [
+              "이상지질혈증"
+            ],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "diet",
+            "template_id": "leafy_greens",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 5092.579999996815,
+          "prompt_tokens": 476,
+          "completion_tokens": 217,
+          "total_tokens": 693,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
+        }
+      },
+      "adaptive": {
+        "persona_id": "n11",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": false,
+          "M3_kag": true,
+          "M4_verify_gate": false,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "식후 20분 걷기",
+            "rationale": "식사 후 바로 앉아있거나 누워있는 대신 가볍게 걸으면 혈당 상승을 억제하고 고혈압 및 이상 지질혈증 관리에도 도움이 됩니다.",
+            "grounded_on": [
+              "고혈압->심혈관질환",
+              "이상지질혈증->심혈관질환"
+            ],
+            "execution": {
+              "when": "식후",
+              "duration_min": 20
+            },
+            "difficulty": 2,
+            "mission_type": "exercise",
+            "template_id": "walk_after_meal",
+            "source": "generated"
+          },
+          {
+            "title": "가벼운 스쿼트 10회 하기",
+            "rationale": "스쿼트와 같은 가벼운 근력 운동은 근육량을 유지하고 대사율을 높여 혈당 조절과 고혈압 완화에 도움을 줍니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "낮 시간",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "exercise",
+            "template_id": "light_strength",
+            "source": "generated"
+          },
+          {
+            "title": "끼니에 녹색잎채소 1가지 챙기기",
+            "rationale": "녹색 잎 채소는 식이섬유와 다양한 영양소를 제공하여 혈당 조절 및 콜레스테롤 수치 개선에 기여합니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "diet",
+            "template_id": "leafy_greens",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 4591.485959012061,
+          "prompt_tokens": 476,
+          "completion_tokens": 194,
+          "total_tokens": 670,
           "llm_calls": 1,
           "regenerations": 0,
           "rejected": []
@@ -11284,6 +14574,72 @@
           "rejected": []
         }
       },
+      "gen_only(M1+M3+M5)": {
+        "persona_id": "n12",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": false,
+          "M3_kag": true,
+          "M4_verify_gate": false,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "식후 20분 걷기",
+            "rationale": "식사 후 바로 앉아있지 않고 걷기를 통해 혈압 상승을 억제할 수 있습니다.",
+            "grounded_on": [
+              "고혈압->심혈관질환"
+            ],
+            "execution": {
+              "when": "식후",
+              "duration_min": 20
+            },
+            "difficulty": 2,
+            "mission_type": "exercise",
+            "template_id": "walk_after_meal",
+            "source": "generated"
+          },
+          {
+            "title": "오늘 한 끼 저염식 하기",
+            "rationale": "소금 섭취를 줄이면 고혈압 관리에 도움이 됩니다.",
+            "grounded_on": [
+              "고혈압->심혈관질환"
+            ],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "diet",
+            "template_id": "low_sodium_meal",
+            "source": "generated"
+          },
+          {
+            "title": "24시 전에 잠자리에 들기",
+            "rationale": "충분한 수면은 혈압 조절 및 전반적인 건강 유지에 중요합니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "취침 전",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "sleep",
+            "template_id": "sleep_routine",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 3630.1747920224443,
+          "prompt_tokens": 415,
+          "completion_tokens": 150,
+          "total_tokens": 565,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
+        }
+      },
       "full": {
         "persona_id": "n12",
         "config": {
@@ -11351,6 +14707,138 @@
             "식후 20분 걷기",
             "오늘 한 끼 저염식 하기"
           ]
+        }
+      },
+      "risk_routed": {
+        "persona_id": "n12",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": false,
+          "M3_kag": true,
+          "M4_verify_gate": false,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "식후 20분 걷기",
+            "rationale": "식사 후 바로 앉거나 눕지 않고 걷기를 통해 혈압 상승을 억제하고 고혈압으로 인한 심혈관 질환의 위험을 줄일 수 있습니다.",
+            "grounded_on": [
+              "고혈압->심혈관질환"
+            ],
+            "execution": {
+              "when": "식후",
+              "duration_min": 20
+            },
+            "difficulty": 2,
+            "mission_type": "exercise",
+            "template_id": "walk_after_meal",
+            "source": "generated"
+          },
+          {
+            "title": "오늘 한 끼 저염식 하기",
+            "rationale": "소금 섭취를 줄이는 것은 혈압 조절에 도움을 주며, 이는 고혈압 관리와 심혈관 질환 예방에 중요합니다.",
+            "grounded_on": [
+              "고혈압->심혈관질환"
+            ],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "diet",
+            "template_id": "low_sodium_meal",
+            "source": "generated"
+          },
+          {
+            "title": "24시 전에 잠자리에 들기",
+            "rationale": "충분한 수면은 혈압 조절에 중요하며, 특히 밤 12시 이전에 잠들면 더 건강한 생활 리듬을 유지할 수 있어 고혈압 및 관련 질환의 위험을 감소시킬 수 있습니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "취침 전",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "sleep",
+            "template_id": "sleep_routine",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 4935.809374961536,
+          "prompt_tokens": 415,
+          "completion_tokens": 208,
+          "total_tokens": 623,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
+        }
+      },
+      "adaptive": {
+        "persona_id": "n12",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": false,
+          "M3_kag": true,
+          "M4_verify_gate": false,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "식후 20분 걷기",
+            "rationale": "식사 후 바로 앉거나 눕지 않고 가벼운 산책을 하면 혈압 상승을 억제할 수 있습니다.",
+            "grounded_on": [
+              "고혈압->심혈관질환"
+            ],
+            "execution": {
+              "when": "식후",
+              "duration_min": 20
+            },
+            "difficulty": 2,
+            "mission_type": "exercise",
+            "template_id": "walk_after_meal",
+            "source": "generated"
+          },
+          {
+            "title": "오늘 한 끼 저염식 하기",
+            "rationale": "소금 섭취를 줄이면 고혈압 관리에 도움이 되며, 이는 심혈관 질환의 위험도 낮출 수 있습니다.",
+            "grounded_on": [
+              "고혈압->심혈관질환"
+            ],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "diet",
+            "template_id": "low_sodium_meal",
+            "source": "generated"
+          },
+          {
+            "title": "24시 전에 잠자리에 들기",
+            "rationale": "충분한 수면은 혈압 조절에 중요하며, 특히 밤 12시 이전에 취침하는 것이 좋습니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "취침 전",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "sleep",
+            "template_id": "sleep_routine",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 4344.5556669612415,
+          "prompt_tokens": 415,
+          "completion_tokens": 175,
+          "total_tokens": 590,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
         }
       }
     }
@@ -11886,6 +15374,68 @@
           "rejected": []
         }
       },
+      "gen_only(M1+M3+M5)": {
+        "persona_id": "n13",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": false,
+          "M3_kag": true,
+          "M4_verify_gate": false,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "식후 30분 걷기",
+            "rationale": "식사 후 바로 앉아있지 않고 걷기를 통해 소화를 촉진하고 칼로리 소모를 늘릴 수 있습니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "식후",
+              "duration_min": 30
+            },
+            "difficulty": 3,
+            "mission_type": "exercise",
+            "template_id": "walk_after_meal",
+            "source": "generated"
+          },
+          {
+            "title": "가벼운 스쿼트 10회 하기",
+            "rationale": "스쿼트는 하체 근육을 강화하며 기초대사량을 높이는데 도움을 줍니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "낮 시간",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "exercise",
+            "template_id": "light_strength",
+            "source": "generated"
+          },
+          {
+            "title": "끼니에 녹색잎채소 1가지 챙기기",
+            "rationale": "녹색 잎 채소는 낮은 칼로리에 식이섬유와 비타민, 미네랄 등이 풍부하여 포만감을 주고 영양 균형을 맞추는 데 도움이 됩니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "diet",
+            "template_id": "leafy_greens",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 3893.626708013471,
+          "prompt_tokens": 390,
+          "completion_tokens": 168,
+          "total_tokens": 558,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
+        }
+      },
       "full": {
         "persona_id": "n13",
         "config": {
@@ -11943,6 +15493,140 @@
           "prompt_tokens": 390,
           "completion_tokens": 205,
           "total_tokens": 595,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
+        }
+      },
+      "risk_routed": {
+        "persona_id": "n13",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": false,
+          "M3_kag": true,
+          "M4_verify_gate": false,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "식후 30분 걷기",
+            "rationale": "식사 후 바로 앉아있지 않고 걷기를 통해 소화를 촉진하고 칼로리 소모를 늘릴 수 있습니다.",
+            "grounded_on": [
+              "칼로리 소모 증가"
+            ],
+            "execution": {
+              "when": "식후",
+              "duration_min": 30
+            },
+            "difficulty": 3,
+            "mission_type": "exercise",
+            "template_id": "walk_after_meal",
+            "source": "generated"
+          },
+          {
+            "title": "가벼운 스쿼트 10회 하기",
+            "rationale": "스쿼트는 하체 근육을 강화하며 기초 대사량을 높이는데 도움을 줍니다.",
+            "grounded_on": [
+              "근력 운동"
+            ],
+            "execution": {
+              "when": "낮 시간",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "exercise",
+            "template_id": "light_strength",
+            "source": "generated"
+          },
+          {
+            "title": "끼니에 녹색잎채소 1가지 챙기기",
+            "rationale": "녹색 잎 채소는 낮은 열량과 풍부한 영양소로 체중 관리에 도움이 됩니다.",
+            "grounded_on": [
+              "영양 균형 유지"
+            ],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "diet",
+            "template_id": "leafy_greens",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 3996.0712080355734,
+          "prompt_tokens": 390,
+          "completion_tokens": 167,
+          "total_tokens": 557,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
+        }
+      },
+      "adaptive": {
+        "persona_id": "n13",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": false,
+          "M3_kag": true,
+          "M4_verify_gate": false,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "식후 30분 걷기",
+            "rationale": "식사 후 바로 앉아있지 않고 걷기를 하면 소화를 돕고 칼로리 소모를 증가시켜 비만을 예방할 수 있습니다.",
+            "grounded_on": [
+              "칼로리 소모"
+            ],
+            "execution": {
+              "when": "식후",
+              "duration_min": 30
+            },
+            "difficulty": 3,
+            "mission_type": "exercise",
+            "template_id": "walk_after_meal",
+            "source": "generated"
+          },
+          {
+            "title": "가벼운 스쿼트 10회 하기",
+            "rationale": "스쿼트는 하체 근육을 강화하고 기초 대사량을 높이는데 도움을 줍니다. 이는 비만 관리에 효과적입니다.",
+            "grounded_on": [
+              "근육량 증가"
+            ],
+            "execution": {
+              "when": "낮 시간",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "exercise",
+            "template_id": "light_strength",
+            "source": "generated"
+          },
+          {
+            "title": "끼니에 녹색잎채소 1가지 챙기기",
+            "rationale": "녹색 잎 채소는 낮은 열량과 풍부한 영양소로 포만감을 주면서도 체중 증가의 원인이 되는 과식을 방지합니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "diet",
+            "template_id": "leafy_greens",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 4403.729540994391,
+          "prompt_tokens": 390,
+          "completion_tokens": 183,
+          "total_tokens": 573,
           "llm_calls": 1,
           "regenerations": 0,
           "rejected": []
@@ -12568,6 +16252,72 @@
           "rejected": []
         }
       },
+      "gen_only(M1+M3+M5)": {
+        "persona_id": "n14",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": false,
+          "M3_kag": true,
+          "M4_verify_gate": false,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "24시 전에 잠자리에 들기",
+            "rationale": "규칙적인 수면 습관은 불면증 개선에 도움을 줄 수 있습니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "취침 전",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "sleep",
+            "template_id": "sleep_routine",
+            "source": "generated"
+          },
+          {
+            "title": "10분 심호흡·가벼운 스트레칭 하기",
+            "rationale": "스트레스를 완화하고 긴장을 풀어주어 고혈압 및 불면증 완화에 도움이 됩니다.",
+            "grounded_on": [
+              "고혈압->심혈관질환"
+            ],
+            "execution": {
+              "when": "",
+              "duration_min": 10
+            },
+            "difficulty": 1,
+            "mission_type": "stress",
+            "template_id": "breathing_stretch",
+            "source": "generated"
+          },
+          {
+            "title": "식후 30분 걷기",
+            "rationale": "적당한 운동은 혈압을 낮추는 데 도움을 주며, 심혈관 질환의 위험도 감소시킬 수 있습니다.",
+            "grounded_on": [
+              "고혈압->심혈관질환"
+            ],
+            "execution": {
+              "when": "식후",
+              "duration_min": 30
+            },
+            "difficulty": 3,
+            "mission_type": "exercise",
+            "template_id": "walk_after_meal",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 4345.153958012816,
+          "prompt_tokens": 427,
+          "completion_tokens": 167,
+          "total_tokens": 594,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
+        }
+      },
       "full": {
         "persona_id": "n14",
         "config": {
@@ -12629,6 +16379,138 @@
           "prompt_tokens": 427,
           "completion_tokens": 168,
           "total_tokens": 595,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
+        }
+      },
+      "risk_routed": {
+        "persona_id": "n14",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": false,
+          "M3_kag": true,
+          "M4_verify_gate": false,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "24시 전에 잠자리에 들기",
+            "rationale": "불면증을 완화하고 규칙적인 수면 패턴을 형성하기 위해 하루를 마무리하는 시간에 맞춰 잠자리에 드는 것이 중요합니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "취침 전",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "sleep",
+            "template_id": "sleep_routine",
+            "source": "generated"
+          },
+          {
+            "title": "10분 심호흡·가벼운 스트레칭 하기",
+            "rationale": "스트레스를 줄이고 근육의 긴장을 풀어주어 불면증 완화에 도움을 줍니다. 또한 고혈압 환자의 경우 스트레스 관리가 중요하므로 일석이조의 효과를 볼 수 있습니다.",
+            "grounded_on": [
+              "고혈압->심혈관질환"
+            ],
+            "execution": {
+              "when": "",
+              "duration_min": 10
+            },
+            "difficulty": 1,
+            "mission_type": "stress",
+            "template_id": "breathing_stretch",
+            "source": "generated"
+          },
+          {
+            "title": "식후 30분 걷기",
+            "rationale": "소화를 돕고 혈압을 낮추는 효과가 있어 고혈압 환자에게 좋습니다. 식후에는 혈당 및 혈압이 상승할 가능성이 있으므로 가볍게 걷기를 통해 이를 조절해야 합니다.",
+            "grounded_on": [
+              "고혈압->심혈관질환"
+            ],
+            "execution": {
+              "when": "식후",
+              "duration_min": 30
+            },
+            "difficulty": 3,
+            "mission_type": "exercise",
+            "template_id": "walk_after_meal",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 4912.959709006827,
+          "prompt_tokens": 427,
+          "completion_tokens": 208,
+          "total_tokens": 635,
+          "llm_calls": 1,
+          "regenerations": 0,
+          "rejected": []
+        }
+      },
+      "adaptive": {
+        "persona_id": "n14",
+        "config": {
+          "M1_template": true,
+          "M2_graph_constrained": false,
+          "M3_kag": true,
+          "M4_verify_gate": false,
+          "M5_structured": true
+        },
+        "status": "generated",
+        "missions": [
+          {
+            "title": "24시 전에 잠자리에 들기",
+            "rationale": "규칙적인 수면 습관은 불면증을 완화하고 전반적인 건강을 개선하는 데 도움이 됩니다.",
+            "grounded_on": [],
+            "execution": {
+              "when": "취침 전",
+              "duration_min": null
+            },
+            "difficulty": 1,
+            "mission_type": "sleep",
+            "template_id": "sleep_routine",
+            "source": "generated"
+          },
+          {
+            "title": "10분 심호흡·가벼운 스트레칭 하기",
+            "rationale": "스트레스는 고혈압과 불면증에 영향을 줄 수 있으므로 이를 관리하는 것이 중요합니다.",
+            "grounded_on": [
+              "고혈압->심혈관질환"
+            ],
+            "execution": {
+              "when": "",
+              "duration_min": 10
+            },
+            "difficulty": 1,
+            "mission_type": "stress",
+            "template_id": "breathing_stretch",
+            "source": "generated"
+          },
+          {
+            "title": "식후 30분 걷기",
+            "rationale": "걷기는 심혈관 질환의 위험을 감소시키며 혈압 조절에도 도움을 줍니다.",
+            "grounded_on": [
+              "고혈압->심혈관질환"
+            ],
+            "execution": {
+              "when": "식후",
+              "duration_min": 30
+            },
+            "difficulty": 3,
+            "mission_type": "exercise",
+            "template_id": "walk_after_meal",
+            "source": "generated"
+          }
+        ],
+        "disclaimer": "이 미션은 건강검진 결과를 참고한 생활습관 제안이며, 진단이나 치료 지시가 아닙니다. 증상이 있거나 걱정되면 전문가와 상담하세요.",
+        "meta": {
+          "latency_ms": 4010.887166019529,
+          "prompt_tokens": 427,
+          "completion_tokens": 164,
+          "total_tokens": 591,
           "llm_calls": 1,
           "regenerations": 0,
           "rejected": []
