@@ -132,9 +132,8 @@ def find_best_alias_match(text: str) -> tuple[MetricSpec, str] | None:
         for alias in spec.aliases:
             norm_alias = normalize_label(alias)
             if len(norm_alias) <= 3:
-                # 짧은 alias는 원문 exact match만 허용한다.
-                # unit strip을 적용하면 '키(cm)' → '키' 처럼 오탐이 발생한다.
-                matched = norm_alias == norm
+                # 짧은 alias: exact match. 단위 접미사 제거 후도 허용 (키(cm) → 키).
+                matched = norm_alias == norm or norm_alias == norm_stripped
             else:
                 # 긴 alias는 단위 접미사 제거 후 재시도 + ≤2자 OCR 오인식 허용
                 matched = any(
