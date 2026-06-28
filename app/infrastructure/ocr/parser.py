@@ -64,7 +64,18 @@ class OcrParser:
             if found is None:
                 continue
             spec, label_end = found
-            right = [f for f in row[label_end:] if not _is_reference(f.text)]
+            right_raw = row[label_end:]
+            right = [
+                f
+                for i, f in enumerate(right_raw)
+                if not _is_reference(f.text)
+                and not (
+                    _is_number(f.text)
+                    and i + 1 < len(right_raw)
+                    and _is_reference(right_raw[i + 1].text)
+                    and not right_raw[i + 1].text[:1].isdigit()
+                )
+            ]
             extracted = self._extract(spec, right, ref_x_threshold)
             if not extracted and spec.kind in ("hw_pair", "bp_pair") and row_index + 1 < len(rows):
                 next_row = rows[row_index + 1]
