@@ -23,7 +23,7 @@ METRIC_SPECS: list[MetricSpec] = [
         plausible_min=50.0,
         plausible_max=230.0,
     ),
-    MetricSpec("weight", "체중", ("체중",), "kg", plausible_min=10.0, plausible_max=300.0),
+    MetricSpec("weight", "체중", ("체중", "몸무게"), "kg", plausible_min=10.0, plausible_max=300.0),
     MetricSpec("waist", "허리둘레", ("허리둘레",), "cm", plausible_min=30.0, plausible_max=200.0),
     MetricSpec(
         "bmi", "체질량지수", ("체질량지수",), "kg/m2", plausible_min=10.0, plausible_max=70.0
@@ -82,8 +82,8 @@ METRIC_SPECS: list[MetricSpec] = [
         plausible_min=50.0,
         plausible_max=700.0,
     ),
-    MetricSpec("hdl", "HDL콜레스테롤", ("HDL",), "mg/dL", plausible_min=5.0, plausible_max=200.0),
-    MetricSpec("ldl", "LDL콜레스테롤", ("LDL",), "mg/dL", plausible_min=10.0, plausible_max=500.0),
+    MetricSpec("hdl", "HDL콜레스테롤", ("HDL콜레스테롤", "HDL"), "mg/dL", plausible_min=5.0, plausible_max=200.0),
+    MetricSpec("ldl", "LDL콜레스테롤", ("LDL콜레스테롤", "LDL"), "mg/dL", plausible_min=10.0, plausible_max=500.0),
     MetricSpec(
         "triglyceride",
         "트리글리세라이드",
@@ -99,7 +99,7 @@ METRIC_SPEC_BY_CODE: dict[str, MetricSpec] = {spec.code: spec for spec in METRIC
 
 
 def normalize_label(s: str) -> str:
-    return s.replace(" ", "").replace("\t", "").upper()
+    return s.replace(" ", "").replace("\t", "").replace("-", "").upper()
 
 
 def _strip_unit_suffix(text: str) -> str:
@@ -114,13 +114,16 @@ def _is_close_enough(alias: str, text: str, max_typos: int) -> bool:
     return sum(a != b for a, b in zip(alias, text)) <= max_typos
 
 
-def find_best_alias_match(text: str) -> tuple[MetricSpec, str] | None:
+def find_best_alias_match(text: str, max_typos: int = 2) -> tuple[MetricSpec, str] | None:
     """정규화된 text에서 가장 긴 alias를 가진 스펙을 반환한다.
 
     - alias 길이 ≤ 3: exact match (신장, 키, LDL, HDL 등 단어 충돌 방지)
-    - alias 길이 ≥ 4: substring match 또는 ≤2자 OCR 오인식 허용
+    - alias 길이 ≥ 4: substring match 또는 ≤max_typos자 OCR 오인식 허용
     - 괄호 단위 접미사('(cm)', '(mg/dL)' 등)를 제거한 후에도 재시도
     alias 길이가 같으면 METRIC_SPECS 순서상 앞선 스펙이 우선한다.
+    max_typos=2: 단일 토큰 OCR 오인식 허용 (기본값).
+    max_typos=1: 멀티토큰 조인 시 — "허리키둘"(2자 오차)이 "허리둘레"에 오매칭하는 것을 방지.
+    max_typos=0: substring match만 허용.
     """
     norm = normalize_label(text)
     if not norm:
@@ -128,21 +131,35 @@ def find_best_alias_match(text: str) -> tuple[MetricSpec, str] | None:
     norm_stripped = normalize_label(_strip_unit_suffix(text))
     best_spec: MetricSpec | None = None
     best_alias: str = ""
+    best_exact: bool = False  # True = substring match, False = typo-only match
     for spec in METRIC_SPECS:
         for alias in spec.aliases:
             norm_alias = normalize_label(alias)
             if len(norm_alias) <= 3:
-                # 짧은 alias: exact match. 단위 접미사 제거 후도 허용 (키(cm) → 키).
                 matched = norm_alias == norm or norm_alias == norm_stripped
+                is_exact = matched
             else:
-                # 긴 alias는 단위 접미사 제거 후 재시도 + ≤2자 OCR 오인식 허용
-                matched = any(
-                    norm_alias in candidate or _is_close_enough(norm_alias, candidate, max_typos=2)
+                # alias가 토큰 결합 텍스트의 앞에 있어야 진짜 라벨 위치.
+                # 중간/끝에 alias가 나오면 별개 라벨의 문자가 포함된 오매칭.
+                # 선행 괄호 허용: "(LDL-콜레스테롤)" → 괄호 제거 후 매칭.
+                is_exact = any(
+                    c.startswith(norm_alias) or c.lstrip("([{（").startswith(norm_alias)
+                    for c in (norm, norm_stripped)
+                )
+                is_typo = not is_exact and any(
+                    _is_close_enough(norm_alias, candidate, max_typos=max_typos)
                     for candidate in (norm, norm_stripped)
                 )
-            if matched and len(norm_alias) > len(best_alias):
+                matched = is_exact or is_typo
+            alias_len = len(norm_alias)
+            # 더 긴 alias 우선. 같은 길이면 exact(substring) > typo 우선.
+            if matched and (
+                alias_len > len(best_alias)
+                or (alias_len == len(best_alias) and is_exact and not best_exact)
+            ):
                 best_spec = spec
                 best_alias = norm_alias
+                best_exact = is_exact
     return (best_spec, best_alias) if best_spec else None
 
 
