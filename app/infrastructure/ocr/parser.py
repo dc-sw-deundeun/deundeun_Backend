@@ -40,6 +40,10 @@ def _is_reference(text: str) -> bool:
     return any(marker in text for marker in _REFERENCE_MARKERS)
 
 
+_REF_COL_RATIO = 0.65  # 폼 너비의 65% 이상 = 참고치 컬럼으로 간주
+_MIN_FORM_WIDTH = 600  # 이보다 좁으면 테스트 픽스처로 간주하고 x 필터 미적용
+
+
 class OcrParser:
     def parse(self, result: OcrResultDTO) -> list[ParsedMetric]:
         if not result.fields:
@@ -47,6 +51,12 @@ class OcrParser:
         heights = [f.y_height for f in result.fields if f.y_height > 0]
         row_tolerance = max(15.0, statistics.median(heights) * 1.0) if heights else 20.0
         rows = self._cluster_rows(result.fields, row_tolerance)
+
+        form_x_max = max((f.x_max for f in result.fields), default=0.0)
+        ref_x_threshold = (
+            form_x_max * _REF_COL_RATIO if form_x_max >= _MIN_FORM_WIDTH else None
+        )
+
         metrics: list[ParsedMetric] = []
         seen: set[str] = set()
         for row_index, row in enumerate(rows):
@@ -55,16 +65,19 @@ class OcrParser:
                 continue
             spec, label_end = found
             right = [f for f in row[label_end:] if not _is_reference(f.text)]
-            extracted = self._extract(spec, right)
+            extracted = self._extract(spec, right, ref_x_threshold)
             if not extracted and spec.kind in ("hw_pair", "bp_pair") and row_index + 1 < len(rows):
                 next_row = rows[row_index + 1]
                 if self._find_label_in_row(next_row) is None:
                     extracted = self._extract(
                         spec,
                         [f for f in next_row if not _is_reference(f.text)],
+                        ref_x_threshold,
                     )
             if not extracted and spec.code == "alt" and row_index > 0:
-                extracted = self._extract_alt_from_previous_ast_row(rows[row_index - 1])
+                extracted = self._extract_alt_from_previous_ast_row(
+                    rows[row_index - 1], ref_x_threshold
+                )
             for m in extracted:
                 if m.metric_code not in seen:
                     seen.add(m.metric_code)
@@ -117,18 +130,30 @@ class OcrParser:
 
         return (best_spec, best_end) if best_spec else None
 
-    def _extract(self, spec: MetricSpec, right: list[OcrFieldDTO]) -> list[ParsedMetric]:
+    def _extract(
+        self,
+        spec: MetricSpec,
+        right: list[OcrFieldDTO],
+        ref_x_threshold: float | None = None,
+    ) -> list[ParsedMetric]:
         if spec.kind == "bp_pair":
-            return self._extract_bp(right)
+            return self._extract_bp(right, ref_x_threshold)
         if spec.kind == "hw_pair":
-            return self._extract_hw(right)
+            return self._extract_hw(right, ref_x_threshold)
         if spec.kind == "categorical":
             return self._extract_categorical(spec, right)
-        return self._extract_numeric(spec, right)
+        return self._extract_numeric(spec, right, ref_x_threshold)
 
-    def _extract_numeric(self, spec: MetricSpec, right: list[OcrFieldDTO]) -> list[ParsedMetric]:
+    def _extract_numeric(
+        self,
+        spec: MetricSpec,
+        right: list[OcrFieldDTO],
+        ref_x_threshold: float | None = None,
+    ) -> list[ParsedMetric]:
         for fld in right:
             if _is_number(fld.text):
+                if ref_x_threshold is not None and fld.x_min >= ref_x_threshold:
+                    continue
                 return [
                     ParsedMetric(
                         metric_code=spec.code,
@@ -142,8 +167,15 @@ class OcrParser:
                 ]
         return []
 
-    def _extract_bp(self, right: list[OcrFieldDTO]) -> list[ParsedMetric]:
-        numbers = [f for f in right if _is_number(f.text)]
+    def _extract_bp(
+        self, right: list[OcrFieldDTO], ref_x_threshold: float | None = None
+    ) -> list[ParsedMetric]:
+        numbers = [
+            f
+            for f in right
+            if _is_number(f.text)
+            and (ref_x_threshold is None or f.x_min < ref_x_threshold)
+        ]
         if len(numbers) < 2:
             return []
         sys_f, dia_f = numbers[0], numbers[1]
@@ -171,12 +203,20 @@ class OcrParser:
         ]
 
     def _extract_alt_from_previous_ast_row(
-        self, previous_row: list[OcrFieldDTO]
+        self,
+        previous_row: list[OcrFieldDTO],
+        ref_x_threshold: float | None = None,
     ) -> list[ParsedMetric]:
         found = self._find_label_in_row(previous_row)
         if found is None or found[0].code != "ast":
             return []
-        numbers = [f for f in previous_row if _is_number(f.text) and not _is_reference(f.text)]
+        numbers = [
+            f
+            for f in previous_row
+            if _is_number(f.text)
+            and not _is_reference(f.text)
+            and (ref_x_threshold is None or f.x_min < ref_x_threshold)
+        ]
         if len(numbers) < 2:
             return []
         alt_f = numbers[1]
@@ -193,7 +233,11 @@ class OcrParser:
             )
         ]
 
-    def _extract_hw(self, right: list[OcrFieldDTO]) -> list[ParsedMetric]:
+    def _extract_hw(
+        self, right: list[OcrFieldDTO], ref_x_threshold: float | None = None  # noqa: ARG002
+    ) -> list[ParsedMetric]:
+        # hw_pair 라벨("키(cm) 및 몸무게(kg)")은 길어서 값이 폼 우측에 위치함.
+        # 빈 서식에서는 hw_pair 행에 숫자가 없으므로 x 필터를 적용하지 않는다.
         numbers = [f for f in right if _is_number(f.text)]
         if not numbers:
             return []
