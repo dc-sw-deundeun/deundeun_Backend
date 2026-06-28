@@ -160,7 +160,7 @@ class OcrParser:
                         best_start = start
                         best_end = start + window
 
-        return (best_spec, best_start, best_end) if best_spec else None
+        return (best_spec, best_start, best_end) if best_spec and best_start is not None else None
 
     def _find_label_in_row(self, row: list[OcrFieldDTO]) -> tuple[MetricSpec, int] | None:
         """행에서 가장 긴 alias로 매칭되는 스펙을 반환한다.
