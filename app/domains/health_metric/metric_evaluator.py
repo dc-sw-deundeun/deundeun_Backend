@@ -11,6 +11,10 @@ OCR_CODE_TO_CANONICAL: dict[str, str] = {
     "waist": "WAIST",
     "fasting_glucose": "FPG",
     "hemoglobin": "HGB",
+    "hemoglobin_female": "HGB_F",
+    "hemoglobin_male": "HGB_M",
+    "hgb_f": "HGB_F",
+    "hgb_m": "HGB_M",
     "systolic_bp": "BP_SYS",
     "diastolic_bp": "BP_DIA",
     "total_cholesterol": "TC",
@@ -22,6 +26,17 @@ OCR_CODE_TO_CANONICAL: dict[str, str] = {
     "ast": "AST",
     "alt": "ALT",
     "gamma_gtp": "GGT",
+    "gamma_gtp_female": "GGT_F",
+    "gamma_gtp_male": "GGT_M",
+    "ggt_f": "GGT_F",
+    "ggt_m": "GGT_M",
+}
+
+SEX_SPECIFIC_CANONICALS: dict[str, tuple[str, str]] = {
+    "HGB_F": ("HGB", "female"),
+    "HGB_M": ("HGB", "male"),
+    "GGT_F": ("GGT", "female"),
+    "GGT_M": ("GGT", "male"),
 }
 
 _STATUS_MAP = {
@@ -40,9 +55,13 @@ def evaluate_metric_status(
 ) -> str | None:
     if value is None or value.strip() == "":
         return None
-    canonical = OCR_CODE_TO_CANONICAL.get(metric_code)
+    normalized_code = metric_code.strip().lower().replace("-", "_")
+    canonical = OCR_CODE_TO_CANONICAL.get(normalized_code)
     if canonical is None:
         return "UNKNOWN"
+    sex_specific = SEX_SPECIFIC_CANONICALS.get(canonical)
+    if sex_specific is not None:
+        canonical, sex = sex_specific
     rule = METRIC_RULES.get(canonical)
     if rule is None:
         return "UNKNOWN"

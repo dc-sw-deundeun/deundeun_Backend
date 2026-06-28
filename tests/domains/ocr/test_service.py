@@ -199,6 +199,7 @@ def test_commit_upload_writes_record_metrics_and_audit_job(db_session):
         user_id=1,
         ocr_status=OcrStatus.PARTIAL.value,
         failed_pages=[1],
+        content_hash=_HASH,
         metrics=[
             FinalMetric(
                 metric_code="fasting_glucose",
@@ -286,6 +287,7 @@ def test_commit_upload_rolls_back_when_metric_insert_fails(db_session):
             user_id=1,
             ocr_status=OcrStatus.COMPLETED.value,
             failed_pages=[],
+            content_hash=_HASH,
             metrics=[
                 FinalMetric(
                     metric_code="invalid_metric",

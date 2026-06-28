@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy.orm import Session
 
 from app.domains.health_metric.repository import HealthMetricRepository
@@ -77,6 +79,7 @@ def test_trends_returns_series(db_session: Session) -> None:
     first = service.create_manual(
         1,
         ManualCheckupRequest(
+            measured_at=datetime(2026, 2, 1, 9, 0, 0),
             metrics=[
                 CommitMetricRequest(
                     metric_code="fasting_glucose",
@@ -84,12 +87,13 @@ def test_trends_returns_series(db_session: Session) -> None:
                     value="90",
                     unit="mg/dL",
                 )
-            ]
+            ],
         ),
     )
     second = service.create_manual(
         1,
         ManualCheckupRequest(
+            measured_at=datetime(2026, 1, 1, 9, 0, 0),
             metrics=[
                 CommitMetricRequest(
                     metric_code="fasting_glucose",
@@ -97,13 +101,42 @@ def test_trends_returns_series(db_session: Session) -> None:
                     value="100",
                     unit="mg/dL",
                 )
-            ]
+            ],
         ),
     )
     trends = service.get_trends(1, second.id)
     assert trends.trends[0].metric_code == "fasting_glucose"
     assert len(trends.trends[0].points) == 2
-    assert trends.trends[0].points[0].record_id == first.id
+    assert trends.trends[0].points[0].record_id == second.id
+    assert trends.trends[0].points[1].record_id == first.id
+
+
+def test_sex_specific_metric_code_evaluation(db_session: Session) -> None:
+    _create_user(db_session)
+    service = _service(db_session)
+    record = service.create_manual(
+        1,
+        ManualCheckupRequest(
+            metrics=[
+                CommitMetricRequest(
+                    metric_code="HGB_M",
+                    metric_name="혈색소 남성",
+                    value="12.9",
+                    unit="g/dL",
+                ),
+                CommitMetricRequest(
+                    metric_code="GGT_F",
+                    metric_name="감마지티피 여성",
+                    value="36",
+                    unit="U/L",
+                ),
+            ]
+        ),
+    )
+
+    statuses = {metric.metric_code: metric.status for metric in service.get_metrics(1, record.id)}
+
+    assert statuses == {"HGB_M": "RISK", "GGT_F": "RISK"}
 
 
 def test_verify_persists_metric_evaluation_to_db(db_session: Session) -> None:

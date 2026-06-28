@@ -96,7 +96,7 @@ class CommitCheckupRequest(BaseModel):
     ocr_status: str = Field(pattern=r"^(COMPLETED|PARTIAL|FAILED)$")
     failed_pages: list[int] = Field(default_factory=list)
     metrics: list[CommitMetricRequest] = Field(min_length=1)
-    content_hash: str | None = Field(default=None, min_length=64, max_length=64)
+    content_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
 
 
 class ManualCheckupRequest(BaseModel):

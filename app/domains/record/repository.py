@@ -87,6 +87,7 @@ class RecordRepository:
     ) -> list[tuple[CheckupRecord, CheckupMetricResult]]:
         if not metric_codes:
             return []
+        event_at = func.coalesce(CheckupRecord.measured_at, CheckupRecord.created_at)
         stmt = (
             select(CheckupRecord, CheckupMetricResult)
             .join(
@@ -97,7 +98,11 @@ class RecordRepository:
                 CheckupRecord.user_id == user_id,
                 CheckupMetricResult.metric_code.in_(metric_codes),
             )
-            .order_by(CheckupRecord.created_at.asc(), CheckupMetricResult.metric_code.asc())
+            .order_by(
+                event_at.asc(),
+                CheckupRecord.id.asc(),
+                CheckupMetricResult.metric_code.asc(),
+            )
         )
         return [(record, metric) for record, metric in self._db.execute(stmt).all()]
 

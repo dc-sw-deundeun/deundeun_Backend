@@ -143,18 +143,17 @@ class OcrService:
         ocr_status: str,
         failed_pages: list[int],
         metrics: list[FinalMetric],
-        content_hash: str | None = None,
+        content_hash: str,
     ) -> CommitOutcome:
-        if content_hash:
-            existing = self._record_repo.find_by_user_and_hash(user_id, content_hash)
-            if existing is not None:
-                persisted = self._record_repo.list_metrics(existing.id)
-                return CommitOutcome(
-                    record_id=existing.id,
-                    metrics=persisted,
-                    verification_status=existing.verification_status,
-                    is_duplicate=True,
-                )
+        existing = self._record_repo.find_by_user_and_hash(user_id, content_hash)
+        if existing is not None:
+            persisted = self._record_repo.list_metrics(existing.id)
+            return CommitOutcome(
+                record_id=existing.id,
+                metrics=persisted,
+                verification_status=existing.verification_status,
+                is_duplicate=True,
+            )
 
         try:
             record = self._record_repo.create_record(

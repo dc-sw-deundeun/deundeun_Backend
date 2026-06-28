@@ -80,6 +80,7 @@ def test_record_request_schemas_parse_nested_metric_updates():
     commit_request = CommitCheckupRequest(
         ocr_status="COMPLETED",
         failed_pages=[],
+        content_hash="b" * 64,
         metrics=[
             {
                 "metric_code": "bmi",
@@ -125,3 +126,23 @@ def test_metric_update_rejects_unit_longer_than_database_column(schema):
 
     with pytest.raises(ValidationError):
         schema(**payload)
+
+
+def test_commit_checkup_requires_sha256_content_hash():
+    payload = {
+        "ocr_status": "COMPLETED",
+        "failed_pages": [],
+        "metrics": [
+            {
+                "metric_code": "bmi",
+                "metric_name": "체질량지수",
+                "value": "24.1",
+            }
+        ],
+    }
+
+    with pytest.raises(ValidationError):
+        CommitCheckupRequest(**payload)
+
+    with pytest.raises(ValidationError):
+        CommitCheckupRequest(**{**payload, "content_hash": "g" * 64})
