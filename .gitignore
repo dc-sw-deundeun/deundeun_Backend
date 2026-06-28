@@ -32,6 +32,7 @@ MANIFEST
 .env
 .env.*
 !.env.example
+!.env.server.example
 .envrc
 .venv/
 venv/
@@ -134,6 +135,9 @@ Thumbs.db
 # Local planning docs
 # =========================
 docs/
+!docs/
+docs/*
+!docs/deployment-onprem.md
 .github/ISSUE_TEMPLATE/config.yml
 .github/ISSUE_TEMPLATE/phase-*.yml
 

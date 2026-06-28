@@ -40,7 +40,12 @@ read_env_value() {
 
 API_SERVICE="${API_SERVICE:-$(read_env_value API_SERVICE api)}"
 API_CONTAINER_NAME="${API_CONTAINER_NAME:-$(read_env_value API_CONTAINER_NAME deundeun-api)}"
+POSTGRES_SERVICE="${POSTGRES_SERVICE:-$(read_env_value POSTGRES_SERVICE postgres)}"
+POSTGRES_CONTAINER_NAME="${POSTGRES_CONTAINER_NAME:-$(read_env_value POSTGRES_CONTAINER_NAME deundeun-postgres)}"
+NGINX_SERVICE="${NGINX_SERVICE:-$(read_env_value NGINX_SERVICE nginx)}"
+NGINX_CONTAINER_NAME="${NGINX_CONTAINER_NAME:-$(read_env_value NGINX_CONTAINER_NAME deundeun-nginx)}"
 RUN_MIGRATIONS="${RUN_MIGRATIONS:-$(read_env_value RUN_MIGRATIONS true)}"
+START_NGINX="${START_NGINX:-$(read_env_value START_NGINX true)}"
 HEALTHCHECK_TIMEOUT_SECONDS="${HEALTHCHECK_TIMEOUT_SECONDS:-$(read_env_value HEALTHCHECK_TIMEOUT_SECONDS 60)}"
 HEALTHCHECK_INTERVAL_SECONDS="${HEALTHCHECK_INTERVAL_SECONDS:-$(read_env_value HEALTHCHECK_INTERVAL_SECONDS 2)}"
 
@@ -55,7 +60,11 @@ compose_cmd=(
   --profile deploy
 )
 
-wait_for_health() {
+echo "[deploy] Validating Compose configuration"
+"${compose_cmd[@]}" config --quiet
+
+wait_for_container() {
+  local container_name="$1"
   local deadline status
   deadline=$((SECONDS + HEALTHCHECK_TIMEOUT_SECONDS))
 
@@ -63,16 +72,16 @@ wait_for_health() {
     status="$(
       docker inspect \
         --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{if .State.Running}}running{{else}}stopped{{end}}{{end}}' \
-        "$API_CONTAINER_NAME" 2>/dev/null || true
+        "$container_name" 2>/dev/null || true
     )"
 
     case "$status" in
       healthy | running)
-        echo "[deploy] Container is $status"
+        echo "[deploy] Container is $status: $container_name"
         return 0
         ;;
       unhealthy | stopped)
-        echo "[deploy] Container is $status"
+        echo "[deploy] Container is $status: $container_name" >&2
         return 1
         ;;
       *)
@@ -81,7 +90,7 @@ wait_for_health() {
     esac
   done
 
-  echo "[deploy] Healthcheck timed out after ${HEALTHCHECK_TIMEOUT_SECONDS}s" >&2
+  echo "[deploy] Healthcheck timed out for $container_name after ${HEALTHCHECK_TIMEOUT_SECONDS}s" >&2
   return 1
 }
 
@@ -92,26 +101,42 @@ previous_image="$(
   docker inspect --format '{{.Config.Image}}' "$API_CONTAINER_NAME" 2>/dev/null || true
 )"
 
-if [[ "$RUN_MIGRATIONS" == "true" ]]; then
-  echo "[deploy] Running migrations"
-  "${compose_cmd[@]}" run --rm --no-deps "$API_SERVICE" alembic upgrade head
+echo "[deploy] Ensuring postgres is up"
+docker compose --env-file "$APP_ENV_FILE" -f "$COMPOSE_FILE" up -d "$POSTGRES_SERVICE"
+if ! wait_for_container "$POSTGRES_CONTAINER_NAME"; then
+  docker compose --env-file "$APP_ENV_FILE" -f "$COMPOSE_FILE" logs --tail=80 "$POSTGRES_SERVICE" >&2 || true
+  exit 1
 fi
 
-echo "[deploy] Starting service with Compose"
+if [[ "$RUN_MIGRATIONS" == "true" ]]; then
+  echo "[deploy] Running migrations"
+  "${compose_cmd[@]}" run --rm "$API_SERVICE" alembic upgrade head
+fi
+
+echo "[deploy] Starting API with Compose"
 "${compose_cmd[@]}" up -d --no-deps "$API_SERVICE"
 
-if ! wait_for_health; then
-  echo "[deploy] New container failed healthcheck" >&2
+if ! wait_for_container "$API_CONTAINER_NAME"; then
+  echo "[deploy] New API container failed healthcheck" >&2
   "${compose_cmd[@]}" logs --tail=80 "$API_SERVICE" >&2 || true
 
   if [[ -n "$previous_image" && "$previous_image" != "$IMAGE_TAG" ]]; then
     echo "[deploy] Rolling back to previous image: $previous_image" >&2
     export IMAGE_TAG="$previous_image"
     "${compose_cmd[@]}" up -d --no-deps "$API_SERVICE"
-    wait_for_health || true
+    wait_for_container "$API_CONTAINER_NAME" || true
   fi
 
   exit 1
+fi
+
+if [[ "$START_NGINX" == "true" ]]; then
+  echo "[deploy] Ensuring nginx is up"
+  "${compose_cmd[@]}" up -d "$NGINX_SERVICE"
+  wait_for_container "$NGINX_CONTAINER_NAME" || {
+    "${compose_cmd[@]}" logs --tail=80 "$NGINX_SERVICE" >&2 || true
+    exit 1
+  }
 fi
 
 echo "[deploy] Done - $API_CONTAINER_NAME is running: $IMAGE_TAG"

@@ -1,14 +1,19 @@
-# deundeun Docker Compose (단일 파일)
+# deundeun Docker Compose
 #
 # 로컬 Postgres만:
 #   docker compose -f docker/docker-compose.yml up -d postgres
 #
-# VM API 배포 (외부 DB — DATABASE_URL은 env_file에 설정):
-#   IMAGE_TAG=deundeun/backend:sha-abc1234 APP_ENV_FILE=/opt/deundeun/.env \
-#     docker compose -f docker/docker-compose.yml --profile deploy up -d api
+# 로컬 전체 스택 (API 이미지 빌드 후, postgres + api + nginx):
+#   docker compose -f docker/docker-compose.yml --profile deploy up -d
 #
-# 로컬 API + Postgres (이미지 빌드 후):
-#   IMAGE_TAG=deundeun/backend:local docker compose -f docker/docker-compose.yml --profile deploy up -d
+# 서버 Postgres만 사전 기동:
+#   docker compose --env-file /opt/deundeun/.env -f /opt/deundeun/docker-compose.yml \
+#     up -d postgres
+#
+# 서버 배포 (deploy.sh가 postgres · migrate · api · nginx 순서 처리):
+#   bash /opt/deundeun/deploy.sh deundeun/backend:sha-abc1234
+
+name: ${COMPOSE_PROJECT_NAME:-deundeun}
 
 services:
   postgres:
@@ -20,11 +25,17 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-deundeun}
       POSTGRES_DB: ${POSTGRES_DB:-deundeun}
     ports:
-      - "${POSTGRES_PORT:-55432}:5432"
+      - "${POSTGRES_BIND:-127.0.0.1}:${POSTGRES_PORT:-55432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    networks:
+      - deundeun
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-deundeun} -d ${POSTGRES_DB:-deundeun}"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-deundeun} -d ${POSTGRES_DB:-deundeun}",
+        ]
       interval: ${POSTGRES_HEALTHCHECK_INTERVAL:-5s}
       timeout: ${POSTGRES_HEALTHCHECK_TIMEOUT:-5s}
       retries: ${POSTGRES_HEALTHCHECK_RETRIES:-5}
@@ -35,10 +46,17 @@ services:
     image: ${IMAGE_TAG:-deundeun/backend:latest}
     container_name: ${API_CONTAINER_NAME:-deundeun-api}
     restart: ${API_RESTART_POLICY:-unless-stopped}
-    ports:
-      - "${API_HOST_PORT:-8000}:${API_CONTAINER_PORT:-8000}"
     env_file:
       - ${APP_ENV_FILE:-../.env}
+    expose:
+      - "${API_CONTAINER_PORT:-8000}"
+    ports:
+      - "${API_HOST_BIND:-127.0.0.1}:${API_HOST_PORT:-8000}:${API_CONTAINER_PORT:-8000}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - deundeun
     healthcheck:
       test:
         [
@@ -50,5 +68,39 @@ services:
       retries: ${API_HEALTHCHECK_RETRIES:-3}
       start_period: ${API_HEALTHCHECK_START_PERIOD:-10s}
 
+  nginx:
+    profiles: ["deploy"]
+    image: ${NGINX_IMAGE:-nginx:1.27-alpine}
+    container_name: ${NGINX_CONTAINER_NAME:-deundeun-nginx}
+    restart: ${NGINX_RESTART_POLICY:-unless-stopped}
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      NGINX_SERVER_NAME: ${NGINX_SERVER_NAME:-api.deundeun.xyz}
+      NGINX_UPSTREAM_HOST: ${NGINX_UPSTREAM_HOST:-api}
+      NGINX_UPSTREAM_PORT: ${NGINX_UPSTREAM_PORT:-8000}
+      NGINX_UPSTREAM_KEEPALIVE: ${NGINX_UPSTREAM_KEEPALIVE:-16}
+      NGINX_CLIENT_MAX_BODY_SIZE: ${NGINX_CLIENT_MAX_BODY_SIZE:-32m}
+      NGINX_PROXY_CONNECT_TIMEOUT: ${NGINX_PROXY_CONNECT_TIMEOUT:-60s}
+      NGINX_PROXY_READ_TIMEOUT: ${NGINX_PROXY_READ_TIMEOUT:-120s}
+    ports:
+      - "${NGINX_HTTP_PORT:-80}:80"
+    volumes:
+      - ${NGINX_CONF_DIR:-./nginx}/templates:/etc/nginx/templates:ro
+    networks:
+      - deundeun
+    healthcheck:
+      test: ["CMD-SHELL", "test -s /var/run/nginx.pid && kill -0 $(cat /var/run/nginx.pid)"]
+      interval: ${NGINX_HEALTHCHECK_INTERVAL:-30s}
+      timeout: ${NGINX_HEALTHCHECK_TIMEOUT:-5s}
+      retries: ${NGINX_HEALTHCHECK_RETRIES:-3}
+      start_period: ${NGINX_HEALTHCHECK_START_PERIOD:-10s}
+
+networks:
+  deundeun:
+    name: ${COMPOSE_PROJECT_NAME:-deundeun}_net
+
 volumes:
   pgdata:
+    name: ${COMPOSE_PROJECT_NAME:-deundeun}_pgdata

@@ -218,16 +218,18 @@ Docker Hub가 아닌 Harbor, GHCR, MSP registry 등을 쓰면 `REGISTRY_IMAGE`�
 2. 배포 디렉터리 생성: `/opt/deundeun`
 3. `scripts/deploy.sh` 복사: `/opt/deundeun/deploy.sh`
 4. `docker/docker-compose.yml` 복사: `/opt/deundeun/docker-compose.yml`
-5. 환경변수 파일 배치: `/opt/deundeun/.env`
+5. 환경변수 파일 배치: `.env.server.example`을 기준으로 `/opt/deundeun/.env` 작성
 6. 컨테이너 레지스트리가 private이면 대상 서버에서 `docker login` 수행
-7. 방화벽 8000 포트 허용 또는 Nginx 등 reverse proxy 연결
+7. 방화벽 80/443 포트 허용, 외부 트래픽은 Compose nginx로 수신
 8. SSH public key 등록 (배포 전용 키 권장)
 
 ### `.env` 주입 방식
 
 - `docker compose --env-file "$APP_ENV_FILE"`: Compose 변수 보간에 사용합니다. 예: `IMAGE_TAG`, `API_HOST_PORT`, `API_CONTAINER_NAME`.
 - Compose `api.env_file: ${APP_ENV_FILE:-../.env}`: 동일 파일을 컨테이너 내부 애플리케이션 환경변수로 주입합니다. 예: `DATABASE_URL`, `JWT_SECRET_KEY`, `CLOVA_OCR_SECRET_KEY`.
+- Compose `nginx.environment`: 같은 `.env`의 `NGINX_SERVER_NAME`, `NGINX_UPSTREAM_*`, timeout/upload limit 값을 nginx template 렌더링에 사용합니다.
 - FastAPI 설정은 알 수 없는 env를 무시하도록 되어 있어, `.env`에 Compose 전용 변수를 함께 둬도 앱 실행에는 영향이 없습니다.
+- 실제 secret이 들어간 `/opt/deundeun/.env`, 로컬 `.env`, `.env.server`는 커밋하지 않습니다.
 
 ---
 
@@ -255,10 +257,13 @@ ruff check .
 # 이미지 빌드
 docker build -t deundeun/backend:local .
 
-# 컨테이너 실행
-docker run -p 8000:8000 deundeun/backend:local
+# Postgres만 (로컬)
+docker compose -f docker/docker-compose.yml up -d postgres
 
-# docker-compose (단일 파일, SSH 대상/API 배포 profile)
-IMAGE_TAG=deundeun/backend:latest APP_ENV_FILE=/opt/deundeun/.env \
-  docker compose -f docker/docker-compose.yml --profile deploy up -d api
+# 전체 스택 — postgres + api + nginx
+IMAGE_TAG=deundeun/backend:local \
+  docker compose -f docker/docker-compose.yml --profile deploy up -d
+
+# 서버 배포 (SSH)
+bash /opt/deundeun/deploy.sh deundeun/backend:sha-abc1234
 ```
