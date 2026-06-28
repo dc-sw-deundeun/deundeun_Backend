@@ -73,6 +73,7 @@ class AblationRunner:
         viol, rate, reasons = evaluate_safety(ms, persona)
         faith, grate = evaluate_faithfulness(ms, persona)
         ref = evaluate_referral(ms, persona)
+        levels = {k: float(geval.get(k, 0)) for k in _LEVELS}
         return EvalRecord(
             persona_id=persona.id,
             persona_kind=persona.kind,
@@ -87,16 +88,20 @@ class AblationRunner:
             grounding_rate=grate,
             referral_satisfied=ref,
             personalization=float(geval.get("overall", 0)),
-            personalization_levels={k: float(geval.get(k, 0)) for k in _LEVELS},
+            personalization_levels=levels,
+            diversity=float(len({m.mission_type for m in ms.missions})),
+            generic_index=levels["l0"] - levels["l4"],
+            rejected_count=len(ms.meta.rejected),
             latency_ms=ms.meta.latency_ms,
             total_tokens=ms.meta.total_tokens,
             llm_calls=ms.meta.llm_calls,
             regenerations=ms.meta.regenerations,
         )
 
-    async def run(self, personas, combos: dict[str, PipelineConfig]):
+    async def run(self, personas, combos: dict):
+        # combos 값은 PipelineConfig 또는 (persona)->PipelineConfig 라우터
         tasks = [
-            self._cell(persona, label, config)
+            self._cell(persona, label, config(persona) if callable(config) else config)
             for label, config in combos.items()
             for persona in personas
         ]

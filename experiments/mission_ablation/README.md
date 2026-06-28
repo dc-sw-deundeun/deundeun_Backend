@@ -58,6 +58,19 @@ PYTHONPATH=. python -m experiments.mission_ablation.run --concurrency 6
   발목부종+장시간보행, 운동금지, 심혈관+고강도, 무릎관절염+고충격. 각 ground truth(이상/금지/권고) 포함.
 - 일반 14 (`personas/normal_personas.json`): 단일~복합 조건, 연령·순응도·활동량 다양.
 
+## 조합 (configs.py)
+
+정적 10종(baseline·M1~M5·시점묶음·hybrid·`gen_only(M1+M3+M5)`) + **적응형 2종(라우터)**:
+- `risk_routed` — PKG로 위험군 자동판정(`pool.has_active_constraints`) → 위험군만 full 게이트, 정상군은 생성 전만. (FrugalGPT식 모듈 캐스케이드)
+- `adaptive` — M1·M5 항상, M3는 KG 관계 있을 때만, M2·M4는 위험군만.
+
+## 핵심 결론 (비용·과제약 포함 composite)
+
+"전부 켜기(full)"는 **최적이 아니다** — 사후 게이트(M2·M4)는 정상인 미션을 과제약(over-refusal)하고 토큰·지연을 키운다.
+최적은 **생성 전 개입(M1 제약 템플릿 + M3 KAG + M5 구조화), 사후 게이트 없음**: M1의 안전 템플릿이 금기를
+애초에 생성 불가하게 만들어 *게이트 없이도 안전위반 0*을 달성한다. 미지의 금기 방어가 필요하면 `risk_routed`가 차선.
+(상세 수치·Pareto는 `results/best_config_report.md`)
+
 ## 한계 (리포트에 명시)
 
 - **M2는 근사 구현**: 진짜 디코딩 제약이 아닌 사후 grounded_on 필터. 진짜 제약은 future work.

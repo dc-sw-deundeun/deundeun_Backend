@@ -12,7 +12,7 @@ import asyncio
 
 from app.core.config import settings
 from app.domains.mission.agents.base import LLMClient
-from experiments.mission_ablation.configs import COMBOS
+from experiments.mission_ablation.configs import COMBOS, ROUTERS
 from experiments.mission_ablation.datasets import load_personas, validate_personas
 from experiments.mission_ablation.report import composite_score, generate_all
 from experiments.mission_ablation.runner import RESULTS_DIR, AblationRunner
@@ -30,10 +30,11 @@ def _select_personas(personas, spec: str):
 
 
 def _select_combos(spec: str) -> dict:
+    all_combos = {**COMBOS, **ROUTERS}
     if spec in ("", "all"):
-        return COMBOS
+        return all_combos
     labels = {s.strip() for s in spec.split(",")}
-    return {k: v for k, v in COMBOS.items() if k in labels}
+    return {k: v for k, v in all_combos.items() if k in labels}
 
 
 def main() -> None:

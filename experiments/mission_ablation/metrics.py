@@ -27,6 +27,11 @@ class EvalRecord(BaseModel):
     # 적합성/완전성
     referral_satisfied: bool = True
 
+    # 트레이드오프(헬프풀니스/비용) 지표
+    diversity: float = 0.0  # 미션 세트 내 distinct mission_type 수
+    generic_index: float = 0.0  # L0 - L4 (양수=교과서적/generic 우세)
+    rejected_count: int = 0  # 게이트가 막은 미션 수(정상인이면 과제약 신호)
+
     # 개인화 (G-Eval, 0~100)
     personalization: float = 0.0
     personalization_levels: dict[str, float] = Field(default_factory=dict)
