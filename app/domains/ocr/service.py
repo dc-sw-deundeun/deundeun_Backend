@@ -109,6 +109,7 @@ class OcrService:
                         confidence=metric.confidence,
                         raw_text=metric.raw_text,
                         page_index=idx,
+                        out_of_range=metric.out_of_range,
                     )
                 )
 

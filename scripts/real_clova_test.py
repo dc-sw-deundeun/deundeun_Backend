@@ -8,9 +8,9 @@
 
 import base64
 import os
-import sys
 import time
 import uuid
+from pathlib import Path
 
 import httpx
 
@@ -24,7 +24,8 @@ DEFAULT_IMAGE = os.path.expanduser("~/Desktop/일반건강검진.png")
 def call_clova(image_path: str) -> dict:
     invoke_url = settings.clova_ocr_invoke_url
     secret_key = settings.clova_ocr_secret_key
-    assert invoke_url and secret_key, "Clova 설정 누락(.env)"
+    if not (invoke_url and secret_key):
+        raise SystemExit("Clova 설정 누락(.env): CLOVA_OCR_INVOKE_URL / CLOVA_OCR_SECRET_KEY 필요")
     with open(image_path, "rb") as fh:
         b64 = base64.b64encode(fh.read()).decode("ascii")
     ext = image_path.rsplit(".", 1)[-1].lower()
@@ -58,12 +59,33 @@ def to_result(body: dict) -> OcrResultDTO:
 
 
 def main():
-    image_path = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_IMAGE
-    assert settings.clova_ocr_invoke_url and settings.clova_ocr_secret_key, "Clova 설정 누락(.env)"
-    print(f"[IMG]  {image_path}")
+    import argparse
+
+    ap = argparse.ArgumentParser(description="실제 Clova OCR 호출 + 파서 검증")
+    ap.add_argument("image", nargs="?", default=DEFAULT_IMAGE, help="이미지 경로")
+    ap.add_argument("--save-json", metavar="PATH", help="raw Clova 응답 JSON 저장 경로")
+    args = ap.parse_args()
+
+    if not (settings.clova_ocr_invoke_url and settings.clova_ocr_secret_key):
+        ap.error("Clova 설정 누락(.env): CLOVA_OCR_INVOKE_URL / CLOVA_OCR_SECRET_KEY 필요")
+    if args.save_json:
+        save_path = Path(args.save_json)
+        if not save_path.parent.exists():
+            ap.error(f"--save-json 상위 디렉터리 없음: {save_path.parent}")
+    print(f"[IMG]  {args.image}")
     print(f"[API]  {settings.clova_ocr_invoke_url[:60]}...")
 
-    body = call_clova(image_path)
+    body = call_clova(args.image)
+
+    if args.save_json:
+        import json as _json
+
+        print("[WARN] raw JSON에는 실제 검진 결과(PII/건강정보)가 포함됩니다.")
+        print("       회귀 픽스처로 커밋하기 전 반드시 개인정보를 마스킹하세요.")
+        with open(args.save_json, "w", encoding="utf-8") as f:
+            _json.dump(body, f, ensure_ascii=False, indent=2)
+        print(f"[SAVE] raw JSON → {args.save_json}")
+
     result = to_result(body)
     print(f"\n[RAW]  Clova 인식 토큰 {len(result.fields)}개 (원문):")
     line = " ".join(
