@@ -61,39 +61,45 @@ class OcrParser:
         metrics: list[ParsedMetric] = []
         seen: set[str] = set()
         for row_index, row in enumerate(rows):
-            found = self._find_label_in_row(row)
-            if found is None:
-                continue
-            spec, label_end = found
-            right_raw = row[label_end:]
-            right = [
-                f
-                for i, f in enumerate(right_raw)
-                if not _is_reference(f.text)
-                and not (
-                    _is_number(f.text)
-                    and i + 1 < len(right_raw)
-                    and _is_reference(right_raw[i + 1].text)
-                    and not right_raw[i + 1].text[:1].isdigit()
-                )
-            ]
-            extracted = self._extract(spec, right, ref_x_threshold)
-            if not extracted and spec.kind in ("hw_pair", "bp_pair") and row_index + 1 < len(rows):
-                next_row = rows[row_index + 1]
-                if self._find_label_in_row(next_row) is None:
-                    extracted = self._extract(
-                        spec,
-                        [f for f in next_row if not _is_reference(f.text)],
-                        ref_x_threshold,
+            col_pos = 0
+            while col_pos < len(row):
+                found = self._find_first_label_from(row, col_pos)
+                if found is None:
+                    break
+                spec, label_start, label_end = found
+                next_label = self._find_first_label_from(row, label_end)
+                value_end = next_label[1] if next_label else len(row)
+
+                right_raw = row[label_end:value_end]
+                right = [
+                    f
+                    for i, f in enumerate(right_raw)
+                    if not _is_reference(f.text)
+                    and not (
+                        _is_number(f.text)
+                        and i + 1 < len(right_raw)
+                        and _is_reference(right_raw[i + 1].text)
+                        and not right_raw[i + 1].text[:1].isdigit()
                     )
-            if not extracted and spec.code == "alt" and row_index > 0:
-                extracted = self._extract_alt_from_previous_ast_row(
-                    rows[row_index - 1], ref_x_threshold
-                )
-            for m in extracted:
-                if m.metric_code not in seen:
-                    seen.add(m.metric_code)
-                    metrics.append(m)
+                ]
+                extracted = self._extract(spec, right, ref_x_threshold)
+                if not extracted and spec.kind in ("hw_pair", "bp_pair") and row_index + 1 < len(rows):
+                    next_row = rows[row_index + 1]
+                    if self._find_first_label_from(next_row, 0) is None:
+                        extracted = self._extract(
+                            spec,
+                            [f for f in next_row if not _is_reference(f.text)],
+                            ref_x_threshold,
+                        )
+                if not extracted and spec.code == "alt" and row_index > 0:
+                    extracted = self._extract_alt_from_previous_ast_row(
+                        rows[row_index - 1], ref_x_threshold
+                    )
+                for m in extracted:
+                    if m.metric_code not in seen:
+                        seen.add(m.metric_code)
+                        metrics.append(m)
+                col_pos = label_end
         return metrics
 
     def _cluster_rows(self, fields: list[OcrFieldDTO], tolerance: float) -> list[list[OcrFieldDTO]]:
@@ -118,6 +124,36 @@ class OcrParser:
         for row in rows:
             row.sort(key=lambda f: f.x_min)
         return rows
+
+    def _find_first_label_from(
+        self, row: list[OcrFieldDTO], pos: int
+    ) -> tuple[MetricSpec, int, int] | None:
+        """pos 이상에서 가장 앞서 나오는 라벨 매칭을 반환한다.
+        같은 start 위치라면 더 긴 alias를 우선한다.
+        반환: (spec, start_idx, end_idx)
+        """
+        best_spec: MetricSpec | None = None
+        best_start: int | None = None
+        best_end: int = 0
+        best_alias_len: int = 0
+
+        for start in range(pos, len(row)):
+            for window in range(1, _MAX_LABEL_WINDOW + 1):
+                if start + window > len(row):
+                    break
+                combined = "".join(f.text for f in row[start : start + window])
+                match = find_best_alias_match(combined)
+                if match:
+                    alias_len = len(match[1])
+                    is_earlier = best_start is None or start < best_start
+                    is_same_longer = best_start == start and alias_len > best_alias_len
+                    if is_earlier or is_same_longer:
+                        best_spec = match[0]
+                        best_alias_len = alias_len
+                        best_start = start
+                        best_end = start + window
+
+        return (best_spec, best_start, best_end) if best_spec else None
 
     def _find_label_in_row(self, row: list[OcrFieldDTO]) -> tuple[MetricSpec, int] | None:
         """행에서 가장 긴 alias로 매칭되는 스펙을 반환한다.
