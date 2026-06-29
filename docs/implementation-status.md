@@ -5,15 +5,6 @@
 
 범례: 구현, 부분, stub
 
-Swagger summary 표기:
-
-| 표기 | 의미 |
-|------|------|
-| `[프론트 사용]` | 현재 프론트엔드가 연동해도 되는 구현 API |
-| `[호환]` | 기존 클라이언트 호환용 alias, 신규 작업은 설명의 권장 API 사용 |
-| `[서버/내부]` | 운영 확인, 외부 callback 등 프론트 화면에서 직접 호출하지 않는 API |
-| `[프론트 작업 제외]` | 후속 Phase 또는 미구현 API, 호출 시 501/NOT_IMPLEMENTED 기대 |
-
 ## 요약
 
 | 영역 | 상태 | 프론트 연동 |
@@ -22,8 +13,8 @@ Swagger summary 표기:
 | Onboarding | 구현 | 가능 |
 | Record / OCR | 구현 | 가능 |
 | HealthMetric | 구현 | 가능 |
-| Analysis | stub | 501 응답 |
-| Mission / Character | stub | 501 응답 |
+| Analysis | 구현 (Stub MVP) | 가능 |
+| Mission / Character | stub | 501 응답 (UserMission 자동 배정만 Phase 4) |
 | Home | stub | 501 응답 |
 | Notification | stub | 501 응답 |
 | My / Support | stub | 501 응답 |
@@ -52,20 +43,13 @@ Swagger summary 표기:
 |--------|------|------|
 | GET | `/status` | 온보딩 진행 상태 |
 | POST | `/wearable` | wearable CONNECT/SKIP |
-| DELETE | `/wearable/{provider}` | wearable 연동 해제 |
 | POST | `/complete` | 온보딩 완료 |
-
-프론트 작업 제외:
-
-| Method | Path | 상태 |
-|--------|------|------|
-| POST | `/checkup` | placeholder, 초기 검진 업로드는 Record API 사용 |
 
 ### Record `/api/v1/records`
 
 | Method | Path | 설명 |
 |--------|------|------|
-| POST | `/checkups/upload` | 호환용 alias, 신규 작업은 `/checkups/ocr-preview` 사용 |
+| POST | `/checkups/upload` | 검진 이미지 업로드, OCR preview |
 | POST | `/checkups/ocr-preview` | OCR preview |
 | POST | `/checkups` | 검진 결과 커밋 |
 | POST | `/checkups/manual` | 수동 검진 입력 |
@@ -97,14 +81,22 @@ Swagger summary 표기:
 | POST | `/evaluate` | 건강 지표 평가 |
 | POST | `/analyses` | 건강 지표 분석 저장/조회 흐름 |
 
-## Stub API
+### Analysis `/api/v1/analysis` (Phase 4 Stub MVP)
 
-아래 라우터는 현재 사용자-facing 기능으로 쓰면 안 됩니다. 호출 시 `NOT_IMPLEMENTED` 또는 501 계열 응답을 기대해야 합니다.
+| Method | Path | 설명 |
+|--------|------|------|
+| POST | `/checkups/{record_id}` | 분석 요청 (`ANALYSIS_CLIENT=stub`, 가짜 callback) |
+| GET | `/jobs/{analysis_job_id}` | 분석 상태 폴링 |
+| GET | `/jobs/{analysis_job_id}/result` | 분석 결과 조회 |
+| POST | `/callback` | 외부 callback (서명 검증, 멱등) |
+
+분석 COMPLETED 시 `MissionTemplate` seed(`DEFAULT_SELF_CHECK`) 기준 **UserMission 1건 자동 배정**.
+
+## Stub API
 
 | Prefix | 상태 |
 |--------|------|
-| `/api/v1/analysis` | 외부 분석 서버 연동 미완성 |
-| `/api/v1/missions` | 미션 도메인 미완성 |
+| `/api/v1/missions` | 미션 API 미완성 (UserMission DB 레코드는 Phase 4에서 생성됨) |
 | `/api/v1/characters` | 성장/캐릭터 도메인 미완성 |
 | `/api/v1/home` | 홈 aggregation 미완성 |
 | `/api/v1/notifications` | 알림 도메인 미완성 |
@@ -112,32 +104,19 @@ Swagger summary 표기:
 
 ## 마이그레이션
 
-현재 Alembic head까지 적용하면 아래 영역의 스키마가 생성됩니다.
-
 | Revision | 내용 |
 |----------|------|
-| `001_initial_auth_schema` | 인증·사용자 초기 스키마 |
-| `002_add_auth_indexes_and_user_timestamp_trigger` | 인증 인덱스, updated_at trigger |
-| `003_add_login_lock_and_access_token_blacklist` | 로그인 잠금, 토큰 블랙리스트 |
-| `97a644712a37_init_ocr_checkup_schema` | OCR·검진 초기 스키마 |
-| `76928652848e_add_page_index_drop_dedup` | OCR metric page index 추가 |
-| `983204074d73_drop_ocr_jobs_raw_result_url` | OCR job raw result URL 제거 |
-| `004_add_health_metric_analyses` | health metric 분석 테이블 |
-| `005_add_health_metric_analysis_measured_at` | 분석 measured_at 추가 |
-| `006_merge_health_metric_and_ocr_heads` | health metric/OCR head 병합 |
-| `007_add_wearable_connections` | wearable 연결 테이블 |
-| `008_add_health_metric_references` | 건강 지표 reference seed, file hash unique |
+| `001` ~ `008` | (기존) |
+| `009_add_analysis_schema` | analysis_jobs, summaries, mission_candidates, mission_templates seed, user_missions |
 
 ## 다음 구현 우선순위
 
-1. Analysis API 실제 구현: 요청 생성, 상태 조회, callback, polling, 서명 검증
-2. Mission/Character: 오늘의 미션, 완료/검증, XP/성장
-3. Home aggregation: 홈 화면에 필요한 요약 응답
-4. Notification/My/Search: 사용자 설정, 알림, 검색, 지원 기능
+1. Phase 5 Mission/Growth: `GET /missions/today`, complete/XP, growth
+2. Home aggregation
+3. Http/OpenAI AnalysisClient (현재 stub만)
+4. Notification/My/Search
 
 ## 검증 기준
-
-변경 후 최소 확인:
 
 ```bash
 ruff check .
