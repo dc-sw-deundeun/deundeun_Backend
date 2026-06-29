@@ -17,6 +17,10 @@ _APP_TABLES = (
     "consent_histories",
     "wearable_connections",
     "users",
+    "analysis_mission_candidates",
+    "checkup_analysis_summaries",
+    "analysis_jobs",
+    "user_missions",
     "ocr_jobs",
     "checkup_metric_results",
     "checkup_files",
@@ -122,6 +126,11 @@ def client(
         session_module._engine = db_engine
         _TestSession = sessionmaker(autocommit=False, autoflush=False, bind=db_engine)
         session_module._SessionLocal = _TestSession
+
+        import app.core.config as config_module
+
+        config_module.settings.analysis_callback_secret = "dev-analysis-callback-secret"
+        config_module.settings.analysis_client = "stub"
 
         def override_get_db() -> Generator[Session, None, None]:
             db = _TestSession()
