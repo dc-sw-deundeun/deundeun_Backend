@@ -1,10 +1,13 @@
 import json
 
 from fastapi import APIRouter, Depends, Header, Request
+from pydantic import ValidationError
 
 from app.core.dependencies import get_current_user
+from app.core.exceptions import BadRequestException
 from app.core.response import success_response
 from app.domains.analysis.dependencies import get_analysis_service
+from app.domains.analysis.schemas import AnalysisCallbackRequest
 from app.domains.analysis.service import AnalysisService
 from app.domains.user.schemas import CurrentUser
 
@@ -53,7 +56,7 @@ async def get_analysis_job(
     summary="[프론트 사용] AI 분석 결과 조회",
     description=(
         "분석 job의 완료 결과를 조회합니다. summary와 mission_candidates를 반환합니다. "
-        "완료 전에는 summary가 null일 수 있습니다. "
+        "COMPLETED 상태가 아니면 ANALYSIS_NOT_COMPLETED(409)를 반환합니다. "
         "Authorization 헤더 필요."
     ),
 )
@@ -82,7 +85,14 @@ async def analysis_callback(
 ):
     raw_body = await request.body()
     service.verify_callback_signature(raw_body, x_analysis_signature)
-    payload_dict = json.loads(raw_body)
-    callback = AnalysisService.callback_from_request(payload_dict)
+    try:
+        payload_dict = json.loads(raw_body)
+        request_body = AnalysisCallbackRequest.model_validate(payload_dict)
+    except (json.JSONDecodeError, UnicodeDecodeError, ValidationError) as exc:
+        raise BadRequestException(
+            message="callback payload 형식이 올바르지 않습니다.",
+            error_code="INVALID_CALLBACK_PAYLOAD",
+        ) from exc
+    callback = AnalysisService.callback_from_request(request_body)
     service.handle_callback(callback)
     return success_response(message="분석 callback이 처리되었습니다.")

@@ -36,7 +36,7 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("record_id", sa.Integer(), nullable=False),
         sa.Column("user_id", sa.Integer(), nullable=False),
-        sa.Column("external_job_id", sa.String(length=100), nullable=False),
+        sa.Column("external_job_id", sa.String(length=100), nullable=True),
         sa.Column("status", sa.String(length=20), nullable=False),
         sa.Column("attempt_count", sa.Integer(), nullable=False, server_default="1"),
         sa.Column("error_code", sa.String(length=50), nullable=True),
@@ -45,8 +45,17 @@ def upgrade() -> None:
         sa.Column("started_at", sa.DateTime(), nullable=True),
         sa.Column("finished_at", sa.DateTime(), nullable=True),
         sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.text("now()")),
+        sa.ForeignKeyConstraint(["record_id"], ["checkup_records.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("external_job_id"),
+        sa.UniqueConstraint("external_job_id", name="uq_analysis_jobs_external_job_id"),
+    )
+    op.create_index(
+        "uq_analysis_jobs_active_record_id",
+        "analysis_jobs",
+        ["record_id"],
+        unique=True,
+        postgresql_where=sa.text("status IN ('PENDING', 'PROCESSING')"),
     )
     op.create_index("ix_analysis_jobs_record_id", "analysis_jobs", ["record_id"])
     op.create_index("ix_analysis_jobs_user_id", "analysis_jobs", ["user_id"])
@@ -84,6 +93,8 @@ def upgrade() -> None:
         ),
         sa.Column("model_version", sa.String(length=50), nullable=True),
         sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.text("now()")),
+        sa.ForeignKeyConstraint(["job_id"], ["analysis_jobs.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["record_id"], ["checkup_records.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("record_id"),
     )
@@ -112,6 +123,9 @@ def upgrade() -> None:
         sa.Column("verification_mode", sa.String(length=30), nullable=True),
         sa.Column("target_json", sa.JSON(), nullable=True),
         sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.text("now()")),
+        sa.ForeignKeyConstraint(
+            ["summary_id"], ["checkup_analysis_summaries.id"], ondelete="CASCADE"
+        ),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
@@ -146,6 +160,9 @@ def upgrade() -> None:
         sa.Column("status", sa.String(length=20), nullable=False, server_default="ASSIGNED"),
         sa.Column("xp_reward", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.text("now()")),
+        sa.ForeignKeyConstraint(["source_record_id"], ["checkup_records.id"], ondelete="SET NULL"),
+        sa.ForeignKeyConstraint(["template_id"], ["mission_templates.id"]),
+        sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint(
             "user_id",

@@ -6,8 +6,11 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.domains.analysis.dependencies import build_analysis_service
+from app.domains.analysis.models import AnalysisJob
+from app.domains.analysis.repository import AnalysisRepository
 from app.domains.analysis.status import AnalysisStatus
-from app.domains.mission.repository import MissionRepository, local_date_for_timezone
+from app.domains.mission.policy import local_date_for_timezone
+from app.domains.mission.repository import MissionRepository
 from app.domains.ocr.status import OcrStatus
 from app.domains.onboarding.repository import OnboardingRepository
 from app.domains.record.repository import RecordRepository
@@ -107,12 +110,19 @@ def test_unverified_record_returns_409(
 async def test_duplicate_callback_is_idempotent(db_session: Session) -> None:
     _create_user(db_session, user_id=1, email="dup-callback@example.com")
     record_id = _verified_record(db_session, user_id=1)
+    analysis_repo = AnalysisRepository(db_session)
+    analysis_repo.save_job(
+        AnalysisJob(
+            record_id=record_id,
+            user_id=1,
+            external_job_id="manual-dup-callback",
+            status=AnalysisStatus.PROCESSING.value,
+        )
+    )
     service = build_analysis_service(db_session)
-    created = await service.create_analysis_job(record_id, user_id=1)
-    job = service.get_job_status(created.job_id, user_id=1)
 
     callback = service._analysis_client.build_callback_payload(
-        external_job_id=job.external_job_id,
+        external_job_id="manual-dup-callback",
         record_id=record_id,
         metrics=service._build_metric_dtos(record_id),
     )
@@ -121,6 +131,7 @@ async def test_duplicate_callback_is_idempotent(db_session: Session) -> None:
 
     mission_repo = MissionRepository(db_session)
     assert mission_repo.count_user_missions_for_date(user_id=1, assigned_date=_today_kst()) == 1
+    assert analysis_repo.find_summary_by_record_id(record_id) is not None
 
 
 def test_analysis_e2e_via_api(
@@ -179,3 +190,20 @@ def test_callback_requires_valid_signature(
         },
     )
     assert ok_res.status_code == 200
+
+
+def test_callback_returns_400_for_malformed_signed_body(client: TestClient) -> None:
+    body = b"\xff"
+    signature = compute_analysis_signature(body, "dev-analysis-callback-secret")
+
+    res = client.post(
+        "/api/v1/analysis/callback",
+        content=body,
+        headers={
+            "Content-Type": "application/json",
+            "X-Analysis-Signature": signature,
+        },
+    )
+
+    assert res.status_code == 400
+    assert res.json()["error_code"] == "INVALID_CALLBACK_PAYLOAD"

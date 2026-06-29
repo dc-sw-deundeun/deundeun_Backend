@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import JSON, DateTime, Integer, String, Text
+from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database.base import Base
@@ -14,9 +14,13 @@ class AnalysisJob(Base):
     __tablename__ = "analysis_jobs"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    record_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
-    user_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
-    external_job_id: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    record_id: Mapped[int] = mapped_column(
+        ForeignKey("checkup_records.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    external_job_id: Mapped[str | None] = mapped_column(String(100), unique=True, nullable=True)
     status: Mapped[str] = mapped_column(String(20), nullable=False)
     attempt_count: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     error_code: Mapped[str | None] = mapped_column(String(50), nullable=True)
@@ -31,8 +35,15 @@ class CheckupAnalysisSummary(Base):
     __tablename__ = "checkup_analysis_summaries"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    record_id: Mapped[int] = mapped_column(Integer, unique=True, nullable=False, index=True)
-    job_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    record_id: Mapped[int] = mapped_column(
+        ForeignKey("checkup_records.id", ondelete="CASCADE"),
+        unique=True,
+        nullable=False,
+        index=True,
+    )
+    job_id: Mapped[int] = mapped_column(
+        ForeignKey("analysis_jobs.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     summary_text: Mapped[str] = mapped_column(Text, nullable=False)
     risk_level: Mapped[str] = mapped_column(String(30), nullable=False)
     positive_points: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
@@ -47,7 +58,11 @@ class AnalysisMissionCandidate(Base):
     __tablename__ = "analysis_mission_candidates"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    summary_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    summary_id: Mapped[int] = mapped_column(
+        ForeignKey("checkup_analysis_summaries.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
     candidate_type: Mapped[str] = mapped_column(String(20), nullable=False)
     template_code: Mapped[str | None] = mapped_column(String(50), nullable=True)
     priority: Mapped[int | None] = mapped_column(Integer, nullable=True)

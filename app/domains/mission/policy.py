@@ -1,3 +1,7 @@
+from datetime import date, datetime, timezone
+from zoneinfo import ZoneInfo
+
+
 def can_complete_mission(user_mission) -> bool:
     """미션 완료 가능 여부를 확인합니다."""
     raise NotImplementedError
@@ -29,3 +33,10 @@ def calculate_exp_reward(mission_type: str) -> int:
 def calculate_weekly_statistics(user_missions: list) -> dict:
     """주간 미션 통계를 계산합니다."""
     raise NotImplementedError
+
+
+def local_date_for_timezone(timezone_name: str, *, now: datetime | None = None) -> date:
+    current = now or datetime.now(timezone.utc)
+    if current.tzinfo is None:
+        current = current.replace(tzinfo=timezone.utc)
+    return current.astimezone(ZoneInfo(timezone_name)).date()

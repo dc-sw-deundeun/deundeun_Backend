@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.domains.analysis.models import (
@@ -57,6 +58,8 @@ class AnalysisRepository:
         finished: bool = False,
     ) -> None:
         job.status = status
+        if status == AnalysisStatus.COMPLETED.value:
+            job.error_code = None
         if error_code is not None:
             job.error_code = error_code
         if model_version is not None:
@@ -68,9 +71,16 @@ class AnalysisRepository:
         self._db.flush()
 
     def save_summary(self, summary: CheckupAnalysisSummary) -> CheckupAnalysisSummary:
-        self._db.add(summary)
-        self._db.flush()
-        return summary
+        try:
+            with self._db.begin_nested():
+                self._db.add(summary)
+                self._db.flush()
+            return summary
+        except IntegrityError:
+            existing = self.find_summary_by_record_id(summary.record_id)
+            if existing is not None:
+                return existing
+            raise
 
     def find_summary_by_record_id(self, record_id: int) -> CheckupAnalysisSummary | None:
         return self._db.scalar(

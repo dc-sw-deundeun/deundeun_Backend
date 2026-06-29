@@ -3,15 +3,20 @@ import hmac
 import json
 
 
-def compute_analysis_signature(payload: dict | str, secret: str) -> str:
+def _to_body_bytes(payload: dict | str | bytes) -> bytes:
+    if isinstance(payload, bytes):
+        return payload
     if isinstance(payload, str):
-        body = payload
-    else:
-        body = json.dumps(payload, separators=(",", ":"), sort_keys=True)
-    return hmac.new(secret.encode("utf-8"), body.encode("utf-8"), hashlib.sha256).hexdigest()
+        return payload.encode("utf-8")
+    return json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8")
 
 
-def verify_analysis_signature(body: str, secret: str, signature: str | None) -> bool:
+def compute_analysis_signature(payload: dict | str | bytes, secret: str) -> str:
+    body = _to_body_bytes(payload)
+    return hmac.new(secret.encode("utf-8"), body, hashlib.sha256).hexdigest()
+
+
+def verify_analysis_signature(body: dict | str | bytes, secret: str, signature: str | None) -> bool:
     if not signature or not secret:
         return False
     expected = compute_analysis_signature(body, secret)

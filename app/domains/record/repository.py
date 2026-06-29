@@ -216,6 +216,7 @@ class RecordRepository:
             metric.record_id = record_id
             current = existing.get(metric.metric_code)
             if current is not None:
+                current.metric_name = metric.metric_name
                 current.value = metric.value
                 current.unit = metric.unit
                 current.status = metric.status

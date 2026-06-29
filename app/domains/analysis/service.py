@@ -15,6 +15,7 @@ from app.domains.analysis.models import (
 )
 from app.domains.analysis.repository import AnalysisRepository
 from app.domains.analysis.schemas import (
+    AnalysisCallbackRequest,
     AnalysisJobCreateResponse,
     AnalysisJobStatusResponse,
     AnalysisResultResponse,
@@ -23,7 +24,8 @@ from app.domains.analysis.schemas import (
 )
 from app.domains.analysis.status import AnalysisStatus
 from app.domains.mission.constants import DEFAULT_MISSION_TEMPLATE_CODE
-from app.domains.mission.repository import MissionRepository, local_date_for_timezone
+from app.domains.mission.policy import local_date_for_timezone
+from app.domains.mission.repository import MissionRepository
 from app.domains.ocr.status import MetricSource, VerificationStatus
 from app.domains.onboarding.repository import OnboardingRepository
 from app.domains.record.models import CheckupMetricResult
@@ -72,7 +74,14 @@ class AnalysisService:
         record = self._record_repo.get_record_for_user(user_id, record_id)
         if record is None:
             raise NotFoundException(message="검진 기록을 찾을 수 없습니다.")
-        self.ensure_verified(record_id)
+        record = self._record_repo.lock_record(record_id)
+        if record.user_id != user_id:
+            raise NotFoundException(message="검진 기록을 찾을 수 없습니다.")
+        if record.verification_status != VerificationStatus.VERIFIED.value:
+            raise ConflictException(
+                message="검수가 완료되지 않은 기록은 분석할 수 없습니다.",
+                error_code="NOT_VERIFIED",
+            )
 
         if self._analysis_repo.find_summary_by_record_id(record_id) is not None:
             raise ConflictException(
@@ -94,7 +103,7 @@ class AnalysisService:
         job = AnalysisJob(
             record_id=record_id,
             user_id=user_id,
-            external_job_id="pending",
+            external_job_id=None,
             status=AnalysisStatus.PENDING.value,
             started_at=_now(),
         )
@@ -120,7 +129,7 @@ class AnalysisService:
             job_id=job.id,
             record_id=record_id,
             status=job.status,
-            external_job_id=job.external_job_id,
+            external_job_id=job.external_job_id or "",
         )
 
     def get_job_status(self, job_id: int, user_id: int) -> AnalysisJobStatusResponse:
@@ -129,7 +138,7 @@ class AnalysisService:
             job_id=job.id,
             record_id=job.record_id,
             status=job.status,
-            external_job_id=job.external_job_id,
+            external_job_id=job.external_job_id or "",
             attempt_count=job.attempt_count,
             error_code=job.error_code,
             model_version=job.model_version,
@@ -237,7 +246,7 @@ class AnalysisService:
                 message="callback secret이 설정되지 않았습니다.",
                 error_code="CALLBACK_SECRET_NOT_CONFIGURED",
             )
-        if not verify_analysis_signature(raw_body.decode("utf-8"), secret, signature):
+        if not verify_analysis_signature(raw_body, secret, signature):
             raise ForbiddenException(
                 message="callback 서명이 유효하지 않습니다.",
                 error_code="INVALID_CALLBACK_SIGNATURE",
@@ -346,10 +355,17 @@ class AnalysisService:
         )
 
     @classmethod
-    def callback_from_request(cls, body: dict) -> AnalysisCallbackDTO:
+    def callback_from_request(cls, body: AnalysisCallbackRequest | dict) -> AnalysisCallbackDTO:
+        if isinstance(body, AnalysisCallbackRequest):
+            body = body.model_dump()
         summary_data = body.get("summary")
         summary = None
         if summary_data is not None:
+            if not isinstance(summary_data, dict):
+                raise BadRequestException(
+                    message="summary 형식이 올바르지 않습니다.",
+                    error_code="INVALID_CALLBACK_PAYLOAD",
+                )
             summary = AnalysisSummaryDTO(
                 risk_level=summary_data.get("overall_status")
                 or summary_data.get("risk_level")
@@ -366,6 +382,11 @@ class AnalysisService:
 
         metrics = None
         if body.get("metrics"):
+            if not isinstance(body["metrics"], list):
+                raise BadRequestException(
+                    message="metrics 형식이 올바르지 않습니다.",
+                    error_code="INVALID_CALLBACK_PAYLOAD",
+                )
             metrics = [
                 AnalysisMetricDTO(
                     metric_code=item.get("code") or item.get("metric_code") or "",
@@ -376,22 +397,49 @@ class AnalysisService:
                     confidence=item.get("confidence"),
                 )
                 for item in body["metrics"]
+                if isinstance(item, dict)
             ]
 
+        raw_candidates = body.get("mission_candidates") or []
+        if not isinstance(raw_candidates, list):
+            raise BadRequestException(
+                message="mission_candidates 형식이 올바르지 않습니다.",
+                error_code="INVALID_CALLBACK_PAYLOAD",
+            )
         mission_candidates = [
             MissionCandidateDTO(
                 template_code=item.get("template_code") or DEFAULT_MISSION_TEMPLATE_CODE,
                 priority=item.get("priority", 1),
                 reason_code=item.get("reason_code"),
             )
-            for item in body.get("mission_candidates") or []
+            for item in raw_candidates
+            if isinstance(item, dict)
         ]
 
         external_job_id = body.get("external_job_id") or body.get("job_id") or ""
+        if not external_job_id:
+            raise BadRequestException(
+                message="external_job_id는 필수입니다.",
+                error_code="INVALID_CALLBACK_PAYLOAD",
+            )
+        record_id = body.get("record_id")
+        status = body.get("status")
+        if record_id is None or not status:
+            raise BadRequestException(
+                message="record_id와 status는 필수입니다.",
+                error_code="INVALID_CALLBACK_PAYLOAD",
+            )
+        try:
+            record_id_int = int(record_id)
+        except (TypeError, ValueError) as exc:
+            raise BadRequestException(
+                message="record_id 형식이 올바르지 않습니다.",
+                error_code="INVALID_CALLBACK_PAYLOAD",
+            ) from exc
         return AnalysisCallbackDTO(
             external_job_id=external_job_id,
-            record_id=int(body["record_id"]),
-            status=body["status"],
+            record_id=record_id_int,
+            status=str(status),
             model_version=body.get("model_version"),
             summary=summary,
             metrics=metrics,

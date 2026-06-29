@@ -1,6 +1,6 @@
 from datetime import date, datetime, timezone
 
-from sqlalchemy import Boolean, Date, DateTime, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database.base import Base
@@ -36,9 +36,15 @@ class UserMission(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
-    template_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
-    source_record_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    template_id: Mapped[int] = mapped_column(
+        ForeignKey("mission_templates.id"), nullable=False, index=True
+    )
+    source_record_id: Mapped[int | None] = mapped_column(
+        ForeignKey("checkup_records.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     assigned_date: Mapped[date] = mapped_column(Date, nullable=False)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="ASSIGNED")
     xp_reward: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

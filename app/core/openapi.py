@@ -17,7 +17,7 @@ _API_DESCRIPTION = """
 ### 현재 프론트 연동 가능 영역
 Auth/User, Onboarding, Record/OCR, HealthMetric, Analysis Stub MVP는 구현되어 있습니다.
 Home, Mission, Character, Notification, My는 후속 Phase용 stub입니다.
-Mission API는 아직 stub이지만, Phase 4 분석 COMPLETED 시 DB에는 기본 UserMission 1건이 자동 배정됩니다.
+Mission API는 아직 stub이지만, Phase 4 분석 COMPLETED 시 당일 기본 UserMission이 없으면 DB에 1건 자동 배정됩니다.
 
 ### 인증 흐름
 1. `POST /auth/email/verify/request` — 인증 코드 발송
@@ -40,7 +40,7 @@ Mission API는 아직 stub이지만, Phase 4 분석 COMPLETED 시 DB에는 기�
 4. `POST /analysis/callback` — 외부 분석 서버 callback용. 프론트 화면에서 직접 호출하지 않습니다.
 
 현재 Phase 4는 `ANALYSIS_CLIENT=stub` 기반입니다. job 생성 시 가짜 callback이 즉시 처리되고,
-분석 완료 후 `DEFAULT_SELF_CHECK` 미션 템플릿으로 당일 UserMission 1건이 자동 배정됩니다.
+분석 완료 후 당일 기본 미션이 없으면 `DEFAULT_SELF_CHECK` 미션 템플릿으로 UserMission 1건이 자동 배정되고, 이미 있으면 skip됩니다.
 Http/OpenAI 분석 클라이언트, polling worker, 전체 Mission API는 후속 구현 대상입니다.
 """
 
@@ -63,7 +63,7 @@ _OPENAPI_TAGS = [
     },
     {
         "name": "Mission",
-        "description": "[프론트 작업 제외] 미션 API는 Phase 5 예정 stub입니다. 단, Analysis Stub MVP 완료 시 UserMission 1건은 DB에 자동 배정됩니다.",
+        "description": "[프론트 작업 제외] 미션 API는 Phase 5 예정 stub입니다. 단, Analysis Stub MVP 완료 시 당일 기본 UserMission이 없으면 DB에 1건 자동 배정됩니다.",
     },
     {
         "name": "Record",
@@ -79,7 +79,7 @@ _OPENAPI_TAGS = [
     },
     {
         "name": "Analysis",
-        "description": "[프론트 사용] Phase 4 Stub MVP 완료. VERIFIED 검진 기록 분석 요청·상태·결과 API를 제공합니다. ANALYSIS_CLIENT=stub은 즉시 완료 callback과 기본 미션 자동 배정을 수행하며, callback은 서버/내부용입니다.",
+        "description": "[프론트 사용] Phase 4 Stub MVP 완료. VERIFIED 검진 기록 분석 요청·상태·결과 API를 제공합니다. ANALYSIS_CLIENT=stub은 즉시 완료 callback과 당일 기본 미션 없을 때 자동 배정을 수행하며, callback은 서버/내부용입니다.",
     },
     {
         "name": "Character",

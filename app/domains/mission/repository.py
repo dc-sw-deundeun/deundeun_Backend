@@ -1,18 +1,11 @@
-from datetime import date, datetime, timezone
-from zoneinfo import ZoneInfo
+from datetime import date
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.domains.mission.constants import DEFAULT_MISSION_TEMPLATE_CODE
 from app.domains.mission.models import MissionTemplate, UserMission
-
-
-def local_date_for_timezone(timezone_name: str, *, now: datetime | None = None) -> date:
-    current = now or datetime.now(timezone.utc)
-    if current.tzinfo is None:
-        current = current.replace(tzinfo=timezone.utc)
-    return current.astimezone(ZoneInfo(timezone_name)).date()
 
 
 class MissionRepository:
@@ -20,7 +13,12 @@ class MissionRepository:
         self._db = db
 
     def find_template_by_code(self, code: str) -> MissionTemplate | None:
-        return self._db.scalar(select(MissionTemplate).where(MissionTemplate.code == code))
+        return self._db.scalar(
+            select(MissionTemplate).where(
+                MissionTemplate.code == code,
+                MissionTemplate.active.is_(True),
+            )
+        )
 
     def find_default_template(self) -> MissionTemplate | None:
         return self.find_template_by_code(DEFAULT_MISSION_TEMPLATE_CODE)
@@ -52,9 +50,16 @@ class MissionRepository:
             status="ASSIGNED",
             xp_reward=template.default_xp,
         )
-        self._db.add(mission)
-        self._db.flush()
-        return mission
+        try:
+            with self._db.begin_nested():
+                self._db.add(mission)
+                self._db.flush()
+            return mission
+        except IntegrityError:
+            existing = self.find_user_mission_for_date(user_id, template.id, assigned_date)
+            if existing is not None:
+                return existing
+            raise
 
     def count_user_missions_for_date(self, user_id: int, assigned_date: date) -> int:
         from sqlalchemy import func

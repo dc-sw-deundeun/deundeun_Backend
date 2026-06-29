@@ -14,7 +14,7 @@
 | Record / OCR | 구현 | 가능 |
 | HealthMetric | 구현 | 가능 |
 | Analysis | 구현 (Stub MVP) | 가능 |
-| Mission / Character | stub | 501 응답 (UserMission 자동 배정만 Phase 4) |
+| Mission / Character | stub | 501 응답 (당일 기본 UserMission 자동 배정만 Phase 4) |
 | Home | stub | 501 응답 |
 | Notification | stub | 501 응답 |
 | My / Support | stub | 501 응답 |
@@ -90,7 +90,7 @@
 | GET | `/jobs/{analysis_job_id}/result` | 분석 결과 조회 |
 | POST | `/callback` | 외부 callback (서명 검증, 멱등) |
 
-분석 COMPLETED 시 `MissionTemplate` seed(`DEFAULT_SELF_CHECK`) 기준 **UserMission 1건 자동 배정**.
+분석 COMPLETED 시 당일 기본 미션이 없으면 `MissionTemplate` seed(`DEFAULT_SELF_CHECK`) 기준 **UserMission 1건 자동 배정**. 이미 있으면 skip합니다.
 
 ## Stub API
 
