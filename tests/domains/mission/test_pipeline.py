@@ -44,7 +44,9 @@ def _edema_trap() -> PKG:
 
 
 def _exercise_prohibited_trap() -> PKG:
-    return PKG(id="noex", kind="trap", conditions=["hypertension"], flags={"exercise_prohibited": True})
+    return PKG(
+        id="noex", kind="trap", conditions=["hypertension"], flags={"exercise_prohibited": True}
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -202,5 +204,9 @@ def test_extract_json_handles_code_fences() -> None:
 
 
 def test_check_mission_direct() -> None:
-    assert pool.check_mission(GeneratedMission(title="물 8잔 마시기", mission_type="hydration"), _ckd_trap())
-    assert not pool.check_mission(GeneratedMission(title="저염식 한 끼", mission_type="diet"), _ckd_trap())
+    assert pool.check_mission(
+        GeneratedMission(title="물 8잔 마시기", mission_type="hydration"), _ckd_trap()
+    )
+    assert not pool.check_mission(
+        GeneratedMission(title="저염식 한 끼", mission_type="diet"), _ckd_trap()
+    )

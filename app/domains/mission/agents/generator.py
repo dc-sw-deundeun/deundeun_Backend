@@ -195,9 +195,7 @@ class Generator:
         for t in pool.candidate_templates(pkg)[:n]:
             params = {k: v.get("base") for k, v in t.get("slots", {}).items()}
             title = t["template"].format(**params) if params else t["template"]
-            out.append(
-                MissionCandidate(title=title, mission_type=t["type"], template_id=t["id"])
-            )
+            out.append(MissionCandidate(title=title, mission_type=t["type"], template_id=t["id"]))
         return out
 
 

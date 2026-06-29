@@ -30,9 +30,7 @@ class MissionPipeline:
         self.context_agent = ContextAgent()
         self.generator = Generator(self.llm)
 
-    async def generate_missions(
-        self, pkg: PKG, config: PipelineConfig, n: int = 3
-    ) -> MissionSet:
+    async def generate_missions(self, pkg: PKG, config: PipelineConfig, n: int = 3) -> MissionSet:
         client = InMemoryPKG(pkg)
         verifier = Verifier(client)
         gating = config.M2_graph_constrained or config.M4_verify_gate
@@ -74,9 +72,7 @@ class MissionPipeline:
         if config.M4_verify_gate:
             accepted += verifier.referral_missions(pkg, accepted)
 
-        missions = [
-            GeneratedMission(**{**c.model_dump(), "source": source}) for c in accepted
-        ]
+        missions = [GeneratedMission(**{**c.model_dump(), "source": source}) for c in accepted]
 
         if source == "fallback":
             status = "fallback"
