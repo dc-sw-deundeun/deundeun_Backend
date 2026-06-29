@@ -14,7 +14,8 @@ from app.infrastructure.ocr.metric_dictionary import (
 from app.infrastructure.ocr.ocr_dto import OcrFieldDTO, OcrResultDTO
 
 _NUMBER_RE = re.compile(r"^\d+(\.\d+)?$")
-_REFERENCE_MARKERS = ("정상", "미만", "이하", "이상", "~", "범위", "음성±")
+_REFERENCE_MARKERS = ("정상", "미만", "미안", "이하", "이상", "~", "범위", "음성±")
+# "미안"은 "미만"의 흔한 OCR 오인식 — 건강검진 서식에서 참조범위 마커로만 사용됨
 # alias 중 가장 긴 것의 문자 수 = 글자별 토큰 분리 시 필요한 최대 윈도우 크기
 _MAX_LABEL_WINDOW: int = max(
     len(normalize_label(alias)) for spec in METRIC_SPECS for alias in spec.aliases
@@ -40,6 +41,10 @@ def _is_reference(text: str) -> bool:
     return any(marker in text for marker in _REFERENCE_MARKERS)
 
 
+_REF_COL_RATIO = 0.65  # 폼 너비의 65% 이상 = 참고치 컬럼으로 간주
+_MIN_FORM_WIDTH = 600  # 이보다 좁으면 테스트 픽스처로 간주하고 x 필터 미적용
+
+
 class OcrParser:
     def parse(self, result: OcrResultDTO) -> list[ParsedMetric]:
         if not result.fields:
@@ -47,28 +52,61 @@ class OcrParser:
         heights = [f.y_height for f in result.fields if f.y_height > 0]
         row_tolerance = max(15.0, statistics.median(heights) * 1.0) if heights else 20.0
         rows = self._cluster_rows(result.fields, row_tolerance)
+
+        form_x_max = max((f.x_max for f in result.fields), default=0.0)
+        ref_x_threshold = form_x_max * _REF_COL_RATIO if form_x_max >= _MIN_FORM_WIDTH else None
+
         metrics: list[ParsedMetric] = []
         seen: set[str] = set()
         for row_index, row in enumerate(rows):
-            found = self._find_label_in_row(row)
-            if found is None:
-                continue
-            spec, label_end = found
-            right = [f for f in row[label_end:] if not _is_reference(f.text)]
-            extracted = self._extract(spec, right)
-            if not extracted and spec.kind in ("hw_pair", "bp_pair") and row_index + 1 < len(rows):
-                next_row = rows[row_index + 1]
-                if self._find_label_in_row(next_row) is None:
-                    extracted = self._extract(
-                        spec,
-                        [f for f in next_row if not _is_reference(f.text)],
+            col_pos = 0
+            while col_pos < len(row):
+                found = self._find_first_label_from(row, col_pos)
+                if found is None:
+                    break
+                spec, label_start, label_end = found
+                next_label = self._find_first_label_from(row, label_end)
+                # hw_pair("키 및 몸무게" 형태)는 weight 라벨이 value 앞에 오므로
+                # next_label 경계로 잘리지 않도록 row 끝까지 탐색한다.
+                if spec.kind == "hw_pair":
+                    value_end = len(row)
+                else:
+                    value_end = next_label[1] if next_label else len(row)
+
+                right_raw = row[label_end:value_end]
+                right = [
+                    f
+                    for i, f in enumerate(right_raw)
+                    if not _is_reference(f.text)
+                    and not (
+                        _is_number(f.text)
+                        and i + 1 < len(right_raw)
+                        and _is_reference(right_raw[i + 1].text)
+                        and not right_raw[i + 1].text[:1].isdigit()
                     )
-            if not extracted and spec.code == "alt" and row_index > 0:
-                extracted = self._extract_alt_from_previous_ast_row(rows[row_index - 1])
-            for m in extracted:
-                if m.metric_code not in seen:
-                    seen.add(m.metric_code)
-                    metrics.append(m)
+                ]
+                extracted = self._extract(spec, right, ref_x_threshold)
+                if (
+                    not extracted
+                    and spec.kind in ("hw_pair", "bp_pair")
+                    and row_index + 1 < len(rows)
+                ):
+                    next_row = rows[row_index + 1]
+                    if self._find_first_label_from(next_row, 0) is None:
+                        extracted = self._extract(
+                            spec,
+                            [f for f in next_row if not _is_reference(f.text)],
+                            ref_x_threshold,
+                        )
+                if not extracted and spec.code == "alt" and row_index > 0:
+                    extracted = self._extract_alt_from_previous_ast_row(
+                        rows[row_index - 1], ref_x_threshold
+                    )
+                for m in extracted:
+                    if m.metric_code not in seen:
+                        seen.add(m.metric_code)
+                        metrics.append(m)
+                col_pos = label_end
         return metrics
 
     def _cluster_rows(self, fields: list[OcrFieldDTO], tolerance: float) -> list[list[OcrFieldDTO]]:
@@ -94,6 +132,36 @@ class OcrParser:
             row.sort(key=lambda f: f.x_min)
         return rows
 
+    def _find_first_label_from(
+        self, row: list[OcrFieldDTO], pos: int
+    ) -> tuple[MetricSpec, int, int] | None:
+        """pos 이상에서 가장 앞서 나오는 라벨 매칭을 반환한다.
+        같은 start 위치라면 더 긴 alias를 우선한다.
+        반환: (spec, start_idx, end_idx)
+        """
+        best_spec: MetricSpec | None = None
+        best_start: int | None = None
+        best_end: int = 0
+        best_alias_len: int = 0
+
+        for start in range(pos, len(row)):
+            for window in range(1, _MAX_LABEL_WINDOW + 1):
+                if start + window > len(row):
+                    break
+                combined = "".join(f.text for f in row[start : start + window])
+                match = find_best_alias_match(combined, max_typos=(2 if window == 1 else 1))
+                if match:
+                    alias_len = len(match[1])
+                    is_earlier = best_start is None or start < best_start
+                    is_same_longer = best_start == start and alias_len > best_alias_len
+                    if is_earlier or is_same_longer:
+                        best_spec = match[0]
+                        best_alias_len = alias_len
+                        best_start = start
+                        best_end = start + window
+
+        return (best_spec, best_start, best_end) if best_spec and best_start is not None else None
+
     def _find_label_in_row(self, row: list[OcrFieldDTO]) -> tuple[MetricSpec, int] | None:
         """행에서 가장 긴 alias로 매칭되는 스펙을 반환한다.
 
@@ -109,7 +177,7 @@ class OcrParser:
                 if start + window > len(row):
                     break
                 combined = "".join(f.text for f in row[start : start + window])
-                match = find_best_alias_match(combined)
+                match = find_best_alias_match(combined, max_typos=(2 if window == 1 else 1))
                 if match and len(match[1]) > best_alias_len:
                     best_spec = match[0]
                     best_alias_len = len(match[1])
@@ -117,18 +185,30 @@ class OcrParser:
 
         return (best_spec, best_end) if best_spec else None
 
-    def _extract(self, spec: MetricSpec, right: list[OcrFieldDTO]) -> list[ParsedMetric]:
+    def _extract(
+        self,
+        spec: MetricSpec,
+        right: list[OcrFieldDTO],
+        ref_x_threshold: float | None = None,
+    ) -> list[ParsedMetric]:
         if spec.kind == "bp_pair":
-            return self._extract_bp(right)
+            return self._extract_bp(right, ref_x_threshold)
         if spec.kind == "hw_pair":
-            return self._extract_hw(right)
+            return self._extract_hw(right, ref_x_threshold)
         if spec.kind == "categorical":
             return self._extract_categorical(spec, right)
-        return self._extract_numeric(spec, right)
+        return self._extract_numeric(spec, right, ref_x_threshold)
 
-    def _extract_numeric(self, spec: MetricSpec, right: list[OcrFieldDTO]) -> list[ParsedMetric]:
+    def _extract_numeric(
+        self,
+        spec: MetricSpec,
+        right: list[OcrFieldDTO],
+        ref_x_threshold: float | None = None,
+    ) -> list[ParsedMetric]:
         for fld in right:
             if _is_number(fld.text):
+                if ref_x_threshold is not None and fld.x_min >= ref_x_threshold:
+                    continue
                 return [
                     ParsedMetric(
                         metric_code=spec.code,
@@ -142,8 +222,14 @@ class OcrParser:
                 ]
         return []
 
-    def _extract_bp(self, right: list[OcrFieldDTO]) -> list[ParsedMetric]:
-        numbers = [f for f in right if _is_number(f.text)]
+    def _extract_bp(
+        self, right: list[OcrFieldDTO], ref_x_threshold: float | None = None
+    ) -> list[ParsedMetric]:
+        numbers = [
+            f
+            for f in right
+            if _is_number(f.text) and (ref_x_threshold is None or f.x_min < ref_x_threshold)
+        ]
         if len(numbers) < 2:
             return []
         sys_f, dia_f = numbers[0], numbers[1]
@@ -171,12 +257,20 @@ class OcrParser:
         ]
 
     def _extract_alt_from_previous_ast_row(
-        self, previous_row: list[OcrFieldDTO]
+        self,
+        previous_row: list[OcrFieldDTO],
+        ref_x_threshold: float | None = None,
     ) -> list[ParsedMetric]:
         found = self._find_label_in_row(previous_row)
         if found is None or found[0].code != "ast":
             return []
-        numbers = [f for f in previous_row if _is_number(f.text) and not _is_reference(f.text)]
+        numbers = [
+            f
+            for f in previous_row
+            if _is_number(f.text)
+            and not _is_reference(f.text)
+            and (ref_x_threshold is None or f.x_min < ref_x_threshold)
+        ]
         if len(numbers) < 2:
             return []
         alt_f = numbers[1]
@@ -193,7 +287,13 @@ class OcrParser:
             )
         ]
 
-    def _extract_hw(self, right: list[OcrFieldDTO]) -> list[ParsedMetric]:
+    def _extract_hw(
+        self,
+        right: list[OcrFieldDTO],
+        ref_x_threshold: float | None = None,  # noqa: ARG002
+    ) -> list[ParsedMetric]:
+        # hw_pair 라벨("키(cm) 및 몸무게(kg)")은 길어서 값이 폼 우측에 위치함.
+        # 빈 서식에서는 hw_pair 행에 숫자가 없으므로 x 필터를 적용하지 않는다.
         numbers = [f for f in right if _is_number(f.text)]
         if not numbers:
             return []
