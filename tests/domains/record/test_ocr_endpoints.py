@@ -61,7 +61,7 @@ def api(db_session):
 
 def test_upload_single_image_success(api):
     client, _ = api
-    resp = client.post("/api/v1/records/checkups/upload", json={"images": [_PNG_B64]})
+    resp = client.post("/api/v1/records/checkups/ocr-preview", json={"images": [_PNG_B64]})
     assert resp.status_code == 200
     data = resp.json()["data"]
     assert data["page_count"] == 1
@@ -73,21 +73,21 @@ def test_upload_single_image_success(api):
 
 def test_upload_zero_images_rejected(api):
     client, _ = api
-    resp = client.post("/api/v1/records/checkups/upload", json={"images": []})
+    resp = client.post("/api/v1/records/checkups/ocr-preview", json={"images": []})
     assert resp.status_code == 400
     assert resp.json()["error_code"] == "INVALID_IMAGE_COUNT"
 
 
 def test_upload_eleven_images_rejected(api):
     client, _ = api
-    resp = client.post("/api/v1/records/checkups/upload", json={"images": [_PNG_B64] * 11})
+    resp = client.post("/api/v1/records/checkups/ocr-preview", json={"images": [_PNG_B64] * 11})
     assert resp.status_code == 400
     assert resp.json()["error_code"] == "INVALID_IMAGE_COUNT"
 
 
 def test_upload_invalid_base64_rejected(api):
     client, _ = api
-    resp = client.post("/api/v1/records/checkups/upload", json={"images": ["!!!not_base64!!!"]})
+    resp = client.post("/api/v1/records/checkups/ocr-preview", json={"images": ["!!!not_base64!!!"]})
     assert resp.status_code == 400
     assert resp.json()["error_code"] == "INVALID_IMAGE_FORMAT"
 
@@ -112,7 +112,7 @@ def test_upload_unsupported_format_rejected(api):
     client, _ = api
     bmp_bytes = b"BM" + b"\x00" * 30
     resp = client.post(
-        "/api/v1/records/checkups/upload",
+        "/api/v1/records/checkups/ocr-preview",
         json={"images": [base64.b64encode(bmp_bytes).decode()]},
     )
     assert resp.status_code == 415
@@ -123,7 +123,7 @@ def test_upload_single_image_too_large_rejected(api):
     client, _ = api
     raw = b"\x89PNG\r\n\x1a\n" + b"\x00" * (10 * 1024 * 1024 + 1)
     resp = client.post(
-        "/api/v1/records/checkups/upload",
+        "/api/v1/records/checkups/ocr-preview",
         json={"images": [base64.b64encode(raw).decode()]},
     )
     assert resp.status_code == 413
@@ -136,7 +136,7 @@ def test_upload_total_size_too_large_rejected(api, monkeypatch):
 
     monkeypatch.setattr(settings, "max_total_upload_size_bytes", len(_PNG_BYTES) + 1)
     resp = client.post(
-        "/api/v1/records/checkups/upload",
+        "/api/v1/records/checkups/ocr-preview",
         json={"images": [_PNG_B64, _PNG_B64]},
     )
     assert resp.status_code == 413
@@ -170,7 +170,7 @@ def test_upload_partial_failure_response(api):
     app.dependency_overrides[get_ocr_service] = lambda: service
 
     resp = client.post(
-        "/api/v1/records/checkups/upload",
+        "/api/v1/records/checkups/ocr-preview",
         json={"images": [_PNG_B64, _PNG_B64, _PNG_B64]},
     )
     assert resp.status_code == 200
@@ -194,7 +194,7 @@ def test_upload_all_fail_returns_502(api):
     )
     app.dependency_overrides[get_ocr_service] = lambda: service
 
-    resp = client.post("/api/v1/records/checkups/upload", json={"images": [_PNG_B64]})
+    resp = client.post("/api/v1/records/checkups/ocr-preview", json={"images": [_PNG_B64]})
     assert resp.status_code == 502
     assert resp.json()["error_code"] == "OCR_FAILED"
 
