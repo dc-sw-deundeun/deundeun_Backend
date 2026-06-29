@@ -1,0 +1,161 @@
+{
+  "_doc": "미션 템플릿 풀 + 안전 제약. M1(템플릿/슬롯)·M4(hard exclude/referral)·M2(grounding) 공용 자산.",
+  "conditions": {
+    "hypertension": {"label": "고혈압"},
+    "type2_diabetes": {"label": "제2형 당뇨"},
+    "prediabetes": {"label": "당뇨 전단계"},
+    "dyslipidemia": {"label": "이상지질혈증"},
+    "obesity": {"label": "비만"},
+    "fatty_liver": {"label": "지방간"},
+    "ckd": {"label": "만성신장질환"},
+    "anemia": {"label": "빈혈"},
+    "ankle_edema": {"label": "발목 부종"},
+    "osteoarthritis": {"label": "무릎 골관절염"},
+    "cardiovascular_disease": {"label": "심혈관질환"},
+    "insomnia": {"label": "불면"},
+    "depression_screen": {"label": "우울 의심"},
+    "gout": {"label": "통풍"},
+    "gerd": {"label": "역류성 식도염"}
+  },
+  "medications": {
+    "amlodipine": {"label": "암로디핀"},
+    "warfarin": {"label": "와파린"},
+    "metformin": {"label": "메트포르민"},
+    "statin": {"label": "스타틴"},
+    "diuretic": {"label": "이뇨제"}
+  },
+  "type_exclusions": [
+    {
+      "types": ["exercise"],
+      "excluded_by": {"flags": ["exercise_prohibited"]},
+      "reason": "운동 금지 지시가 있는 사용자에게 운동 미션 금지"
+    }
+  ],
+  "concept_exclusions": [
+    {
+      "concept": "hydration_push",
+      "keywords": ["물 마시", "물을 마시", "잔 마시", "수분", "물 충분", "물 자주", "물을 충분"],
+      "excluded_by": {"conditions": ["ckd"]},
+      "reason": "진행성 신장질환에서 과도한 수분 섭취 권고는 위험"
+    },
+    {
+      "concept": "high_vitamin_k",
+      "keywords": ["시금치", "녹색잎", "녹색 잎", "케일", "브로콜리", "녹황색"],
+      "excluded_by": {"medications": ["warfarin"]},
+      "reason": "와파린-비타민K 상호작용으로 항응고 효과 변동"
+    },
+    {
+      "concept": "prolonged_walk",
+      "keywords": ["1시간 걷", "60분 걷", "오래 걷", "장시간 보행", "장시간 걷", "40분 걷", "50분 걷"],
+      "excluded_by": {"conditions": ["ankle_edema"]},
+      "reason": "발목 부종 상태에서 장시간 보행은 부종 악화"
+    },
+    {
+      "concept": "intense_exercise",
+      "keywords": ["고강도", "달리기", "뛰기", "등산", "전력", "인터벌"],
+      "excluded_by": {"conditions": ["cardiovascular_disease"]},
+      "reason": "심혈관질환자에게 고강도 운동은 위험"
+    },
+    {
+      "concept": "high_impact",
+      "keywords": ["줄넘기", "점프", "뜀뛰기", "계단 오르내리기 반복"],
+      "excluded_by": {"conditions": ["osteoarthritis"]},
+      "reason": "무릎 골관절염에서 충격이 큰 운동은 관절 악화"
+    }
+  ],
+  "referrals": {
+    "anemia": "빈혈 관련",
+    "ckd": "신장 기능 관련",
+    "depression_screen": "기분·수면 관련"
+  },
+  "templates": [
+    {
+      "id": "walk_after_meal",
+      "type": "exercise",
+      "template": "식후 {duration}분 걷기",
+      "slots": {"duration": {"base": 10, "unit": "분"}},
+      "targets": ["type2_diabetes", "prediabetes", "obesity", "hypertension", "fatty_liver"],
+      "grounding": ["walking->fasting_glucose"]
+    },
+    {
+      "id": "light_strength",
+      "type": "exercise",
+      "template": "가벼운 스쿼트 {count}회 하기",
+      "slots": {"count": {"base": 10, "unit": "회"}},
+      "targets": ["obesity", "type2_diabetes", "dyslipidemia"],
+      "grounding": ["strength->muscle_mass"]
+    },
+    {
+      "id": "low_sodium_meal",
+      "type": "diet",
+      "template": "오늘 한 끼 저염식 하기",
+      "slots": {},
+      "targets": ["hypertension", "ckd", "cardiovascular_disease"],
+      "grounding": ["sodium->blood_pressure"]
+    },
+    {
+      "id": "leafy_greens",
+      "type": "diet",
+      "template": "끼니에 녹색잎채소 {count}가지 챙기기",
+      "slots": {"count": {"base": 1, "unit": "가지"}},
+      "targets": ["dyslipidemia", "obesity", "type2_diabetes"],
+      "grounding": ["fiber->ldl"]
+    },
+    {
+      "id": "reduce_sugar_drink",
+      "type": "diet",
+      "template": "단 음료 대신 물·차 마시기",
+      "slots": {},
+      "targets": ["type2_diabetes", "prediabetes", "fatty_liver", "obesity"],
+      "grounding": ["sugar->fasting_glucose"]
+    },
+    {
+      "id": "purine_moderate",
+      "type": "diet",
+      "template": "오늘 고기·해산물 과식 피하기",
+      "slots": {},
+      "targets": ["gout"],
+      "grounding": ["purine->uric_acid"]
+    },
+    {
+      "id": "hydration",
+      "type": "hydration",
+      "template": "물 {cups}잔 마시기",
+      "slots": {"cups": {"base": 8, "unit": "잔"}},
+      "targets": ["gout"],
+      "grounding": ["water->uric_acid"]
+    },
+    {
+      "id": "sleep_routine",
+      "type": "sleep",
+      "template": "{hour}시 전에 잠자리에 들기",
+      "slots": {"hour": {"base": 24, "unit": "시"}},
+      "targets": ["insomnia", "hypertension", "depression_screen"],
+      "grounding": ["sleep->blood_pressure"]
+    },
+    {
+      "id": "breathing_stretch",
+      "type": "stress",
+      "template": "{minutes}분 심호흡·가벼운 스트레칭 하기",
+      "slots": {"minutes": {"base": 10, "unit": "분"}},
+      "targets": ["depression_screen", "hypertension", "insomnia"],
+      "grounding": ["relaxation->blood_pressure"]
+    },
+    {
+      "id": "record_meal",
+      "type": "habit",
+      "template": "오늘 먹은 식사 사진으로 기록하기",
+      "slots": {},
+      "targets": [],
+      "grounding": []
+    },
+    {
+      "id": "clinic_followup",
+      "type": "checkup_followup",
+      "template": "가까운 시일 내 병원에서 {topic} 상담받기",
+      "slots": {"topic": {"base": "검진 결과"}},
+      "targets": ["anemia", "ckd", "depression_screen"],
+      "grounding": []
+    }
+  ]
+}

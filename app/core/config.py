@@ -31,6 +31,13 @@ class Settings(BaseSettings):
     openai_model: str = "gpt-4.1-mini"
     openai_timeout_seconds: float = 20.0
 
+    # 미션 생성/실험용 LLM provider 선택: "openai" | "clova"
+    llm_provider: str = "openai"
+    clova_studio_api_key: str | None = None
+    clova_studio_base_url: str = "https://clovastudio.stream.ntruss.com/v1/openai"
+    clova_studio_model: str = "HCX-005"
+    clova_studio_timeout_seconds: float = 30.0
+
     health_metric_evaluate_rate_limit_per_minute: int = 20
     health_metric_analysis_rate_limit_per_minute: int = 10
 
@@ -77,6 +84,13 @@ class Settings(BaseSettings):
     ocr_acquire_timeout_seconds: float = 1.0
     ocr_retry_after_seconds: int = 10
 
+    @field_validator("llm_provider")
+    @classmethod
+    def validate_llm_provider(cls, value: str) -> str:
+        if value not in ("openai", "clova"):
+            raise ValueError("LLM_PROVIDER must be 'openai' or 'clova'")
+        return value
+
     @model_validator(mode="after")
     def validate_production_secrets(self) -> "Settings":
         if self.app_env in ("production", "staging"):
@@ -87,6 +101,14 @@ class Settings(BaseSettings):
             if not self.clova_ocr_invoke_url or not self.clova_ocr_secret_key:
                 raise ValueError(
                     "CLOVA_OCR_INVOKE_URL and CLOVA_OCR_SECRET_KEY must be configured in production/staging"
+                )
+            if self.llm_provider == "clova" and not self.clova_studio_api_key:
+                raise ValueError(
+                    "CLOVA_STUDIO_API_KEY must be configured when LLM_PROVIDER=clova in production/staging"
+                )
+            if self.llm_provider == "openai" and not self.openai_api_key:
+                raise ValueError(
+                    "OPENAI_API_KEY must be configured when LLM_PROVIDER=openai in production/staging"
                 )
         return self
 
