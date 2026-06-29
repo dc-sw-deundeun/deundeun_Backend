@@ -222,6 +222,77 @@ def test_wearable_connect_without_provider_returns_422(
     assert res.status_code == 422
 
 
+def test_wearable_disconnect_resets_step_for_reconnect(
+    client: TestClient, email_client: CapturingEmailClient
+) -> None:
+    headers = _auth_headers(client, email_client, "disconnect@example.com")
+    client.post(f"{AUTH}/policies/agree", json={"consents": _FULL_CONSENTS}, headers=headers)
+    client.post(
+        f"{ONB}/wearable",
+        json={
+            "action": "CONNECT",
+            "provider": "APPLE_HEALTH",
+            "scopes": ["steps"],
+        },
+        headers=headers,
+    )
+
+    disconnect = client.delete(f"{ONB}/wearable/APPLE_HEALTH", headers=headers)
+    assert disconnect.status_code == 200
+    data = disconnect.json()["data"]
+    assert data["onboarding_step"] == "WEARABLE"
+    assert data["wearable_connections"] == []
+
+    reconnect = client.post(
+        f"{ONB}/wearable",
+        json={
+            "action": "CONNECT",
+            "provider": "SAMSUNG_HEALTH",
+            "scopes": ["steps"],
+        },
+        headers=headers,
+    )
+    assert reconnect.status_code == 200
+    reconnect_data = reconnect.json()["data"]
+    assert reconnect_data["onboarding_step"] == "INITIAL_CHECKUP"
+    assert reconnect_data["connection"]["provider"] == "SAMSUNG_HEALTH"
+
+
+def test_wearable_disconnect_not_found_returns_404(
+    client: TestClient, email_client: CapturingEmailClient
+) -> None:
+    headers = _auth_headers(client, email_client, "nodisconnect@example.com")
+    client.post(f"{AUTH}/policies/agree", json={"consents": _FULL_CONSENTS}, headers=headers)
+
+    res = client.delete(f"{ONB}/wearable/APPLE_HEALTH", headers=headers)
+    assert res.status_code == 404
+    assert res.json()["error_code"] == "WEARABLE_CONNECTION_NOT_FOUND"
+
+
+def test_wearable_disconnect_after_checkup_verified_keeps_step(
+    client: TestClient, email_client: CapturingEmailClient, db_session: Session
+) -> None:
+    email = "disconnect-verified@example.com"
+    headers = _auth_headers(client, email_client, email)
+    client.post(f"{AUTH}/policies/agree", json={"consents": _FULL_CONSENTS}, headers=headers)
+    client.post(
+        f"{ONB}/wearable",
+        json={
+            "action": "CONNECT",
+            "provider": "APPLE_HEALTH",
+            "scopes": ["steps"],
+        },
+        headers=headers,
+    )
+    _set_step(db_session, email, OnboardingStep.CHECKUP_VERIFIED)
+
+    res = client.delete(f"{ONB}/wearable/APPLE_HEALTH", headers=headers)
+    assert res.status_code == 200
+    data = res.json()["data"]
+    assert data["onboarding_step"] == "CHECKUP_VERIFIED"
+    assert data["wearable_connections"] == []
+
+
 def test_wearable_before_consent_returns_409(
     client: TestClient, email_client: CapturingEmailClient
 ) -> None:

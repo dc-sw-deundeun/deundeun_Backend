@@ -19,6 +19,15 @@ class OnboardingAlreadyCompletedException(AppException):
         )
 
 
+class WearableConnectionNotFoundException(AppException):
+    def __init__(self) -> None:
+        super().__init__(
+            status_code=404,
+            message="연동된 웨어러블을 찾을 수 없습니다.",
+            error_code="WEARABLE_CONNECTION_NOT_FOUND",
+        )
+
+
 class OnboardingIncompleteException(AppException):
     """완료 요청 시 선행 단계(검진 인증 등)가 끝나지 않은 경우."""
 

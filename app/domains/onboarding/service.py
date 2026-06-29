@@ -3,9 +3,10 @@ from app.domains.onboarding import policy
 from app.domains.onboarding.exceptions import (
     OnboardingAlreadyCompletedException,
     OnboardingIncompleteException,
+    WearableConnectionNotFoundException,
 )
 from app.domains.onboarding.hooks import on_onboarding_complete
-from app.domains.onboarding.models import WearableStatus
+from app.domains.onboarding.models import WearableProvider, WearableStatus
 from app.domains.onboarding.repository import OnboardingRepository
 from app.domains.onboarding.schemas import (
     OnboardingCompleteResponse,
@@ -14,6 +15,7 @@ from app.domains.onboarding.schemas import (
     WearableConnectionItem,
     WearableConnectRequest,
     WearableConnectResponse,
+    WearableDisconnectResponse,
 )
 from app.domains.user.models import OnboardingStep, User, UserStatus
 from app.infrastructure.wearable.wearable_client import WearableClient
@@ -68,6 +70,24 @@ class OnboardingService:
         return WearableConnectResponse(
             onboarding_step=OnboardingStep.INITIAL_CHECKUP.value,
             connection=connection_item,
+        )
+
+    def disconnect_wearable(
+        self, user_id: int, provider: WearableProvider
+    ) -> WearableDisconnectResponse:
+        user = self._require_active_user(user_id)
+        deleted = self.repo.delete_wearable_connection(user_id, provider.value)
+        if not deleted:
+            raise WearableConnectionNotFoundException()
+
+        remaining = self.repo.list_wearable_connections(user_id)
+        if user.onboarding_step == OnboardingStep.INITIAL_CHECKUP.value and not remaining:
+            user.onboarding_step = OnboardingStep.WEARABLE
+
+        self.repo.db.commit()
+        return WearableDisconnectResponse(
+            onboarding_step=user.onboarding_step,
+            wearable_connections=[WearableConnectionItem.model_validate(c) for c in remaining],
         )
 
     def complete_onboarding(self, user_id: int) -> OnboardingCompleteResponse:

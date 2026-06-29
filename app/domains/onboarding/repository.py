@@ -63,3 +63,11 @@ class OnboardingRepository:
         if connection is None:
             raise RuntimeError("Failed to upsert wearable connection")
         return connection
+
+    def delete_wearable_connection(self, user_id: int, provider: str) -> bool:
+        connection = self.find_wearable_connection(user_id, provider)
+        if connection is None:
+            return False
+        self.db.delete(connection)
+        self.db.flush()
+        return True

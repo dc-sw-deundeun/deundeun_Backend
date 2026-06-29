@@ -5,6 +5,7 @@ CONSENT → WEARABLE → INITIAL_CHECKUP → CHECKUP_VERIFIED → COMPLETED
 
 - CONSENT: 회원가입 직후. `POST /auth/policies/agree`로 약관 동의 시 WEARABLE로 전이.
 - WEARABLE: `POST /onboarding/wearable`(CONNECT/SKIP)로 INITIAL_CHECKUP으로 전이.
+  `DELETE /onboarding/wearable/{provider}`로 연동 해제 가능(INITIAL_CHECKUP에서 마지막 연동 해제 시 WEARABLE 복귀).
 - INITIAL_CHECKUP: 최초 검진 기록 업로드(Phase 3). 기록 생성 시 유지.
 - CHECKUP_VERIFIED: 검진 결과 검증 완료(Phase 3). 검증 시 RecordService가 전이.
 - COMPLETED: `POST /onboarding/complete`로 최종 완료.

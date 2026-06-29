@@ -52,5 +52,10 @@ class WearableConnectResponse(BaseModel):
     connection: WearableConnectionItem | None = None
 
 
+class WearableDisconnectResponse(BaseModel):
+    onboarding_step: str
+    wearable_connections: list[WearableConnectionItem]
+
+
 class OnboardingCompleteResponse(BaseModel):
     onboarding_step: str
