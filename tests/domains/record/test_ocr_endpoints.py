@@ -87,7 +87,9 @@ def test_upload_eleven_images_rejected(api):
 
 def test_upload_invalid_base64_rejected(api):
     client, _ = api
-    resp = client.post("/api/v1/records/checkups/ocr-preview", json={"images": ["!!!not_base64!!!"]})
+    resp = client.post(
+        "/api/v1/records/checkups/ocr-preview", json={"images": ["!!!not_base64!!!"]}
+    )
     assert resp.status_code == 400
     assert resp.json()["error_code"] == "INVALID_IMAGE_FORMAT"
 
