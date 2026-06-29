@@ -57,13 +57,21 @@ def _difficulty(duration_min: int | None, count: int | None) -> int:
     return 3
 
 
-def build_seeds(pkg_client: PKGClient, pkg: PKG, n: int) -> list[MissionCandidate]:
+def build_seeds(
+    pkg_client: PKGClient, pkg: PKG, n: int, exclude: set[str] | None = None
+) -> list[MissionCandidate]:
     """페르소나에 맞고 안전한 템플릿을 골라 슬롯을 채운 seed 미션을 만든다.
 
     grounded_on은 비워둔다(컨텍스트 관계에서 생성 단계가 채움 → M3/M5 기여 분리).
+    exclude(이미 시도한 template_id)는 건너뛰어 재생성이 새 후보를 보게 한다.
     """
+    exclude = exclude or set()
     seeds: list[MissionCandidate] = []
-    for t in pool.candidate_templates(pkg)[:n]:
+    for t in pool.candidate_templates(pkg):
+        if len(seeds) >= n:
+            break
+        if t["id"] in exclude:
+            continue
         params = compute_params(t, pkg_client, pkg)
         title = t["template"].format(**params) if params else t["template"]
         duration = params.get("duration") or params.get("minutes")

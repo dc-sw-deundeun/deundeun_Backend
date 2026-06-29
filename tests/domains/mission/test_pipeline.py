@@ -196,6 +196,22 @@ def test_trap_safety_zero_with_M4(monkeypatch, persona, forbidden) -> None:
     assert [m for m in ms.missions if pool.check_mission(m, persona)] == []
 
 
+def test_llm_failure_is_marked_fallback_not_generated(monkeypatch) -> None:
+    """LLM 호출이 실패하면 status/source가 generated가 아니라 fallback이어야 한다(CodeRabbit #3)."""
+    monkeypatch.setattr(settings, "openai_api_key", None)
+
+    async def boom(self, payload):
+        raise RuntimeError("api down")
+
+    monkeypatch.setattr(LLMClient, "_call", boom)
+    pipe = MissionPipeline(llm=LLMClient(api_key="test"))
+    ms = asyncio.run(pipe.generate_missions(_ckd_trap(), PipelineConfig(M1_template=True), n=3))
+
+    assert ms.status == "fallback"
+    assert ms.missions
+    assert all(m.source == "fallback" for m in ms.missions)
+
+
 def test_extract_json_handles_code_fences() -> None:
     from app.domains.mission.agents.base import _extract_json
 

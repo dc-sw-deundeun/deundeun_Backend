@@ -131,8 +131,7 @@ class LLMClient:
                 async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
                     response = await client.post(url, headers=headers, json=payload)
                 if response.status_code in _RETRY_STATUS and attempt < _MAX_RETRIES - 1:
-                    retry_after = response.headers.get("Retry-After")
-                    wait = float(retry_after) if retry_after else float(2**attempt)
+                    wait = _retry_after_seconds(response.headers.get("Retry-After"), attempt)
                     await asyncio.sleep(min(wait, 30.0))
                     continue
                 response.raise_for_status()
@@ -162,6 +161,16 @@ class LLMClient:
         return Usage(
             prompt_tokens=prompt, completion_tokens=completion, total_tokens=total, calls=1
         )
+
+
+def _retry_after_seconds(retry_after: str | None, attempt: int) -> float:
+    """Retry-After(초 단위 숫자)를 파싱하되, 숫자가 아니거나(HTTP-date 등) 없으면 지수 백오프로 폴백."""
+    if retry_after:
+        try:
+            return float(retry_after)
+        except ValueError:
+            pass
+    return float(2**attempt)
 
 
 def _extract_json(text: str) -> dict[str, Any]:

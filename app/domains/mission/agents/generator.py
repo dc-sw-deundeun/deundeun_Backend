@@ -59,18 +59,23 @@ class Generator:
         pkg: PKG,
         config: PipelineConfig,
         n: int,
-    ) -> tuple[list[MissionCandidate], Usage]:
-        seeds = build_seeds(pkg_client, pkg, n) if config.M1_template else None
+        exclude: set[str] | None = None,
+    ) -> tuple[list[MissionCandidate], Usage, bool]:
+        """(candidates, usage, used_fallback) 반환. used_fallback=True면 LLM 미사용/실패로
+        결정적 fallback을 쓴 것 — 상위(pipeline)가 source/status를 정확히 기록하도록 신호."""
+        seeds = build_seeds(pkg_client, pkg, n, exclude) if config.M1_template else None
 
         if not self.llm.has_llm:
-            return self._fallback(seeds, pkg, n), Usage()
+            return self._fallback(seeds, pkg, n, exclude), Usage(), True
 
         try:
             if config.M1_template:
-                return await self._generate_phrase(ctx, seeds or [], config)
-            return await self._generate_full(ctx, config, n)
+                cands, usage = await self._generate_phrase(ctx, seeds or [], config)
+            else:
+                cands, usage = await self._generate_full(ctx, config, n)
+            return cands, usage, False
         except Exception:
-            return self._fallback(seeds, pkg, n), Usage()
+            return self._fallback(seeds, pkg, n, exclude), Usage(), True
 
     # ----- M1 OFF: 전체 생성 -----
     async def _generate_full(
@@ -187,12 +192,21 @@ class Generator:
 
     # ----- fallback (LLM 없음/실패) -----
     def _fallback(
-        self, seeds: list[MissionCandidate] | None, pkg: PKG, n: int
+        self,
+        seeds: list[MissionCandidate] | None,
+        pkg: PKG,
+        n: int,
+        exclude: set[str] | None = None,
     ) -> list[MissionCandidate]:
         if seeds:
             return seeds
-        out = []
-        for t in pool.candidate_templates(pkg)[:n]:
+        exclude = exclude or set()
+        out: list[MissionCandidate] = []
+        for t in pool.candidate_templates(pkg):
+            if len(out) >= n:
+                break
+            if t["id"] in exclude:
+                continue
             params = {k: v.get("base") for k, v in t.get("slots", {}).items()}
             title = t["template"].format(**params) if params else t["template"]
             out.append(MissionCandidate(title=title, mission_type=t["type"], template_id=t["id"]))
@@ -284,5 +298,6 @@ _FREE_FORMAT_FULL = (
     "blank line."
 )
 _FREE_FORMAT_PHRASE = (
-    " For each mission in order output '미션{index}: 이유 - ... / 근거 - A->B' on its own block."
+    " For each mission in order, output a block starting with '미션{index}', then lines "
+    "'이유: ...' and '근거: A->B' (colon-separated)."
 )

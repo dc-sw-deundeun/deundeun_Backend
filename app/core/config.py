@@ -64,6 +64,13 @@ class Settings(BaseSettings):
     ocr_acquire_timeout_seconds: float = 1.0
     ocr_retry_after_seconds: int = 10
 
+    @field_validator("llm_provider")
+    @classmethod
+    def validate_llm_provider(cls, value: str) -> str:
+        if value not in ("openai", "clova"):
+            raise ValueError("LLM_PROVIDER must be 'openai' or 'clova'")
+        return value
+
     @model_validator(mode="after")
     def validate_production_secrets(self) -> "Settings":
         if self.app_env in ("production", "staging"):
@@ -74,6 +81,14 @@ class Settings(BaseSettings):
             if not self.clova_ocr_invoke_url or not self.clova_ocr_secret_key:
                 raise ValueError(
                     "CLOVA_OCR_INVOKE_URL and CLOVA_OCR_SECRET_KEY must be configured in production/staging"
+                )
+            if self.llm_provider == "clova" and not self.clova_studio_api_key:
+                raise ValueError(
+                    "CLOVA_STUDIO_API_KEY must be configured when LLM_PROVIDER=clova in production/staging"
+                )
+            if self.llm_provider == "openai" and not self.openai_api_key:
+                raise ValueError(
+                    "OPENAI_API_KEY must be configured when LLM_PROVIDER=openai in production/staging"
                 )
         return self
 

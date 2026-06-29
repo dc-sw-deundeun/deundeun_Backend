@@ -34,20 +34,29 @@ class MissionPipeline:
         client = InMemoryPKG(pkg)
         verifier = Verifier(client)
         gating = config.M2_graph_constrained or config.M4_verify_gate
-        source = "generated" if self.llm.has_llm else "fallback"
 
         t0 = perf_counter()
         ctx = self.context_agent.build(client, config)
 
         accepted: list[MissionCandidate] = []
         rejected_all: list[str] = []
+        tried_ids: set[str] = set()  # 이미 시도한 template_id → 재생성 시 제외
         usage_total = Usage()
         regen = 0
+        any_fallback = False
+        any_success = False
 
         while True:
             needed = n - len(accepted)
-            cands, usage = await self.generator.generate(ctx, client, pkg, config, needed)
+            cands, usage, used_fallback = await self.generator.generate(
+                ctx, client, pkg, config, needed, exclude=tried_ids
+            )
             usage_total = usage_total.add(usage)
+            any_fallback = any_fallback or used_fallback
+            any_success = any_success or not used_fallback
+            for c in cands:
+                if c.template_id:
+                    tried_ids.add(c.template_id)
 
             if gating:
                 acc, rej = verifier.filter(cands, pkg, config)
@@ -61,7 +70,7 @@ class MissionPipeline:
                     accepted.append(c)
                     seen.add(c.title)
 
-            if len(accepted) >= n or not gating or regen >= _MAX_REGEN or not rej:
+            if len(accepted) >= n or not gating or regen >= _MAX_REGEN or not rej or used_fallback:
                 break
             regen += 1
 
@@ -72,11 +81,17 @@ class MissionPipeline:
         if config.M4_verify_gate:
             accepted += verifier.referral_missions(pkg, accepted)
 
+        # LLM 실패로 fallback을 쓴 경우를 source/status에 정직하게 반영
+        if not self.llm.has_llm or (any_fallback and not any_success):
+            source = "fallback"
+        else:
+            source = "generated"
+
         missions = [GeneratedMission(**{**c.model_dump(), "source": source}) for c in accepted]
 
         if source == "fallback":
             status = "fallback"
-        elif not enough:
+        elif not enough or (any_fallback and any_success):
             status = "partial"
         else:
             status = "generated"
