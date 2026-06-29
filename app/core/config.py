@@ -24,8 +24,9 @@ class Settings(BaseSettings):
 
     analysis_server_base_url: str | None = None
     analysis_server_api_key: str | None = None
-    analysis_callback_secret: str | None = None
+    analysis_callback_secret: str | None = "dev-analysis-callback-secret"
     analysis_polling_interval_seconds: int = 60
+    analysis_client: str = "stub"
 
     openai_api_key: str | None = None
     openai_model: str = "gpt-4.1-mini"

@@ -134,6 +134,16 @@ class RecordRepository:
         record.verified_at = _now()
         self._db.flush()
 
+    def set_analysis_status(self, record: CheckupRecord, status: str) -> None:
+        record.analysis_status = status
+        self._db.flush()
+
+    def get_record_for_user(self, user_id: int, record_id: int) -> CheckupRecord | None:
+        record = self.get_record(record_id)
+        if record is None or record.user_id != user_id:
+            return None
+        return record
+
     def list_metrics(self, record_id: int) -> list[CheckupMetricResult]:
         stmt = select(CheckupMetricResult).where(CheckupMetricResult.record_id == record_id)
         return list(self._db.execute(stmt).scalars().all())
@@ -190,6 +200,30 @@ class RecordRepository:
             self._db.add(metric)
         self._db.flush()
         return len(metrics)
+
+    def upsert_analysis_metrics(
+        self,
+        record_id: int,
+        metrics: list[CheckupMetricResult],
+    ) -> None:
+        self._lock_record(record_id)
+        existing = {
+            metric.metric_code: metric
+            for metric in self.list_metrics(record_id)
+            if metric.source == MetricSource.ANALYSIS.value
+        }
+        for metric in metrics:
+            metric.record_id = record_id
+            current = existing.get(metric.metric_code)
+            if current is not None:
+                current.value = metric.value
+                current.unit = metric.unit
+                current.status = metric.status
+                current.interpretation = metric.interpretation
+                current.confidence = metric.confidence
+            else:
+                self._db.add(metric)
+        self._db.flush()
 
     def update_metric_value(
         self, metric: CheckupMetricResult, value: str, unit: str | None
