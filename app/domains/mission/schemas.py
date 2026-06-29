@@ -53,18 +53,18 @@ class PkgEdge(BaseModel):
 
 
 class Demographics(BaseModel):
-    age: int | None = None
+    age: int | None = Field(default=None, ge=0, le=130)
     sex: str | None = None
 
 
 class Wearable(BaseModel):
-    steps_avg: int | None = None
-    resting_hr: int | None = None
-    sleep_hours_avg: float | None = None
+    steps_avg: int | None = Field(default=None, ge=0)
+    resting_hr: int | None = Field(default=None, ge=0)
+    sleep_hours_avg: float | None = Field(default=None, ge=0)
 
 
 class History(BaseModel):
-    success_rate: float | None = None  # 0.0~1.0, 과거 미션 완료율
+    success_rate: float | None = Field(default=None, ge=0.0, le=1.0)  # 과거 미션 완료율
     recent_mission_titles: list[str] = Field(default_factory=list)
 
 
@@ -137,7 +137,7 @@ class StructuredContext(BaseModel):
 
 class Execution(BaseModel):
     when: str = ""  # "식후" 등
-    duration_min: int | None = None
+    duration_min: int | None = Field(default=None, ge=0)
 
 
 class MissionCandidate(BaseModel):
@@ -145,7 +145,7 @@ class MissionCandidate(BaseModel):
     rationale: str = ""
     grounded_on: list[str] = Field(default_factory=list)
     execution: Execution = Field(default_factory=Execution)
-    difficulty: int = 1
+    difficulty: int = Field(default=1, ge=1)
     mission_type: str = ""
     template_id: str | None = None
 
@@ -155,7 +155,7 @@ class GeneratedMission(BaseModel):
     rationale: str = ""
     grounded_on: list[str] = Field(default_factory=list)
     execution: Execution = Field(default_factory=Execution)
-    difficulty: int = 1
+    difficulty: int = Field(default=1, ge=1)
     mission_type: str = ""
     template_id: str | None = None
     source: str = "generated"  # generated | fallback

@@ -226,3 +226,17 @@ def test_check_mission_direct() -> None:
     assert not pool.check_mission(
         GeneratedMission(title="저염식 한 끼", mission_type="diet"), _ckd_trap()
     )
+
+
+def test_schema_rejects_out_of_range_boundary_values() -> None:
+    """경계 모델 수치 범위를 스키마에서 고정한다(CodeRabbit)."""
+    from pydantic import ValidationError
+
+    from app.domains.mission.schemas import Execution, History, Wearable
+
+    with pytest.raises(ValidationError):
+        History(success_rate=1.5)
+    with pytest.raises(ValidationError):
+        Wearable(steps_avg=-1)
+    with pytest.raises(ValidationError):
+        Execution(duration_min=-5)

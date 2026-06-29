@@ -132,7 +132,7 @@ class Generator:
                     execution=Execution(
                         when=(ex.get("when") or ""), duration_min=ex.get("duration_min")
                     ),
-                    difficulty=int(m.get("difficulty") or 1),
+                    difficulty=max(1, int(m.get("difficulty") or 1)),
                     mission_type=mt,
                 )
             )

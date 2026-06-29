@@ -4,7 +4,7 @@
 PKG가 어디서/어떻게 만들어지는지는 전혀 모른다(별도 API·다중 호출자 가능). 트리거(검진완료
 콜백·일일 배치·`/today` lazy 생성)도 모르는 **순수 callable**이다.
 
-```
+```text
 [PKG 생성: 별도 브랜치/API]  ──▶  PKG  ──▶  MissionPipeline.generate_missions(pkg, config)  ──▶  MissionSet
 ```
 
@@ -59,11 +59,16 @@ mission_set = await pipe.generate_missions(pkg, PipelineConfig(...), n=3)
 }
 ```
 
-## PKG를 객체 대신 "서비스"로 줄 경우 (권장 확장점)
+## PKG를 객체 대신 "서비스"로 줄 경우 (확장 메모)
 
-엔진 내부는 PKG 쿼리를 `PKGClient` Protocol(`pkg.py`)로 추상화한다. 현재 구현은
-`InMemoryPKG`(PKG 객체 래핑). PKG가 원격 API/Neo4j면 **같은 Protocol을 구현**해 끼우면
-엔진 무수정으로 동작한다.
+엔진 내부의 그래프 쿼리(M3 relations, M2 edge_exists)는 `PKGClient` Protocol(`pkg.py`)로
+추상화돼 있고, 현재 `MissionPipeline.generate_missions(pkg)`는 입력 PKG를 `InMemoryPKG(pkg)`로
+감싸서 쓴다. 즉 **현재 계약은 "PKG 객체를 조립해 넘기는 것"** 이다 — 원격/Neo4j PKG 서비스는
+PKG 객체를 만들어 전달하면 된다.
+
+> 완전한 원격 `PKGClient` 주입(객체 없이 쿼리만)은 아직 안 된다: 안전 게이트(`pool.check_mission`,
+> `verifier.referral_missions`)가 PKG 객체의 `conditions`/`medications`/`flags`를 직접 참조하므로,
+> 주입형으로 바꾸려면 그 부분까지 클라이언트 기반으로 리팩터해야 한다(별도 작업).
 
 ```python
 class PKGClient(Protocol):
