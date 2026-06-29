@@ -28,8 +28,11 @@ router = APIRouter()
 
 @router.post(
     "/email/verify/request",
-    summary="이메일 인증 코드 발송",
-    description="6자리 인증 코드를 이메일로 발송합니다. SMTP 미설정 시 서버 로그에 코드가 출력됩니다.",
+    summary="[프론트 사용] 이메일 인증 코드 발송",
+    description=(
+        "회원가입 또는 비밀번호 재설정 전 6자리 인증 코드를 이메일로 발송합니다. "
+        "SMTP 미설정 시 서버 로그에 코드가 출력됩니다."
+    ),
 )
 async def request_email_verification(
     body: EmailVerifyRequest,
@@ -41,8 +44,8 @@ async def request_email_verification(
 
 @router.post(
     "/email/verify/confirm",
-    summary="이메일 인증 코드 확인",
-    description="인증 성공 시 signup에 사용할 `verification_token`을 반환합니다.",
+    summary="[프론트 사용] 이메일 인증 코드 확인",
+    description="인증 성공 시 회원가입에 사용할 `verification_token`을 반환합니다.",
 )
 def confirm_email_verification(
     body: EmailVerifyConfirmRequest,
@@ -52,7 +55,11 @@ def confirm_email_verification(
     return success_response(message="이메일 인증이 완료되었습니다.", data=result.model_dump())
 
 
-@router.post("/signup", summary="회원가입", description="이메일 인증 완료 후 계정을 생성합니다.")
+@router.post(
+    "/signup",
+    summary="[프론트 사용] 회원가입",
+    description="이메일 인증 완료 후 계정을 생성합니다. 가입 직후 온보딩 단계는 CONSENT입니다.",
+)
 def signup(
     body: SignupRequest,
     service: AuthService = Depends(get_auth_service),
@@ -63,7 +70,7 @@ def signup(
 
 @router.post(
     "/login",
-    summary="로그인",
+    summary="[프론트 사용] 로그인",
     description="access_token과 refresh_token을 발급합니다. Swagger 테스트 시 access_token을 Authorize에 등록하세요.",
 )
 def login(
@@ -76,7 +83,7 @@ def login(
 
 @router.post(
     "/refresh",
-    summary="토큰 재발급",
+    summary="[프론트 사용] 토큰 재발급",
     description="refresh_token으로 새 access·refresh token을 발급합니다.",
 )
 def refresh_token(
@@ -89,7 +96,7 @@ def refresh_token(
 
 @router.post(
     "/logout",
-    summary="로그아웃",
+    summary="[프론트 사용] 로그아웃",
     description="현재 access token을 블랙리스트에 등록하고 refresh token을 폐기합니다. Authorization 헤더 필요.",
     dependencies=[Security(bearer_scheme)],
 )
@@ -104,7 +111,11 @@ def logout(
     return success_response(message="로그아웃되었습니다.")
 
 
-@router.post("/password/reset/request", summary="비밀번호 재설정 코드 발송")
+@router.post(
+    "/password/reset/request",
+    summary="[프론트 사용] 비밀번호 재설정 코드 발송",
+    description="가입된 이메일 여부를 노출하지 않는 방식으로 비밀번호 재설정 코드를 발송합니다.",
+)
 async def request_password_reset(
     body: PasswordResetRequest,
     service: AuthService = Depends(get_auth_service),
@@ -115,8 +126,11 @@ async def request_password_reset(
 
 @router.post(
     "/password/reset/confirm",
-    summary="비밀번호 재설정 완료",
-    description="재설정 후 모든 refresh·access token이 무효화됩니다.",
+    summary="[프론트 사용] 비밀번호 재설정 완료",
+    description=(
+        "인증 코드 확인 후 새 비밀번호로 변경합니다. 기존 비밀번호와 같은 값은 거부되며, "
+        "재설정 후 모든 refresh·access token이 무효화됩니다."
+    ),
 )
 def confirm_password_reset(
     body: PasswordResetConfirmRequest,
@@ -128,7 +142,7 @@ def confirm_password_reset(
 
 @router.post(
     "/policies/agree",
-    summary="온보딩 약관 동의",
+    summary="[프론트 사용] 온보딩 약관 동의",
     description=(
         "필수 약관(이용약관·개인정보·민감 건강정보)에 모두 동의하면 온보딩 단계가 "
         "CONSENT → WEARABLE로 전이됩니다. Authorization 헤더 필요."
@@ -146,7 +160,7 @@ def agree_policies(
 
 @router.get(
     "/me",
-    summary="내 프로필 조회",
+    summary="[프론트 사용] 내 프로필 조회",
     description="인증된 사용자의 프로필을 반환합니다. Authorization 헤더 필요.",
     dependencies=[Security(bearer_scheme)],
 )

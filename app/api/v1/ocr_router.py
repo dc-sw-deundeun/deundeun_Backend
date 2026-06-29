@@ -11,7 +11,14 @@ from app.domains.user.schemas import CurrentUser
 router = APIRouter()
 
 
-@router.get("/jobs/{job_id}")
+@router.get(
+    "/jobs/{job_id}",
+    summary="[프론트 사용] OCR job 상태 조회",
+    description=(
+        "OCR 작업 상태를 조회합니다. 현재 일반 검진 업로드는 `POST /records/checkups/ocr-preview` "
+        "응답을 우선 사용하고, 비동기 상태 확인이 필요한 화면에서만 호출하세요."
+    ),
+)
 def get_job_status(
     job_id: int,
     current_user: CurrentUser = Depends(get_current_user),

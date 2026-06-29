@@ -57,7 +57,12 @@ configure_cors(app, settings)
 register_exception_handlers(app)
 
 
-@app.get("/health", tags=["Health"])
+@app.get(
+    "/health",
+    tags=["Health"],
+    summary="[서버/내부] 서버 상태 확인",
+    description="로드밸런서, 배포 스크립트, 운영자가 사용하는 health check입니다. 프론트 화면 구현 대상이 아닙니다.",
+)
 async def health_check():
     return {"status": "ok"}
 

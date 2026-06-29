@@ -27,7 +27,14 @@ from app.domains.user.schemas import CurrentUser
 router = APIRouter()
 
 
-@router.post("/evaluate")
+@router.post(
+    "/evaluate",
+    summary="[프론트 사용] 건강검진 항목 평가",
+    description=(
+        "검진 항목 label/value/unit을 표준 지표와 매칭하고 정상·주의·위험 상태, 설명, "
+        "UI용 summary/detail view를 반환합니다. 로그인 없이 호출 가능하며 IP 기준 rate limit이 적용됩니다."
+    ),
+)
 async def evaluate_health_metrics(
     request: HealthMetricEvaluationRequest,
     http_request: Request,
@@ -55,7 +62,14 @@ async def evaluate_health_metrics(
     )
 
 
-@router.post("/analyses")
+@router.post(
+    "/analyses",
+    summary="[프론트 사용] 건강검진 분석 저장",
+    description=(
+        "인증된 사용자의 건강검진 항목 평가 결과를 저장하고 analysis_id와 UI summary를 반환합니다. "
+        "Authorization 헤더 필요."
+    ),
+)
 async def create_health_metric_analysis(
     request: HealthMetricEvaluationRequest,
     current_user: CurrentUser = Depends(get_current_user),

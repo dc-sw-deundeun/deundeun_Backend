@@ -5,6 +5,15 @@
 
 범례: 구현, 부분, stub
 
+Swagger summary 표기:
+
+| 표기 | 의미 |
+|------|------|
+| `[프론트 사용]` | 현재 프론트엔드가 연동해도 되는 구현 API |
+| `[호환]` | 기존 클라이언트 호환용 alias, 신규 작업은 설명의 권장 API 사용 |
+| `[서버/내부]` | 운영 확인, 외부 callback 등 프론트 화면에서 직접 호출하지 않는 API |
+| `[프론트 작업 제외]` | 후속 Phase 또는 미구현 API, 호출 시 501/NOT_IMPLEMENTED 기대 |
+
 ## 요약
 
 | 영역 | 상태 | 프론트 연동 |
@@ -43,13 +52,20 @@
 |--------|------|------|
 | GET | `/status` | 온보딩 진행 상태 |
 | POST | `/wearable` | wearable CONNECT/SKIP |
+| DELETE | `/wearable/{provider}` | wearable 연동 해제 |
 | POST | `/complete` | 온보딩 완료 |
+
+프론트 작업 제외:
+
+| Method | Path | 상태 |
+|--------|------|------|
+| POST | `/checkup` | placeholder, 초기 검진 업로드는 Record API 사용 |
 
 ### Record `/api/v1/records`
 
 | Method | Path | 설명 |
 |--------|------|------|
-| POST | `/checkups/upload` | 검진 이미지 업로드, OCR preview |
+| POST | `/checkups/upload` | 호환용 alias, 신규 작업은 `/checkups/ocr-preview` 사용 |
 | POST | `/checkups/ocr-preview` | OCR preview |
 | POST | `/checkups` | 검진 결과 커밋 |
 | POST | `/checkups/manual` | 수동 검진 입력 |
