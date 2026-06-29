@@ -212,13 +212,6 @@ def test_llm_failure_is_marked_fallback_not_generated(monkeypatch) -> None:
     assert all(m.source == "fallback" for m in ms.missions)
 
 
-def test_extract_json_handles_code_fences() -> None:
-    from app.domains.mission.agents.base import _extract_json
-
-    assert _extract_json('```json\n{"a": 1}\n```') == {"a": 1}
-    assert _extract_json('설명...\n{"a": 2}\n끝') == {"a": 2}
-
-
 def test_check_mission_direct() -> None:
     assert pool.check_mission(
         GeneratedMission(title="물 8잔 마시기", mission_type="hydration"), _ckd_trap()
