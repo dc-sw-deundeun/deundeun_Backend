@@ -92,6 +92,22 @@ def test_upload_invalid_base64_rejected(api):
     assert resp.json()["error_code"] == "INVALID_IMAGE_FORMAT"
 
 
+def test_upload_data_uri_base64_accepted(api):
+    client, _ = api
+    encoded = f"data:image/png;base64,{_PNG_B64}"
+    resp = client.post("/api/v1/records/checkups/ocr-preview", json={"images": [encoded]})
+    assert resp.status_code == 200
+    assert resp.json()["data"]["page_count"] == 1
+
+
+def test_upload_multiline_base64_accepted(api):
+    client, _ = api
+    chunks = [_PNG_B64[i : i + 8] for i in range(0, len(_PNG_B64), 8)]
+    encoded = "\n".join(chunks)
+    resp = client.post("/api/v1/records/checkups/ocr-preview", json={"images": [encoded]})
+    assert resp.status_code == 200
+
+
 def test_upload_unsupported_format_rejected(api):
     client, _ = api
     bmp_bytes = b"BM" + b"\x00" * 30

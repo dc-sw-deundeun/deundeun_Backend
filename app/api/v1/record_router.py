@@ -1,5 +1,3 @@
-import base64
-
 from fastapi import APIRouter, Depends, Query
 
 from app.core.config import settings
@@ -28,6 +26,7 @@ from app.domains.record.schemas import (
 )
 from app.domains.record.service import RecordService
 from app.domains.user.schemas import CurrentUser
+from app.infrastructure.ocr.encoding import decode_base64_image, normalize_base64_image
 from app.infrastructure.ocr.format import detect_image_format
 
 router = APIRouter()
@@ -38,7 +37,16 @@ def _metric_list(service: RecordService, user_id: int, record_id: int) -> list[d
     return [m.model_dump() for m in metrics]
 
 
-@router.post("/checkups/upload", status_code=200)
+@router.post(
+    "/checkups/upload",
+    status_code=200,
+    summary="[호환] 검진 이미지 업로드 OCR preview",
+    description=(
+        "`POST /records/checkups/ocr-preview`와 동일한 호환용 alias입니다. "
+        "신규 프론트 작업은 `/checkups/ocr-preview`를 사용하세요."
+    ),
+    deprecated=True,
+)
 async def upload_checkup(
     body: MultiImageUploadRequest,
     current_user: CurrentUser = Depends(get_current_user),
@@ -47,7 +55,15 @@ async def upload_checkup(
     return await preview_checkup_ocr(body, current_user, ocr_service)
 
 
-@router.post("/checkups/ocr-preview", status_code=200)
+@router.post(
+    "/checkups/ocr-preview",
+    status_code=200,
+    summary="[프론트 사용] 검진 이미지 OCR preview",
+    description=(
+        "PNG/JPEG 이미지를 base64 문자열 배열로 업로드합니다. data URI와 줄바꿈 포함 base64도 허용합니다. "
+        "응답의 metrics를 화면에서 확인·수정한 뒤 `POST /records/checkups`로 저장하세요."
+    ),
+)
 async def preview_checkup_ocr(
     body: MultiImageUploadRequest,
     current_user: CurrentUser = Depends(get_current_user),
@@ -58,16 +74,28 @@ async def preview_checkup_ocr(
 
     images: list[bytes] = []
     total_bytes = 0
-    for encoded in body.images:
+    for index, encoded in enumerate(body.images, start=1):
         try:
-            raw = base64.b64decode(encoded, validate=True)
-        except Exception as exc:
+            raw = decode_base64_image(encoded)
+        except ValueError as exc:
+            had_data_uri = encoded.strip().lower().startswith("data:image/")
+            normalized = normalize_base64_image(encoded)
+            message = "유효하지 않은 base64 인코딩입니다."
+            if had_data_uri and not normalized:
+                message = "data URI 형식이지만 base64 payload가 비어 있습니다."
+            elif had_data_uri:
+                message = (
+                    "data URI 형식의 이미지를 디코드하지 못했습니다. "
+                    "base64 payload를 확인해 주세요."
+                )
             raise BadRequestException(
-                message="유효하지 않은 base64 인코딩입니다.",
+                message=message,
                 error_code="INVALID_IMAGE_FORMAT",
             ) from exc
         if detect_image_format(raw) is None:
-            raise UnsupportedMediaTypeException()
+            raise UnsupportedMediaTypeException(
+                message=f"{index}번째 이미지는 지원하지 않는 형식입니다. PNG 또는 JPEG만 가능합니다."
+            )
         total_bytes += len(raw)
         if len(raw) > settings.max_single_upload_size_bytes:
             max_mb = settings.max_single_upload_size_bytes // (1024 * 1024)
@@ -104,7 +132,15 @@ async def preview_checkup_ocr(
     )
 
 
-@router.post("/checkups", status_code=200)
+@router.post(
+    "/checkups",
+    status_code=200,
+    summary="[프론트 사용] OCR preview 결과 저장",
+    description=(
+        "OCR preview 응답의 `ocr_status`, `failed_pages`, `content_hash`, `metrics`를 전달해 "
+        "검진 기록을 저장합니다. 같은 `content_hash`는 중복 업로드로 처리됩니다."
+    ),
+)
 def commit_checkup(
     body: CommitCheckupRequest,
     current_user: CurrentUser = Depends(get_current_user),
@@ -145,7 +181,12 @@ def commit_checkup(
     )
 
 
-@router.post("/checkups/manual", status_code=201)
+@router.post(
+    "/checkups/manual",
+    status_code=201,
+    summary="[프론트 사용] 수동 검진 기록 생성",
+    description="이미지 없이 사용자가 직접 입력한 검진 수치로 기록을 생성합니다.",
+)
 def create_manual_checkup(
     body: ManualCheckupRequest,
     current_user: CurrentUser = Depends(get_current_user),
@@ -163,7 +204,11 @@ def create_manual_checkup(
     )
 
 
-@router.get("/checkups")
+@router.get(
+    "/checkups",
+    summary="[프론트 사용] 검진 기록 목록 조회",
+    description="인증된 사용자의 검진 기록 목록을 페이지 단위로 조회합니다.",
+)
 def list_checkups(
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),
@@ -174,7 +219,11 @@ def list_checkups(
     return success_response(data=result.model_dump())
 
 
-@router.get("/checkups/{record_id}")
+@router.get(
+    "/checkups/{record_id}",
+    summary="[프론트 사용] 검진 기록 상세 조회",
+    description="검진 기록의 상태, 측정일, 지표 목록을 조회합니다.",
+)
 def get_checkup(
     record_id: int,
     current_user: CurrentUser = Depends(get_current_user),
@@ -184,7 +233,11 @@ def get_checkup(
     return success_response(data=detail.model_dump())
 
 
-@router.get("/checkups/{record_id}/trends")
+@router.get(
+    "/checkups/{record_id}/trends",
+    summary="[프론트 사용] 검진 지표 추세 조회",
+    description="선택한 검진 기록의 지표별 추세 데이터를 조회합니다.",
+)
 def get_checkup_trends(
     record_id: int,
     current_user: CurrentUser = Depends(get_current_user),
@@ -194,7 +247,11 @@ def get_checkup_trends(
     return success_response(data=trends.model_dump())
 
 
-@router.get("/checkups/{record_id}/metrics")
+@router.get(
+    "/checkups/{record_id}/metrics",
+    summary="[프론트 사용] 검진 지표 목록 조회",
+    description="검진 기록에 포함된 지표 목록만 조회합니다.",
+)
 def get_checkup_metrics(
     record_id: int,
     current_user: CurrentUser = Depends(get_current_user),
@@ -203,7 +260,11 @@ def get_checkup_metrics(
     return success_response(data=_metric_list(service, current_user.id, record_id))
 
 
-@router.patch("/checkups/{record_id}/metrics/{metric_id}")
+@router.patch(
+    "/checkups/{record_id}/metrics/{metric_id}",
+    summary="[프론트 사용] 검진 지표 단일 수정",
+    description="사용자가 확인한 단일 검진 지표의 값과 단위를 수정합니다.",
+)
 def update_metric(
     record_id: int,
     metric_id: int,
@@ -218,7 +279,11 @@ def update_metric(
     )
 
 
-@router.put("/checkups/{record_id}/metrics")
+@router.put(
+    "/checkups/{record_id}/metrics",
+    summary="[프론트 사용] 검진 지표 일괄 수정",
+    description="검수 화면에서 여러 검진 지표의 값과 단위를 한 번에 수정합니다.",
+)
 def bulk_update_metrics(
     record_id: int,
     body: MetricBulkUpdateRequest,
@@ -232,7 +297,14 @@ def bulk_update_metrics(
     )
 
 
-@router.post("/checkups/{record_id}/verify")
+@router.post(
+    "/checkups/{record_id}/verify",
+    summary="[프론트 사용] 검진 검수 완료",
+    description=(
+        "사용자 확인이 끝난 검진 기록을 VERIFIED로 전환합니다. "
+        "온보딩 INITIAL_CHECKUP 단계 사용자는 CHECKUP_VERIFIED 단계로 전이됩니다."
+    ),
+)
 def verify_checkup(
     record_id: int,
     body: VerifyRequest,
@@ -246,7 +318,11 @@ def verify_checkup(
     )
 
 
-@router.delete("/checkups/{record_id}")
+@router.delete(
+    "/checkups/{record_id}",
+    summary="[프론트 사용] 검진 기록 삭제",
+    description="인증된 사용자의 검진 기록과 관련 지표를 삭제합니다.",
+)
 async def delete_checkup(
     record_id: int,
     current_user: CurrentUser = Depends(get_current_user),
@@ -256,11 +332,19 @@ async def delete_checkup(
     return success_response(message="검진 기록을 삭제했습니다.")
 
 
-@router.post("/meals")
+@router.post(
+    "/meals",
+    summary="[프론트 작업 제외] 식사 기록 생성 placeholder",
+    description="식사 기록 API는 아직 구현되지 않았습니다. 호출 시 NOT_IMPLEMENTED(501)를 반환합니다.",
+)
 async def create_meal_record(current_user: CurrentUser = Depends(get_current_user)):
     return not_implemented_response()
 
 
-@router.get("/meals")
+@router.get(
+    "/meals",
+    summary="[프론트 작업 제외] 식사 기록 목록 placeholder",
+    description="식사 기록 API는 아직 구현되지 않았습니다. 호출 시 NOT_IMPLEMENTED(501)를 반환합니다.",
+)
 async def list_meal_records(current_user: CurrentUser = Depends(get_current_user)):
     return not_implemented_response()
