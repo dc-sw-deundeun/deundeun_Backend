@@ -7,7 +7,14 @@ from app.core.config import settings
 from app.domains.mission import pool
 from app.domains.mission.agents.base import LLMClient
 from app.domains.mission.agents.pipeline import MissionPipeline
-from app.domains.mission.schemas import PKG, GeneratedMission, PipelineConfig, PkgEdge, PkgNode
+from app.domains.mission.schemas import (
+    PKG,
+    GeneratedMission,
+    PipelineConfig,
+    PkgEdge,
+    PkgNode,
+    Wearable,
+)
 
 # ---------------------------------------------------------------------------
 # 페르소나 헬퍼
@@ -146,7 +153,7 @@ def test_M1_numbers_come_from_rules_not_llm(monkeypatch) -> None:
     monkeypatch.setattr(settings, "openai_api_key", None)
     content = json.dumps({"items": [{"index": 0, "rationale": "이유", "grounded_on": []}]})
     monkeypatch.setattr(LLMClient, "_call", _chat_call(content))
-    persona = PKG(id="p", conditions=["type2_diabetes"], wearable={"steps_avg": 8000})
+    persona = PKG(id="p", conditions=["type2_diabetes"], wearable=Wearable(steps_avg=8000))
     cfg = PipelineConfig(M1_template=True, M5_structured=True)
     pipe = MissionPipeline(llm=LLMClient(api_key="test"))
     ms = asyncio.run(pipe.generate_missions(persona, cfg, n=1))
