@@ -142,6 +142,7 @@ docs/*
 !docs/deployment-onprem.md
 !docs/development-environment.md
 !docs/implementation-status.md
+!docs/api-record-ocr.md
 .github/ISSUE_TEMPLATE/config.yml
 .github/ISSUE_TEMPLATE/phase-*.yml
 
