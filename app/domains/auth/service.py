@@ -23,6 +23,7 @@ from app.domains.auth.exceptions import (
     NotVerifiedException,
     PolicyVersionMismatchException,
     ResendTooSoonException,
+    SamePasswordException,
     VerificationAttemptsExceededException,
     VerificationCodeExpiredException,
 )
@@ -213,6 +214,8 @@ class AuthService:
         user = self.repo.find_user_by_email(email)
         if user is None:
             raise InvalidCredentialsException()
+        if verify_password(new_password, user.password_hash):
+            raise SamePasswordException()
 
         user.password_hash = hash_password(new_password)
         now = datetime.now(UTC)

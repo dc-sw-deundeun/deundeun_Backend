@@ -60,6 +60,15 @@ class WeakPasswordException(AppException):
         )
 
 
+class SamePasswordException(AppException):
+    def __init__(self) -> None:
+        super().__init__(
+            status_code=400,
+            message="새 비밀번호는 기존 비밀번호와 달라야 합니다.",
+            error_code="SAME_PASSWORD",
+        )
+
+
 class InvalidVerificationCodeException(AppException):
     def __init__(self) -> None:
         super().__init__(

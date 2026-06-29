@@ -188,6 +188,31 @@ def test_tc018_password_reset_revokes_sessions(
     assert login_user(client, email="pr@example.com", password="NewPass1!").status_code == 200
 
 
+def test_password_reset_confirm_rejects_same_password(
+    client: TestClient, email_client: CapturingEmailClient
+) -> None:
+    signup_user(client, email_client, email="samepw@example.com", password="OldPass1!")
+
+    assert (
+        client.post(
+            f"{BASE}/password/reset/request", json={"email": "samepw@example.com"}
+        ).status_code
+        == 200
+    )
+    reset_code = email_client.codes["samepw@example.com"]
+    res = client.post(
+        f"{BASE}/password/reset/confirm",
+        json={
+            "email": "samepw@example.com",
+            "code": reset_code,
+            "new_password": "OldPass1!",
+        },
+    )
+
+    assert res.status_code == 400
+    assert res.json()["error_code"] == "SAME_PASSWORD"
+
+
 def test_password_reset_request_for_unknown_email_is_enumeration_safe(
     client: TestClient, email_client: CapturingEmailClient
 ) -> None:
