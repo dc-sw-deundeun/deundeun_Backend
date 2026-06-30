@@ -10,8 +10,6 @@ from app.core.exceptions import (
     UnsupportedMediaTypeException,
 )
 from app.core.response import success_response
-from app.database.session import get_db
-from app.domains.health_metric.service import HealthMetricAnalysisService
 from app.domains.ocr.dependencies import get_ocr_service, get_record_service
 from app.domains.ocr.service import FinalMetric, OcrService
 from app.domains.record.content_hash import compute_content_hash
@@ -232,6 +230,12 @@ def get_checkup_trends(
     return success_response(data=trends.model_dump())
 
 
+def _get_db_session():
+    from app.database.session import get_db
+
+    yield from get_db()
+
+
 @router.get(
     "/checkups/{record_id}/analysis",
     summary="[프론트 사용] 검진 기록 최신 HealthMetric 분석 조회",
@@ -243,8 +247,10 @@ def get_checkup_trends(
 def get_checkup_analysis(
     record_id: int,
     current_user: CurrentUser = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(_get_db_session),
 ):
+    from app.domains.health_metric.service import HealthMetricAnalysisService
+
     analysis = HealthMetricAnalysisService(db).get_latest_for_record(record_id, current_user.id)
     return success_response(data=analysis.model_dump(mode="json"))
 
