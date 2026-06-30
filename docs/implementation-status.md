@@ -14,7 +14,7 @@
 | Record / OCR | 구현 | 가능 |
 | HealthMetric | 구현 | 가능 |
 | Analysis | legacy stub | 프론트 작업 제외 |
-| Mission / Character | stub | 501 응답 |
+| Mission / Character | 부분 | Character 성장/동물 해금 API 구현 브랜치 진행 중 |
 | Home | stub | 501 응답 |
 | Notification | stub | 501 응답 |
 | My / Support | stub | 501 응답 |
@@ -85,12 +85,22 @@ OCR 업로드 플로우 상세는 [api-record-ocr.md](./api-record-ocr.md) 참�
 
 신규 프론트 화면은 `/api/v1/analysis/*`를 호출하지 않고 HealthMetric 분석 API를 사용합니다.
 
+### Character `/api/v1/characters` (구현 브랜치 진행 중)
+
+상세 계약은 [api-character-growth.md](./api-character-growth.md) 참조.
+
+| Method | Path | 설명 |
+|--------|------|------|
+| GET | `/me` | 내 캐릭터 성장 상태와 보유 동물 목록 조회 |
+| GET | `/animals` | 전체 동물 카탈로그와 내 locked/unlocked 상태 조회 |
+
+`POST /me/experience`, `PATCH /me/stage`는 서버/내부 placeholder이며 프론트 공개 API가 아닙니다.
+
 ## Stub API
 
 | Prefix | 상태 |
 |--------|------|
 | `/api/v1/missions` | 미션 API 미완성 (UserMission DB 레코드는 Phase 4에서 생성됨) |
-| `/api/v1/characters` | 성장/캐릭터 도메인 미완성 |
 | `/api/v1/home` | 홈 aggregation 미완성 |
 | `/api/v1/notifications` | 알림 도메인 미완성 |
 | `/api/v1/my` | 마이페이지·지원 기능 미완성 |
@@ -102,6 +112,7 @@ OCR 업로드 플로우 상세는 [api-record-ocr.md](./api-record-ocr.md) 참�
 | `001` ~ `008` | (기존) |
 | `009_add_analysis_schema` | analysis_jobs, summaries, mission_candidates, mission_templates seed, user_missions |
 | `010_add_health_metric_analysis_record_id` | health_metric_analyses.record_id 및 checkup_records 연결 |
+| `011_add_character_growth_schema` | character_profiles, character_growth_logs, character_owned_animals |
 
 ## 다음 구현 우선순위
 
