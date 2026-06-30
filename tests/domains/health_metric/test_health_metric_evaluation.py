@@ -139,54 +139,14 @@ def test_unknown_metric_returns_unknown_item() -> None:
     assert result.canonical_test_code is None
 
 
-def test_endpoint_returns_structured_evaluation_response(monkeypatch) -> None:
-    monkeypatch.setattr(settings, "openai_api_key", None)
-
+def test_evaluate_endpoint_is_removed() -> None:
     with TestClient(fastapi_app) as client:
         response = client.post(
             "/api/v1/health-metrics/evaluate",
-            json={
-                "sex": "male",
-                "metrics": [
-                    {"label": "공복혈당", "value": 126},
-                    {"label": "PHQ9", "value": 8},
-                ],
-            },
-        )
-
-    assert response.status_code == 200
-    body = response.json()
-    assert body["success"] is True
-    results = body["data"]["results"]
-    assert results[0]["canonical_test_code"] == "FPG"
-    assert results[0]["status"] == "risk"
-    assert results[1]["canonical_test_code"] == "PHQ9"
-    assert results[1]["status"] == "caution"
-    assert body["data"]["explanation"]["status"] == "fallback"
-    assert body["data"]["explanation"]["summary"]
-    assert body["data"]["explanation"]["item_explanations"]
-    assert body["data"]["ui"]["summary"]["cards"]
-    assert body["data"]["ui"]["details"]
-
-
-def test_evaluate_endpoint_rate_limit(monkeypatch) -> None:
-    monkeypatch.setattr(settings, "openai_api_key", None)
-    monkeypatch.setattr(settings, "health_metric_evaluate_rate_limit_per_minute", 1)
-
-    with TestClient(fastapi_app) as client:
-        first = client.post(
-            "/api/v1/health-metrics/evaluate",
-            json={"metrics": [{"label": "LDL", "value": 130}]},
-        )
-        second = client.post(
-            "/api/v1/health-metrics/evaluate",
             json={"metrics": [{"label": "LDL", "value": 130}]},
         )
 
-    assert first.status_code == 200
-    assert second.status_code == 429
-    assert second.json()["error_code"] == "RATE_LIMIT_EXCEEDED"
-    assert second.json()["data"]["retry_after_seconds"] > 0
+    assert response.status_code == 404
 
 
 def test_builds_summary_and_detail_view_models() -> None:

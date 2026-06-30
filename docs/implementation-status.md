@@ -68,7 +68,6 @@ OCR 업로드 플로우 상세는 [api-record-ocr.md](./api-record-ocr.md) 참�
 
 | Method | Path | 설명 |
 |--------|------|------|
-| POST | `/evaluate` | 건강 지표 평가(비저장 프리뷰) |
 | POST | `/analyses` | 건강 지표 분석 저장, full UI 응답 반환 |
 | GET | `/analyses/{analysis_id}` | 저장된 건강 지표 분석 조회 |
 

@@ -158,9 +158,3 @@ class HealthMetricAnalysisResponse(BaseModel):
     results: list[HealthMetricEvaluationItem]
     explanation: HealthMetricExplanation
     ui: dict
-
-
-class HealthMetricEvaluationResponse(BaseModel):
-    results: list[HealthMetricEvaluationItem]
-    explanation: HealthMetricExplanation
-    ui: dict | None = None

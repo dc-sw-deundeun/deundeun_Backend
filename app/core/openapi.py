@@ -37,7 +37,6 @@ Mission API는 아직 stub이며, "오늘의 미션으로 받기" HTTP API는 �
 5. `GET /health-metrics/analyses/{analysis_id}` 또는 `GET /records/checkups/{record_id}/analysis` — 저장 분석 재조회
 
 ### HealthMetric 분석 흐름
-- `POST /health-metrics/evaluate`: 로그인 없는 비저장 프리뷰입니다.
 - `POST /health-metrics/analyses`: 인증 필요. `record_id`를 전달하면 사용자 소유 VERIFIED 기록만 허용하고, 성공 시 `CheckupRecord.analysis_status=COMPLETED`로 갱신합니다.
 - 응답은 `analysis_id`, `record_id`, `results`, `explanation`, `ui.summary`, `ui.details`를 포함합니다. 연결된 record가 있으면 `ui.details[].trend.points`에 과거 지표 추이가 포함됩니다.
 
