@@ -17,3 +17,4 @@ class VerificationStatus(str, Enum):
 class MetricSource(str, Enum):
     OCR = "OCR"
     MANUAL = "MANUAL"
+    ANALYSIS = "ANALYSIS"

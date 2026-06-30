@@ -5,6 +5,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 import app.domains.auth.models  # noqa: F401
 from app.database.base import Base
+from app.domains.record.models import CheckupRecord  # noqa: F401
 from app.domains.user.models import User  # noqa: F401
 
 
@@ -26,6 +27,11 @@ class HealthMetricAnalysis(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    record_id: Mapped[int | None] = mapped_column(
+        ForeignKey("checkup_records.id", ondelete="SET NULL"),
         nullable=True,
         index=True,
     )

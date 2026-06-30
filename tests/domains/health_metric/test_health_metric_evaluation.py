@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta, timezone
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -19,6 +21,8 @@ from app.domains.health_metric.service import (
     build_detail_views,
     build_summary_view,
 )
+from app.domains.record.models import CheckupMetricResult, CheckupRecord
+from app.domains.user.models import OnboardingStep, User
 from app.domains.user.schemas import CurrentUser
 from app.main import app as fastapi_app
 
@@ -47,6 +51,20 @@ def _metric(
         unit=unit,
         item9_positive=item9_positive,
     )
+
+
+def _create_user(db_session, *, user_id: int = 1) -> None:
+    db_session.add(
+        User(
+            id=user_id,
+            email=f"health-metric-{user_id}@example.com",
+            password_hash="hash",
+            nickname="health-metric-user",
+            onboarding_step=OnboardingStep.INITIAL_CHECKUP.value,
+            timezone="Asia/Seoul",
+        )
+    )
+    db_session.commit()
 
 
 def test_evaluate_metrics_classifies_normal_caution_and_risk() -> None:
@@ -248,6 +266,140 @@ def test_create_analysis_rate_limit(monkeypatch) -> None:
             fastapi_app.dependency_overrides.pop(get_db, None)
         else:
             fastapi_app.dependency_overrides[get_db] = previous_override
+        if previous_user_override is None:
+            fastapi_app.dependency_overrides.pop(get_current_user, None)
+        else:
+            fastapi_app.dependency_overrides[get_current_user] = previous_user_override
+
+
+def test_create_and_get_analysis_with_verified_record_updates_status_and_trends(
+    client, db_session, monkeypatch
+) -> None:
+    monkeypatch.setattr(settings, "openai_api_key", None)
+    user_id = 1
+    _create_user(db_session, user_id=user_id)
+    measured_at = datetime(2026, 6, 20, tzinfo=timezone.utc)
+    previous_record = CheckupRecord(
+        user_id=user_id,
+        source_type="MANUAL",
+        measured_at=measured_at - timedelta(days=90),
+        ocr_status="COMPLETED",
+        verification_status="VERIFIED",
+        analysis_status="PENDING",
+    )
+    unverified_record = CheckupRecord(
+        user_id=user_id,
+        source_type="MANUAL",
+        measured_at=measured_at - timedelta(days=30),
+        ocr_status="COMPLETED",
+        verification_status="UNVERIFIED",
+        analysis_status="PENDING",
+    )
+    current_record = CheckupRecord(
+        user_id=user_id,
+        source_type="MANUAL",
+        measured_at=measured_at,
+        ocr_status="COMPLETED",
+        verification_status="VERIFIED",
+        analysis_status="PENDING",
+    )
+    db_session.add_all([previous_record, unverified_record, current_record])
+    db_session.flush()
+    db_session.add_all(
+        [
+            CheckupMetricResult(
+                record_id=previous_record.id,
+                metric_code="fasting_glucose",
+                metric_name="공복혈당",
+                value="104",
+                unit="mg/dL",
+                source="MANUAL",
+            ),
+            CheckupMetricResult(
+                record_id=unverified_record.id,
+                metric_code="fasting_glucose",
+                metric_name="공복혈당",
+                value="999",
+                unit="mg/dL",
+                source="MANUAL",
+            ),
+            CheckupMetricResult(
+                record_id=current_record.id,
+                metric_code="fasting_glucose",
+                metric_name="공복혈당",
+                value="126",
+                unit="mg/dL",
+                source="MANUAL",
+            ),
+        ]
+    )
+    db_session.commit()
+
+    previous_user_override = fastapi_app.dependency_overrides.get(get_current_user)
+    fastapi_app.dependency_overrides[get_current_user] = lambda: CurrentUser(id=user_id)
+    try:
+        create_response = client.post(
+            "/api/v1/health-metrics/analyses",
+            json={
+                "sex": "male",
+                "record_id": current_record.id,
+                "metrics": [{"label": "공복혈당", "value": 126, "unit": "mg/dL"}],
+            },
+        )
+
+        assert create_response.status_code == 200
+        data = create_response.json()["data"]
+        assert data["analysis_id"]
+        assert data["record_id"] == current_record.id
+        assert data["results"][0]["canonical_test_code"] == "FPG"
+        assert data["ui"]["summary"]["analysis_id"] == data["analysis_id"]
+        assert data["ui"]["details"][0]["analysis_id"] == data["analysis_id"]
+        assert data["ui"]["details"][0]["trend"]["points"] == [
+            {"label": "2026-03-22", "value": 104.0},
+            {"label": "2026-06-20", "value": 126.0},
+        ]
+
+        db_session.expire_all()
+        assert db_session.get(CheckupRecord, current_record.id).analysis_status == "COMPLETED"
+
+        get_response = client.get(f"/api/v1/health-metrics/analyses/{data['analysis_id']}")
+        assert get_response.status_code == 200
+        assert get_response.json()["data"]["ui"] == data["ui"]
+
+        record_alias_response = client.get(f"/api/v1/records/checkups/{current_record.id}/analysis")
+        assert record_alias_response.status_code == 200
+        assert record_alias_response.json()["data"]["analysis_id"] == data["analysis_id"]
+    finally:
+        if previous_user_override is None:
+            fastapi_app.dependency_overrides.pop(get_current_user, None)
+        else:
+            fastapi_app.dependency_overrides[get_current_user] = previous_user_override
+
+
+def test_create_analysis_rejects_unverified_record(client, db_session, monkeypatch) -> None:
+    monkeypatch.setattr(settings, "openai_api_key", None)
+    _create_user(db_session, user_id=1)
+    record = CheckupRecord(
+        user_id=1,
+        source_type="MANUAL",
+        ocr_status="COMPLETED",
+        verification_status="UNVERIFIED",
+        analysis_status="PENDING",
+    )
+    db_session.add(record)
+    db_session.commit()
+
+    previous_user_override = fastapi_app.dependency_overrides.get(get_current_user)
+    fastapi_app.dependency_overrides[get_current_user] = lambda: CurrentUser(id=1)
+    try:
+        response = client.post(
+            "/api/v1/health-metrics/analyses",
+            json={"record_id": record.id, "metrics": [{"label": "LDL", "value": 150}]},
+        )
+
+        assert response.status_code == 409
+        assert response.json()["error_code"] == "NOT_VERIFIED"
+    finally:
         if previous_user_override is None:
             fastapi_app.dependency_overrides.pop(get_current_user, None)
         else:

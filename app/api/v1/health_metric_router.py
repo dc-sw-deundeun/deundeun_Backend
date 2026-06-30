@@ -12,7 +12,6 @@ from app.core.response import success_response
 from app.database.session import get_db
 from app.domains.health_metric.explanation_service import HealthMetricExplanationService
 from app.domains.health_metric.schemas import (
-    HealthMetricAnalysisCreateResponse,
     HealthMetricEvaluationRequest,
     HealthMetricEvaluationResponse,
 )
@@ -66,8 +65,9 @@ async def evaluate_health_metrics(
     "/analyses",
     summary="[프론트 사용] 건강검진 분석 저장",
     description=(
-        "인증된 사용자의 건강검진 항목 평가 결과를 저장하고 analysis_id와 UI summary를 반환합니다. "
-        "Authorization 헤더 필요."
+        "인증된 사용자의 건강검진 항목 평가 결과를 저장하고 `/evaluate`와 동일한 results, explanation, "
+        "ui.summary, ui.details에 analysis_id와 record_id를 함께 반환합니다. record_id를 전달하면 "
+        "사용자 소유 VERIFIED 검진 기록만 허용하고, 성공 시 해당 기록의 analysis_status를 COMPLETED로 갱신합니다."
     ),
 )
 async def create_health_metric_analysis(
@@ -76,16 +76,32 @@ async def create_health_metric_analysis(
     db: Session = Depends(get_db),
 ):
     _check_analysis_rate_limit(current_user.id)
-    analysis_id, summary = await HealthMetricAnalysisService(db).create(
+    response = await HealthMetricAnalysisService(db).create(
         request=request,
         user_id=current_user.id,
         measured_at=_parse_measured_at(request.measured_at),
     )
-    response = HealthMetricAnalysisCreateResponse(analysis_id=analysis_id, summary=summary)
     return success_response(
         message="건강검진 분석이 생성되었습니다.",
         data=response.model_dump(mode="json"),
     )
+
+
+@router.get(
+    "/analyses/{analysis_id}",
+    summary="[프론트 사용] 건강검진 분석 조회",
+    description=(
+        "저장된 건강검진 분석을 조회합니다. 응답은 POST /health-metrics/analyses와 동일하게 "
+        "results, explanation, ui.summary, ui.details를 포함합니다."
+    ),
+)
+async def get_health_metric_analysis(
+    analysis_id: int,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    response = HealthMetricAnalysisService(db).get(analysis_id, current_user.id)
+    return success_response(data=response.model_dump(mode="json"))
 
 
 def _client_ip(request: Request) -> str:

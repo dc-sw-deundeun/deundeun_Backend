@@ -17,6 +17,11 @@ _APP_TABLES = (
     "consent_histories",
     "wearable_connections",
     "users",
+    "health_metric_analyses",
+    "analysis_mission_candidates",
+    "checkup_analysis_summaries",
+    "analysis_jobs",
+    "user_missions",
     "ocr_jobs",
     "checkup_metric_results",
     "checkup_files",
@@ -109,6 +114,7 @@ def db_session(db_engine: Engine) -> Generator[Session, None, None]:
 def client(
     db_engine: Engine, email_client: CapturingEmailClient
 ) -> Generator[TestClient, None, None]:
+    import app.core.config as config_module
     import app.database.session as session_module
     from app.core.dependencies import get_db, get_email_client_dep
     from app.main import app
@@ -117,11 +123,16 @@ def client(
     _orig_session = session_module._SessionLocal
     _prev_get_db = app.dependency_overrides.get(get_db)
     _prev_email_dep = app.dependency_overrides.get(get_email_client_dep)
+    _orig_analysis_callback_secret = config_module.settings.analysis_callback_secret
+    _orig_analysis_client = config_module.settings.analysis_client
 
     try:
         session_module._engine = db_engine
         _TestSession = sessionmaker(autocommit=False, autoflush=False, bind=db_engine)
         session_module._SessionLocal = _TestSession
+
+        config_module.settings.analysis_callback_secret = "dev-analysis-callback-secret"
+        config_module.settings.analysis_client = "stub"
 
         def override_get_db() -> Generator[Session, None, None]:
             db = _TestSession()
@@ -144,6 +155,8 @@ def client(
             app.dependency_overrides.pop(get_email_client_dep, None)
         else:
             app.dependency_overrides[get_email_client_dep] = _prev_email_dep
+        config_module.settings.analysis_callback_secret = _orig_analysis_callback_secret
+        config_module.settings.analysis_client = _orig_analysis_client
         session_module._engine = _orig_engine
         session_module._SessionLocal = _orig_session
         _truncate_app_tables(db_engine)

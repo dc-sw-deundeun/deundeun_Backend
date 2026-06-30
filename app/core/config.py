@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     analysis_server_api_key: str | None = None
     analysis_callback_secret: str | None = None
     analysis_polling_interval_seconds: int = 60
+    analysis_client: str = "stub"
 
     openai_api_key: str | None = None
     openai_model: str = "gpt-4.1-mini"
@@ -91,6 +92,15 @@ class Settings(BaseSettings):
             raise ValueError("LLM_PROVIDER must be 'openai' or 'clova'")
         return value
 
+    @field_validator("analysis_client")
+    @classmethod
+    def validate_analysis_client(cls, value: str) -> str:
+        if value != "stub":
+            raise ValueError(
+                "ANALYSIS_CLIENT must be 'stub' until http/openai clients are implemented"
+            )
+        return value
+
     @model_validator(mode="after")
     def validate_production_secrets(self) -> "Settings":
         if self.app_env in ("production", "staging"):
@@ -109,6 +119,10 @@ class Settings(BaseSettings):
             if self.llm_provider == "openai" and not self.openai_api_key:
                 raise ValueError(
                     "OPENAI_API_KEY must be configured when LLM_PROVIDER=openai in production/staging"
+                )
+            if not self.analysis_callback_secret:
+                raise ValueError(
+                    "ANALYSIS_CALLBACK_SECRET must be configured in production/staging"
                 )
         return self
 

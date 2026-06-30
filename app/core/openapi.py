@@ -16,7 +16,9 @@ _API_DESCRIPTION = """
 
 ### 현재 프론트 연동 가능 영역
 Auth/User, Onboarding, Record/OCR, HealthMetric은 구현되어 있습니다.
-Home, Mission, Character, Notification, My, Analysis 일부는 후속 Phase용 stub입니다.
+Home, Mission, Character, Notification, My는 후속 Phase용 stub입니다.
+Analysis Stub MVP 라우트는 legacy 호환용으로 유지하지만 신규 프론트 화면에서는 호출하지 않습니다.
+Mission API는 아직 stub이며, "오늘의 미션으로 받기" HTTP API는 후속 Phase에서 구현합니다.
 
 ### 인증 흐름
 1. `POST /auth/email/verify/request` — 인증 코드 발송
@@ -31,6 +33,16 @@ Home, Mission, Character, Notification, My, Analysis 일부는 후속 Phase용 s
 1. `POST /records/checkups/ocr-preview` — 이미지 base64 배열 업로드, OCR preview 확인
 2. `POST /records/checkups` — 사용자가 확인·수정한 preview 결과를 검진 기록으로 저장
 3. `POST /records/checkups/{record_id}/verify` — 검진 검수 완료 및 온보딩 단계 전환
+4. `POST /health-metrics/analyses` — `record_id` + label/value metrics로 HealthMetric 분석 저장
+5. `GET /health-metrics/analyses/{analysis_id}` 또는 `GET /records/checkups/{record_id}/analysis` — 저장 분석 재조회
+
+### HealthMetric 분석 흐름
+- `POST /health-metrics/evaluate`: 로그인 없는 비저장 프리뷰입니다.
+- `POST /health-metrics/analyses`: 인증 필요. `record_id`를 전달하면 사용자 소유 VERIFIED 기록만 허용하고, 성공 시 `CheckupRecord.analysis_status=COMPLETED`로 갱신합니다.
+- 응답은 `analysis_id`, `record_id`, `results`, `explanation`, `ui.summary`, `ui.details`를 포함합니다. 연결된 record가 있으면 `ui.details[].trend.points`에 과거 지표 추이가 포함됩니다.
+
+### Legacy Analysis Stub
+`/api/v1/analysis/*`는 Phase 4 Stub MVP 호환용입니다. 신규 프론트 화면은 `/health-metrics/*`를 사용하세요.
 """
 
 _OPENAPI_TAGS = [
@@ -52,23 +64,19 @@ _OPENAPI_TAGS = [
     },
     {
         "name": "Mission",
-        "description": "[프론트 작업 제외] 미션 API는 후속 Phase stub입니다.",
+        "description": "[프론트 작업 제외] 미션 API는 Phase 5 예정 stub입니다. HealthMetric 기반 미션 생성 API는 후속 구현 대상입니다.",
     },
     {
         "name": "Record",
-        "description": "[프론트 사용] 검진 이미지 OCR preview, 검진 기록 저장·조회·수정·검수.",
-    },
-    {
-        "name": "OCR",
-        "description": "[프론트 사용] OCR job 상태 조회. 일반 업로드 흐름은 Record API를 우선 사용합니다.",
+        "description": "[프론트 사용] 검진 이미지 OCR preview, 검진 기록 저장·조회·수정·검수. OCR 전용 라우터는 제거되었고 Record API로 통합되었습니다.",
     },
     {
         "name": "HealthMetric",
-        "description": "[프론트 사용] 건강검진 항목 평가 및 분석 저장.",
+        "description": "[프론트 사용] 건강검진 항목 평가, 분석 저장, 저장 분석 조회. 실제 검진 분석 결과의 정본입니다.",
     },
     {
         "name": "Analysis",
-        "description": "[프론트 작업 제외] 외부 AI 분석 연동 API는 후속 Phase stub입니다.",
+        "description": "[프론트 작업 제외] Legacy Phase 4 Stub API입니다. 신규 화면은 HealthMetric 분석 API를 사용하세요. callback은 서버/내부용입니다.",
     },
     {
         "name": "Character",

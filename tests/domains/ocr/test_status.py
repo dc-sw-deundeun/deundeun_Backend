@@ -17,4 +17,4 @@ def test_verification_status_values():
 
 
 def test_metric_source_values():
-    assert {s.value for s in MetricSource} == {"OCR", "MANUAL"}
+    assert {s.value for s in MetricSource} == {"OCR", "MANUAL", "ANALYSIS"}
