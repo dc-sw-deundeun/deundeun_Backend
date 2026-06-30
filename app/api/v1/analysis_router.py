@@ -16,13 +16,16 @@ router = APIRouter()
 
 @router.post(
     "/checkups/{record_id}",
-    summary="[프론트 사용] 검진 기록 AI 분석 요청",
+    summary="[프론트 작업 제외] Legacy AI 분석 요청",
     description=(
+        "Legacy Phase 4 Stub API입니다. 신규 프론트 화면은 "
+        "`POST /health-metrics/analyses`를 사용하세요. "
         "VERIFIED 상태의 검진 기록에 대해 Phase 4 분석 job을 생성합니다. "
         "`ANALYSIS_CLIENT=stub` 환경에서는 즉시 완료 callback을 처리하고 기본 미션 1건을 자동 배정합니다. "
         "Http/OpenAI 클라이언트와 polling worker는 후속 구현 대상입니다. "
         "Authorization 헤더 필요."
     ),
+    deprecated=True,
 )
 async def request_analysis(
     record_id: int,
@@ -35,12 +38,14 @@ async def request_analysis(
 
 @router.get(
     "/jobs/{analysis_job_id}",
-    summary="[프론트 사용] AI 분석 job 상태 조회",
+    summary="[프론트 작업 제외] Legacy AI 분석 job 상태 조회",
     description=(
+        "Legacy Phase 4 Stub API입니다. 신규 프론트 화면은 HealthMetric 분석 조회 API를 사용하세요. "
         "분석 job의 현재 상태, external_job_id, 시도 횟수, 에러 코드, 모델 버전을 조회합니다. "
         "Stub MVP에서는 분석 요청 직후 보통 COMPLETED 상태가 됩니다. "
         "Authorization 헤더 필요."
     ),
+    deprecated=True,
 )
 async def get_analysis_job(
     analysis_job_id: int,
@@ -53,12 +58,16 @@ async def get_analysis_job(
 
 @router.get(
     "/jobs/{analysis_job_id}/result",
-    summary="[프론트 사용] AI 분석 결과 조회",
+    summary="[프론트 작업 제외] Legacy AI 분석 결과 조회",
     description=(
+        "Legacy Phase 4 Stub API입니다. 신규 프론트 화면은 "
+        "`GET /health-metrics/analyses/{analysis_id}` 또는 "
+        "`GET /records/checkups/{record_id}/analysis`를 사용하세요. "
         "분석 job의 완료 결과를 조회합니다. summary와 mission_candidates를 반환합니다. "
         "COMPLETED 상태가 아니면 ANALYSIS_NOT_COMPLETED(409)를 반환합니다. "
         "Authorization 헤더 필요."
     ),
+    deprecated=True,
 )
 async def get_analysis_result(
     analysis_job_id: int,
