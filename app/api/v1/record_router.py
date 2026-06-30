@@ -8,7 +8,7 @@ from app.core.exceptions import (
     PayloadTooLargeException,
     UnsupportedMediaTypeException,
 )
-from app.core.response import not_implemented_response, success_response
+from app.core.response import success_response
 from app.domains.ocr.dependencies import get_ocr_service, get_record_service
 from app.domains.ocr.service import FinalMetric, OcrService
 from app.domains.record.content_hash import compute_content_hash
@@ -35,24 +35,6 @@ router = APIRouter()
 def _metric_list(service: RecordService, user_id: int, record_id: int) -> list[dict]:
     metrics = service.get_metrics(user_id, record_id)
     return [m.model_dump() for m in metrics]
-
-
-@router.post(
-    "/checkups/upload",
-    status_code=200,
-    summary="[호환] 검진 이미지 업로드 OCR preview",
-    description=(
-        "`POST /records/checkups/ocr-preview`와 동일한 호환용 alias입니다. "
-        "신규 프론트 작업은 `/checkups/ocr-preview`를 사용하세요."
-    ),
-    deprecated=True,
-)
-async def upload_checkup(
-    body: MultiImageUploadRequest,
-    current_user: CurrentUser = Depends(get_current_user),
-    ocr_service: OcrService = Depends(get_ocr_service),
-):
-    return await preview_checkup_ocr(body, current_user, ocr_service)
 
 
 @router.post(
@@ -330,21 +312,3 @@ async def delete_checkup(
 ):
     service.delete_checkup(current_user.id, record_id)
     return success_response(message="검진 기록을 삭제했습니다.")
-
-
-@router.post(
-    "/meals",
-    summary="[프론트 작업 제외] 식사 기록 생성 placeholder",
-    description="식사 기록 API는 아직 구현되지 않았습니다. 호출 시 NOT_IMPLEMENTED(501)를 반환합니다.",
-)
-async def create_meal_record(current_user: CurrentUser = Depends(get_current_user)):
-    return not_implemented_response()
-
-
-@router.get(
-    "/meals",
-    summary="[프론트 작업 제외] 식사 기록 목록 placeholder",
-    description="식사 기록 API는 아직 구현되지 않았습니다. 호출 시 NOT_IMPLEMENTED(501)를 반환합니다.",
-)
-async def list_meal_records(current_user: CurrentUser = Depends(get_current_user)):
-    return not_implemented_response()

@@ -67,11 +67,7 @@ _OPENAPI_TAGS = [
     },
     {
         "name": "Record",
-        "description": "[프론트 사용] 검진 이미지 OCR preview, 검진 기록 저장·조회·수정·검수.",
-    },
-    {
-        "name": "OCR",
-        "description": "[프론트 사용] OCR job 상태 조회. 일반 업로드 흐름은 Record API를 우선 사용합니다.",
+        "description": "[프론트 사용] 검진 이미지 OCR preview, 검진 기록 저장·조회·수정·검수. OCR 전용 라우터는 제거되었고 Record API로 통합되었습니다.",
     },
     {
         "name": "HealthMetric",
