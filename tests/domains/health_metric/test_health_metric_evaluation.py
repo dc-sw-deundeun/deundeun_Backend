@@ -287,6 +287,14 @@ def test_create_and_get_analysis_with_verified_record_updates_status_and_trends(
         verification_status="VERIFIED",
         analysis_status="PENDING",
     )
+    unverified_record = CheckupRecord(
+        user_id=user_id,
+        source_type="MANUAL",
+        measured_at=measured_at - timedelta(days=30),
+        ocr_status="COMPLETED",
+        verification_status="UNVERIFIED",
+        analysis_status="PENDING",
+    )
     current_record = CheckupRecord(
         user_id=user_id,
         source_type="MANUAL",
@@ -295,7 +303,7 @@ def test_create_and_get_analysis_with_verified_record_updates_status_and_trends(
         verification_status="VERIFIED",
         analysis_status="PENDING",
     )
-    db_session.add_all([previous_record, current_record])
+    db_session.add_all([previous_record, unverified_record, current_record])
     db_session.flush()
     db_session.add_all(
         [
@@ -304,6 +312,14 @@ def test_create_and_get_analysis_with_verified_record_updates_status_and_trends(
                 metric_code="fasting_glucose",
                 metric_name="공복혈당",
                 value="104",
+                unit="mg/dL",
+                source="MANUAL",
+            ),
+            CheckupMetricResult(
+                record_id=unverified_record.id,
+                metric_code="fasting_glucose",
+                metric_name="공복혈당",
+                value="999",
                 unit="mg/dL",
                 source="MANUAL",
             ),

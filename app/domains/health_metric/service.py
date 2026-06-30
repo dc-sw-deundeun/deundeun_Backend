@@ -817,6 +817,7 @@ class HealthMetricAnalysisService:
         series_rows = self._record_repo.list_trend_series(
             user_id,
             sorted(metric_code_to_canonical),
+            verification_status=VerificationStatus.VERIFIED.value,
         )
         for record, metric in series_rows:
             canonical = metric_code_to_canonical.get(metric.metric_code)

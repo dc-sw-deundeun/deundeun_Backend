@@ -83,21 +83,28 @@ class RecordRepository:
         )
 
     def list_trend_series(
-        self, user_id: int, metric_codes: list[str]
+        self,
+        user_id: int,
+        metric_codes: list[str],
+        *,
+        verification_status: str | None = None,
     ) -> list[tuple[CheckupRecord, CheckupMetricResult]]:
         if not metric_codes:
             return []
         event_at = func.coalesce(CheckupRecord.measured_at, CheckupRecord.created_at)
+        conditions = [
+            CheckupRecord.user_id == user_id,
+            CheckupMetricResult.metric_code.in_(metric_codes),
+        ]
+        if verification_status is not None:
+            conditions.append(CheckupRecord.verification_status == verification_status)
         stmt = (
             select(CheckupRecord, CheckupMetricResult)
             .join(
                 CheckupMetricResult,
                 CheckupMetricResult.record_id == CheckupRecord.id,
             )
-            .where(
-                CheckupRecord.user_id == user_id,
-                CheckupMetricResult.metric_code.in_(metric_codes),
-            )
+            .where(*conditions)
             .order_by(
                 event_at.asc(),
                 CheckupRecord.id.asc(),
