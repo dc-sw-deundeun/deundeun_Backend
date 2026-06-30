@@ -17,6 +17,7 @@ _APP_TABLES = (
     "consent_histories",
     "wearable_connections",
     "users",
+    "health_metric_analyses",
     "analysis_mission_candidates",
     "checkup_analysis_summaries",
     "analysis_jobs",
