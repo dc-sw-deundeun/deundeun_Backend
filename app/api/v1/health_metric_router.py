@@ -8,7 +8,7 @@ from app.core.dependencies import get_current_user
 from app.core.rate_limit import rate_limiter
 from app.core.response import success_response
 from app.database.session import get_db
-from app.domains.health_metric.schemas import HealthMetricEvaluationRequest
+from app.domains.health_metric.schemas import HealthMetricAnalysisCreateRequest
 from app.domains.health_metric.service import HealthMetricAnalysisService
 from app.domains.user.schemas import CurrentUser
 
@@ -19,25 +19,24 @@ router = APIRouter()
     "/analyses",
     summary="[프론트 사용] 건강검진 분석 저장",
     description=(
-        "인증된 사용자의 건강검진 항목 평가 결과를 저장하고 results, explanation, ui.summary, "
-        "ui.details에 analysis_id와 record_id를 함께 반환합니다. record_id를 전달하면 "
-        "사용자 소유 VERIFIED 검진 기록만 허용하고, 성공 시 해당 기록의 analysis_status를 COMPLETED로 갱신합니다."
+        "인증된 사용자의 건강검진 metric 배열을 분석해 저장합니다. "
+        "생성 응답에는 분석 결과를 포함하지 않습니다."
     ),
 )
 async def create_health_metric_analysis(
-    request: HealthMetricEvaluationRequest,
+    request: HealthMetricAnalysisCreateRequest,
     current_user: CurrentUser = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     _check_analysis_rate_limit(current_user.id)
-    response = await HealthMetricAnalysisService(db).create(
+    await HealthMetricAnalysisService(db).create(
         request=request,
         user_id=current_user.id,
         measured_at=_parse_measured_at(request.measured_at),
     )
     return success_response(
         message="건강검진 분석이 생성되었습니다.",
-        data=response.model_dump(mode="json"),
+        data=None,
     )
 
 

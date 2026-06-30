@@ -40,6 +40,27 @@ class HealthMetricInput(BaseModel):
         return v
 
 
+class HealthMetricAnalysisMetricInput(BaseModel):
+    metric_code: str = Field(..., min_length=1, max_length=50)
+    metric_name: str = Field(..., min_length=1, max_length=100)
+    value: str | None = Field(default=None, max_length=50)
+    unit: str | None = Field(default=None, max_length=20)
+    raw_text: str | None = Field(default=None, max_length=200)
+
+
+class HealthMetricAnalysisCreateRequest(BaseModel):
+    sex: str = Field(..., description="male/female 또는 남/여")
+    measured_at: str | None = Field(default=None, description="검진 결과지 날짜 YYYY-MM-DD")
+    metrics: list[HealthMetricAnalysisMetricInput] = Field(..., min_length=1, max_length=100)
+
+    @field_validator("sex")
+    @classmethod
+    def sex_must_be_allowed(cls, v: str) -> str:
+        if v.lower() not in _ALLOWED_SEX_VALUES:
+            raise ValueError(f"sex must be one of {sorted(_ALLOWED_SEX_VALUES)}")
+        return v
+
+
 class HealthMetricEvaluationRequest(BaseModel):
     sex: str | None = Field(default=None, description="male/female 또는 남/여")
     measured_at: str | None = Field(default=None, description="검진 결과지 날짜 YYYY-MM-DD")

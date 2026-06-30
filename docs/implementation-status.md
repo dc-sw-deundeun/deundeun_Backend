@@ -68,10 +68,10 @@ OCR 업로드 플로우 상세는 [api-record-ocr.md](./api-record-ocr.md) 참�
 
 | Method | Path | 설명 |
 |--------|------|------|
-| POST | `/analyses` | 건강 지표 분석 저장, full UI 응답 반환 |
+| POST | `/analyses` | 건강 지표 분석 저장, `data: null` 응답 |
 | GET | `/analyses/{analysis_id}` | 저장된 건강 지표 분석 조회 |
 
-`POST /analyses`에 `record_id`를 전달하면 사용자 소유 VERIFIED 검진 기록만 허용하며, 성공 시 `CheckupRecord.analysis_status=COMPLETED`로 갱신합니다. 저장/조회 응답은 `analysis_id`, `record_id`, `results`, `explanation`, `ui.summary`, `ui.details`를 포함하고, record 연결 시 detail trend points를 포함합니다.
+`POST /analyses`는 프론트가 확정한 `sex`, `measured_at`, `metrics[]`를 받아 분석을 저장합니다. 생성 응답은 결과 본문을 반환하지 않으며, 저장 분석 조회 응답은 `analysis_id`, `record_id`, `results`, `explanation`, `ui.summary`, `ui.details`를 포함합니다. detail trend points는 이전 HealthMetric 분석 이력을 기준으로 구성합니다.
 
 ### Analysis `/api/v1/analysis` (Legacy Phase 4 Stub)
 

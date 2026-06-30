@@ -45,6 +45,15 @@ class BadRequestException(AppException):
         super().__init__(status_code=400, message=message, error_code=error_code)
 
 
+class UnprocessableEntityException(AppException):
+    def __init__(
+        self,
+        message: str = "처리할 수 없는 요청입니다.",
+        error_code: str = "UNPROCESSABLE_ENTITY",
+    ) -> None:
+        super().__init__(status_code=422, message=message, error_code=error_code)
+
+
 class UnsupportedMediaTypeException(AppException):
     def __init__(
         self,

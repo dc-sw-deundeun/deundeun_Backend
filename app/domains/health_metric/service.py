@@ -1,11 +1,10 @@
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import ConflictException, NotFoundException
-from app.domains.analysis.status import AnalysisStatus
+from app.core.exceptions import ConflictException, NotFoundException, UnprocessableEntityException
 from app.domains.health_metric.explanation_service import HealthMetricExplanationService
 from app.domains.health_metric.models import HealthMetricAnalysis
 from app.domains.health_metric.repository import (
@@ -13,11 +12,14 @@ from app.domains.health_metric.repository import (
     HealthMetricRepository,
 )
 from app.domains.health_metric.schemas import (
+    HealthMetricAnalysisCreateRequest,
+    HealthMetricAnalysisMetricInput,
     HealthMetricAnalysisResponse,
     HealthMetricDetailView,
     HealthMetricEvaluationItem,
     HealthMetricEvaluationRequest,
     HealthMetricExplanation,
+    HealthMetricInput,
     HealthMetricMeaning,
     HealthMetricOverallSummary,
     HealthMetricRangeBar,
@@ -703,23 +705,30 @@ class HealthMetricAnalysisService:
 
     async def create(
         self,
-        request: HealthMetricEvaluationRequest,
+        request: HealthMetricAnalysisCreateRequest,
         user_id: int,
         measured_at: datetime | None,
     ) -> HealthMetricAnalysisResponse:
-        record = self._validated_record(user_id=user_id, record_id=request.record_id)
-        if measured_at is None and record is not None:
-            measured_at = record.measured_at
-
-        results = HealthMetricService().evaluate_metrics(request)
+        evaluation_request = self._to_evaluation_request(request)
+        results = HealthMetricService().evaluate_metrics(evaluation_request)
+        if not results:
+            raise UnprocessableEntityException(
+                message="분석 가능한 건강검진 항목이 없습니다.",
+                error_code="NO_ANALYZABLE_HEALTH_METRICS",
+            )
         explanation = await HealthMetricExplanationService().build_explanation(
-            request=request,
+            request=evaluation_request,
             results=results,
+        )
+        trend_points_by_code = self._analysis_trend_points_by_code(
+            user_id=user_id,
+            results=results,
+            measured_at=measured_at,
         )
 
         analysis = HealthMetricAnalysis(
             user_id=user_id,
-            record_id=request.record_id,
+            record_id=None,
             sex=request.sex,
             measured_at=measured_at,
             request_payload=request.model_dump(mode="json"),
@@ -730,11 +739,6 @@ class HealthMetricAnalysisService:
         )
         self._repo.save(analysis)
 
-        trend_points_by_code = self._trend_points_by_code(
-            user_id=user_id,
-            record_id=request.record_id,
-            results=results,
-        )
         summary = build_summary_view(
             results=results, explanation=explanation, analysis_id=analysis.id
         )
@@ -746,8 +750,6 @@ class HealthMetricAnalysisService:
         )
         analysis.summary_payload = summary.model_dump(mode="json")
         analysis.details_payload = [detail.model_dump(mode="json") for detail in details]
-        if record is not None:
-            self._record_repo.set_analysis_status(record, AnalysisStatus.COMPLETED.value)
         self._db.commit()
         self._db.refresh(analysis)
 
@@ -786,6 +788,79 @@ class HealthMetricAnalysisService:
                 error_code="NOT_VERIFIED",
             )
         return record
+
+    def _to_evaluation_request(
+        self, request: HealthMetricAnalysisCreateRequest
+    ) -> HealthMetricEvaluationRequest:
+        metrics = [
+            metric
+            for metric in (
+                self._to_evaluation_metric(metric) for metric in request.metrics
+            )
+            if metric is not None
+        ]
+        return HealthMetricEvaluationRequest(
+            sex=request.sex,
+            measured_at=request.measured_at,
+            metrics=metrics,
+        )
+
+    def _to_evaluation_metric(
+        self, metric: HealthMetricAnalysisMetricInput
+    ) -> HealthMetricInput | None:
+        value = _parse_metric_value(metric.value)
+        if value is None:
+            return None
+
+        canonical = _canonical_metric(metric.metric_code, metric.metric_name)
+        if canonical is None:
+            return None
+
+        rule_code = _rule_lookup_code(canonical)
+        if rule_code not in METRIC_RULES:
+            return None
+
+        return HealthMetricInput(
+            label=canonical,
+            value=value,
+            unit=metric.unit or None,
+        )
+
+    def _analysis_trend_points_by_code(
+        self,
+        *,
+        user_id: int,
+        results: list[HealthMetricEvaluationItem],
+        measured_at: datetime | None,
+    ) -> dict[str, list[HealthMetricTrendPoint]]:
+        grouped: dict[str, list[HealthMetricTrendPoint]] = {
+            item.canonical_test_code: []
+            for item in results
+            if item.canonical_test_code is not None
+        }
+        if not grouped:
+            return {}
+
+        for analysis in self._repo.list_for_user(user_id):
+            event_at = analysis.measured_at or analysis.created_at
+            if event_at is None:
+                continue
+            label = event_at.date().isoformat()
+            for item in analysis.results_payload:
+                code = item.get("canonical_test_code") if isinstance(item, dict) else None
+                if code not in grouped:
+                    continue
+                value = item.get("value") if isinstance(item, dict) else None
+                if isinstance(value, (int, float)):
+                    grouped[code].append(HealthMetricTrendPoint(label=label, value=float(value)))
+
+        current_label = (measured_at or datetime.now(UTC)).date().isoformat()
+        for item in results:
+            if item.canonical_test_code in grouped:
+                grouped[item.canonical_test_code].append(
+                    HealthMetricTrendPoint(label=current_label, value=item.value)
+                )
+        return grouped
 
     def _trend_points_by_code(
         self,
@@ -855,6 +930,22 @@ def _canonical_record_metric(metric: CheckupMetricResult) -> str | None:
         or _canonical_label(metric.metric_code)
         or _canonical_label(metric.metric_name)
     )
+
+
+def _canonical_metric(metric_code: str, metric_name: str) -> str | None:
+    return (
+        RECORD_METRIC_CODE_ALIASES.get(metric_code.lower())
+        or _canonical_label(metric_code)
+        or _canonical_label(metric_name)
+    )
+
+
+def _rule_lookup_code(canonical: str) -> str:
+    if canonical in {"HGB_M", "HGB_F"}:
+        return "HGB"
+    if canonical in {"GGT_M", "GGT_F"}:
+        return "GGT"
+    return canonical
 
 
 def _parse_metric_value(value: str | None) -> float | None:
