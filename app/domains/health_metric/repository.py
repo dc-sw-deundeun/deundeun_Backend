@@ -30,11 +30,29 @@ class HealthMetricAnalysisRepository:
 
     def save(self, analysis: HealthMetricAnalysis) -> HealthMetricAnalysis:
         self.db.add(analysis)
-        self.db.commit()
-        self.db.refresh(analysis)
+        self.db.flush()
         return analysis
 
     def get(self, analysis_id: int) -> HealthMetricAnalysis | None:
         return self.db.scalar(
             select(HealthMetricAnalysis).where(HealthMetricAnalysis.id == analysis_id)
+        )
+
+    def get_for_user(self, analysis_id: int, user_id: int) -> HealthMetricAnalysis | None:
+        return self.db.scalar(
+            select(HealthMetricAnalysis).where(
+                HealthMetricAnalysis.id == analysis_id,
+                HealthMetricAnalysis.user_id == user_id,
+            )
+        )
+
+    def get_latest_for_record(self, record_id: int, user_id: int) -> HealthMetricAnalysis | None:
+        return self.db.scalar(
+            select(HealthMetricAnalysis)
+            .where(
+                HealthMetricAnalysis.record_id == record_id,
+                HealthMetricAnalysis.user_id == user_id,
+            )
+            .order_by(HealthMetricAnalysis.created_at.desc(), HealthMetricAnalysis.id.desc())
+            .limit(1)
         )

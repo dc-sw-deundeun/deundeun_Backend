@@ -43,6 +43,9 @@ class HealthMetricInput(BaseModel):
 class HealthMetricEvaluationRequest(BaseModel):
     sex: str | None = Field(default=None, description="male/female 또는 남/여")
     measured_at: str | None = Field(default=None, description="검진 결과지 날짜 YYYY-MM-DD")
+    record_id: int | None = Field(
+        default=None, description="저장 분석과 연결할 VERIFIED 검진 기록 ID"
+    )
     metrics: list[HealthMetricInput] = Field(..., min_length=1, max_length=100)
 
     @field_validator("sex")
@@ -149,9 +152,12 @@ class HealthMetricDetailView(BaseModel):
     recommendations: HealthMetricRecommendations
 
 
-class HealthMetricAnalysisCreateResponse(BaseModel):
+class HealthMetricAnalysisResponse(BaseModel):
     analysis_id: int
-    summary: HealthMetricSummaryView
+    record_id: int | None = None
+    results: list[HealthMetricEvaluationItem]
+    explanation: HealthMetricExplanation
+    ui: dict
 
 
 class HealthMetricEvaluationResponse(BaseModel):

@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, Query
+from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.dependencies import get_current_user
@@ -9,6 +10,8 @@ from app.core.exceptions import (
     UnsupportedMediaTypeException,
 )
 from app.core.response import success_response
+from app.database.session import get_db
+from app.domains.health_metric.service import HealthMetricAnalysisService
 from app.domains.ocr.dependencies import get_ocr_service, get_record_service
 from app.domains.ocr.service import FinalMetric, OcrService
 from app.domains.record.content_hash import compute_content_hash
@@ -227,6 +230,23 @@ def get_checkup_trends(
 ):
     trends = service.get_trends(current_user.id, record_id)
     return success_response(data=trends.model_dump())
+
+
+@router.get(
+    "/checkups/{record_id}/analysis",
+    summary="[프론트 사용] 검진 기록 최신 HealthMetric 분석 조회",
+    description=(
+        "검진 기록에 연결된 최신 HealthMetric 분석 1건을 조회합니다. 신규 화면은 "
+        "`/analysis/*`가 아니라 이 API 또는 `/health-metrics/analyses/{analysis_id}`를 사용하세요."
+    ),
+)
+def get_checkup_analysis(
+    record_id: int,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    analysis = HealthMetricAnalysisService(db).get_latest_for_record(record_id, current_user.id)
+    return success_response(data=analysis.model_dump(mode="json"))
 
 
 @router.get(
