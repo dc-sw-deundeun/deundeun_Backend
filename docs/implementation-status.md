@@ -47,9 +47,10 @@
 
 ### Record `/api/v1/records`
 
+OCR 업로드 플로우 상세는 [api-record-ocr.md](./api-record-ocr.md) 참조.
+
 | Method | Path | 설명 |
 |--------|------|------|
-| POST | `/checkups/upload` | 검진 이미지 업로드, OCR preview |
 | POST | `/checkups/ocr-preview` | OCR preview |
 | POST | `/checkups` | 검진 결과 커밋 |
 | POST | `/checkups/manual` | 수동 검진 입력 |
@@ -61,18 +62,6 @@
 | PUT | `/checkups/{id}/metrics` | 여러 지표 수정 |
 | POST | `/checkups/{id}/verify` | 검진 검수 완료 |
 | DELETE | `/checkups/{id}` | 검진 삭제 |
-
-아직 구현하지 않은 Record API:
-
-| Method | Path | 상태 |
-|--------|------|------|
-| POST/GET | `/meals` | stub/미구현 |
-
-### OCR `/api/v1/ocr`
-
-| Method | Path | 설명 |
-|--------|------|------|
-| GET | `/jobs/{job_id}` | OCR job 상태 조회 |
 
 ### HealthMetric `/api/v1/health-metrics`
 
