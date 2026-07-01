@@ -55,6 +55,7 @@ def list_animals(
         "프론트 공개 API가 아닙니다. 경험치 지급은 미션 완료 흐름에서 내부 서비스로 처리합니다. "
         "현재 직접 호출은 NOT_IMPLEMENTED(501)를 반환합니다."
     ),
+    dependencies=[Security(bearer_scheme)],
 )
 async def add_experience():
     return not_implemented_response()
@@ -67,6 +68,7 @@ async def add_experience():
         "프론트 공개 API가 아닙니다. stage/level은 EXP 정책으로 계산합니다. "
         "현재 직접 호출은 NOT_IMPLEMENTED(501)를 반환합니다."
     ),
+    dependencies=[Security(bearer_scheme)],
 )
 async def update_stage():
     return not_implemented_response()

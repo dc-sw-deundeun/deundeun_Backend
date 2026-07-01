@@ -77,7 +77,8 @@ def progress_ratio(total_exp: int, level: int) -> float:
 
 
 def unlocked_animals_for_level(level: int) -> list[AnimalUnlock]:
-    return [animal for animal in ANIMAL_UNLOCKS if animal.unlock_level <= level]
+    normalized = max(INITIAL_LEVEL, level)
+    return [animal for animal in ANIMAL_UNLOCKS if animal.unlock_level <= normalized]
 
 
 def animal_catalog_entries() -> list[AnimalCatalogEntry]:
