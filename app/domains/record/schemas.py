@@ -72,7 +72,9 @@ class PreviewMetricResponse(BaseModel):
 
 
 class MultiImageUploadRequest(BaseModel):
-    model_config = {"json_schema_extra": {"example": {"images": ["<base64 또는 data:image/jpeg;base64,...>"]}}}
+    model_config = {
+        "json_schema_extra": {"example": {"images": ["<base64 또는 data:image/jpeg;base64,...>"]}}
+    }
 
     images: list[str] = Field(min_length=1, max_length=10)
 
