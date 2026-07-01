@@ -57,7 +57,7 @@ def list_animals(
     ),
     dependencies=[Security(bearer_scheme)],
 )
-async def add_experience():
+async def add_experience(current_user: CurrentUser = Depends(get_current_user)):
     return not_implemented_response()
 
 
@@ -70,5 +70,5 @@ async def add_experience():
     ),
     dependencies=[Security(bearer_scheme)],
 )
-async def update_stage():
+async def update_stage(current_user: CurrentUser = Depends(get_current_user)):
     return not_implemented_response()
