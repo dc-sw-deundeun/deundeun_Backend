@@ -18,6 +18,80 @@ router = APIRouter()
         "EXP/level 정책은 현재 mock 정책입니다. Authorization 헤더 필요."
     ),
     dependencies=[Security(bearer_scheme)],
+    openapi_extra={
+        "responses": {
+            "200": {
+                "content": {
+                    "application/json": {
+                        "examples": {
+                            "level1_frog_only": {
+                                "summary": "신규 유저 (level 1, frog만 보유)",
+                                "value": {
+                                    "success": True,
+                                    "message": "요청이 성공했습니다.",
+                                    "data": {
+                                        "user_id": 1,
+                                        "level": 1,
+                                        "total_exp": 0,
+                                        "current_level_exp": 0,
+                                        "exp_to_next_level": 100,
+                                        "progress_ratio": 0.0,
+                                        "owned_animals": [
+                                            {
+                                                "animal_code": "frog",
+                                                "name": "개구리",
+                                                "unlocked_level": 1,
+                                                "unlocked_at": "2026-07-01T13:00:00Z",
+                                            }
+                                        ],
+                                        "updated_at": "2026-07-01T13:00:00Z",
+                                    },
+                                    "error_code": None,
+                                },
+                            },
+                            "level5_three_animals": {
+                                "summary": "level 5 달성 (frog, chick, penguin 보유)",
+                                "value": {
+                                    "success": True,
+                                    "message": "요청이 성공했습니다.",
+                                    "data": {
+                                        "user_id": 1,
+                                        "level": 5,
+                                        "total_exp": 700,
+                                        "current_level_exp": 37,
+                                        "exp_to_next_level": 311,
+                                        "progress_ratio": 0.12,
+                                        "owned_animals": [
+                                            {
+                                                "animal_code": "frog",
+                                                "name": "개구리",
+                                                "unlocked_level": 1,
+                                                "unlocked_at": "2026-07-01T12:00:00Z",
+                                            },
+                                            {
+                                                "animal_code": "chick",
+                                                "name": "병아리",
+                                                "unlocked_level": 3,
+                                                "unlocked_at": "2026-07-01T13:00:00Z",
+                                            },
+                                            {
+                                                "animal_code": "penguin",
+                                                "name": "펭귄",
+                                                "unlocked_level": 5,
+                                                "unlocked_at": "2026-07-01T13:00:00Z",
+                                            },
+                                        ],
+                                        "updated_at": "2026-07-01T13:00:00Z",
+                                    },
+                                    "error_code": None,
+                                },
+                            },
+                        }
+                    }
+                }
+            }
+        }
+    },
 )
 def get_my_character(
     current_user: CurrentUser = Depends(get_current_user),
@@ -37,6 +111,89 @@ def get_my_character(
         "Authorization 헤더 필요."
     ),
     dependencies=[Security(bearer_scheme)],
+    openapi_extra={
+        "responses": {
+            "200": {
+                "content": {
+                    "application/json": {
+                        "example": {
+                            "success": True,
+                            "message": "요청이 성공했습니다.",
+                            "data": {
+                                "animals": [
+                                    {
+                                        "animal_code": "frog",
+                                        "name": "개구리",
+                                        "unlock_level": 1,
+                                        "required_total_exp": 0,
+                                        "is_unlocked": True,
+                                        "unlocked_at": "2026-07-01T13:00:00Z",
+                                    },
+                                    {
+                                        "animal_code": "chick",
+                                        "name": "병아리",
+                                        "unlock_level": 3,
+                                        "required_total_exp": 235,
+                                        "is_unlocked": False,
+                                        "unlocked_at": None,
+                                    },
+                                    {
+                                        "animal_code": "penguin",
+                                        "name": "펭귄",
+                                        "unlock_level": 5,
+                                        "required_total_exp": 663,
+                                        "is_unlocked": False,
+                                        "unlocked_at": None,
+                                    },
+                                    {
+                                        "animal_code": "dog",
+                                        "name": "강아지",
+                                        "unlock_level": 7,
+                                        "required_total_exp": 1443,
+                                        "is_unlocked": False,
+                                        "unlocked_at": None,
+                                    },
+                                    {
+                                        "animal_code": "cat",
+                                        "name": "고양이",
+                                        "unlock_level": 10,
+                                        "required_total_exp": 3968,
+                                        "is_unlocked": False,
+                                        "unlocked_at": None,
+                                    },
+                                    {
+                                        "animal_code": "tiger",
+                                        "name": "호랑이",
+                                        "unlock_level": 13,
+                                        "required_total_exp": 10181,
+                                        "is_unlocked": False,
+                                        "unlocked_at": None,
+                                    },
+                                    {
+                                        "animal_code": "panda",
+                                        "name": "판다",
+                                        "unlock_level": 16,
+                                        "required_total_exp": 25469,
+                                        "is_unlocked": False,
+                                        "unlocked_at": None,
+                                    },
+                                    {
+                                        "animal_code": "monkey",
+                                        "name": "원숭이",
+                                        "unlock_level": 20,
+                                        "required_total_exp": 85268,
+                                        "is_unlocked": False,
+                                        "unlocked_at": None,
+                                    },
+                                ]
+                            },
+                            "error_code": None,
+                        }
+                    }
+                }
+            }
+        }
+    },
 )
 def list_animals(
     current_user: CurrentUser = Depends(get_current_user),

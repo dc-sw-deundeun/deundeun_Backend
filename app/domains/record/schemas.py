@@ -72,6 +72,8 @@ class PreviewMetricResponse(BaseModel):
 
 
 class MultiImageUploadRequest(BaseModel):
+    model_config = {"json_schema_extra": {"example": {"images": ["<base64 또는 data:image/jpeg;base64,...>"]}}}
+
     images: list[str] = Field(min_length=1, max_length=10)
 
 
@@ -95,6 +97,38 @@ class CommitMetricRequest(BaseModel):
 
 
 class CommitCheckupRequest(BaseModel):
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "ocr_status": "COMPLETED",
+                "failed_pages": [],
+                "content_hash": "a3f1e2d4b5c6a7e8f9012345678901234567890123456789012345678901234",
+                "metrics": [
+                    {
+                        "metric_code": "fasting_glucose",
+                        "metric_name": "공복혈당",
+                        "value": "95",
+                        "unit": "mg/dL",
+                        "confidence": 0.97,
+                        "raw_text": "공복혈당 95",
+                        "page_index": 0,
+                        "is_edited": False,
+                    },
+                    {
+                        "metric_code": "bmi",
+                        "metric_name": "체질량지수",
+                        "value": "22.5",
+                        "unit": "kg/m²",
+                        "confidence": 0.95,
+                        "raw_text": "BMI 22.5",
+                        "page_index": 0,
+                        "is_edited": False,
+                    },
+                ],
+            }
+        }
+    }
+
     ocr_status: str = Field(pattern=r"^(COMPLETED|PARTIAL|FAILED)$")
     failed_pages: list[int] = Field(default_factory=list)
     metrics: list[CommitMetricRequest] = Field(min_length=1)
@@ -102,6 +136,36 @@ class CommitCheckupRequest(BaseModel):
 
 
 class ManualCheckupRequest(BaseModel):
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "measured_at": "2026-06-01T09:00:00Z",
+                "metrics": [
+                    {
+                        "metric_code": "fasting_glucose",
+                        "metric_name": "공복혈당",
+                        "value": "100",
+                        "unit": "mg/dL",
+                        "confidence": None,
+                        "raw_text": None,
+                        "page_index": None,
+                        "is_edited": False,
+                    },
+                    {
+                        "metric_code": "total_cholesterol",
+                        "metric_name": "총콜레스테롤",
+                        "value": "190",
+                        "unit": "mg/dL",
+                        "confidence": None,
+                        "raw_text": None,
+                        "page_index": None,
+                        "is_edited": False,
+                    },
+                ],
+            }
+        }
+    }
+
     measured_at: datetime | None = None
     metrics: list[CommitMetricRequest] = Field(min_length=1)
 
@@ -162,6 +226,8 @@ class CheckupTrendsResponse(BaseModel):
 
 
 class MetricUpdateRequest(BaseModel):
+    model_config = {"json_schema_extra": {"example": {"value": "98", "unit": "mg/dL"}}}
+
     value: str = Field(min_length=1, max_length=50)
     unit: str | None = Field(default=None, max_length=20)
 
@@ -173,8 +239,29 @@ class MetricUpdateItem(BaseModel):
 
 
 class MetricBulkUpdateRequest(BaseModel):
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "metrics": [
+                    {"metric_id": 1, "value": "98", "unit": "mg/dL"},
+                    {"metric_id": 2, "value": "22.5", "unit": "kg/m²"},
+                ]
+            }
+        }
+    }
+
     metrics: list[MetricUpdateItem]
 
 
 class VerifyRequest(BaseModel):
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "metrics": [
+                    {"metric_id": 1, "value": "98", "unit": "mg/dL"},
+                ]
+            }
+        }
+    }
+
     metrics: list[MetricUpdateItem] | None = None
