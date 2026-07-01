@@ -84,7 +84,11 @@ class CharacterRepository:
                 character_profile_id=profile.id,
                 animal_code=entry.animal_code,
                 unlocked_level=entry.unlock_level,
-                unlocked_total_exp=unlocked_total_exp,
+                unlocked_total_exp=(
+                    policy.INITIAL_TOTAL_EXP
+                    if entry.unlock_level <= policy.INITIAL_LEVEL
+                    else unlocked_total_exp
+                ),
             )
             try:
                 with self.db.begin_nested():
