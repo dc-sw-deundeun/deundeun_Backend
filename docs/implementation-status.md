@@ -1,6 +1,6 @@
 # 구현 현황
 
-> 기준일: 2026-06-30
+> 기준일: 2026-07-02
 > 실행 중인 서버의 Swagger/OpenAPI가 API 계약의 최종 기준입니다. 이 문서는 팀 공유용 요약입니다.
 
 범례: 구현, 부분, stub
@@ -66,6 +66,8 @@ OCR 업로드 플로우 상세는 [api-record-ocr.md](./api-record-ocr.md) 참�
 
 ### HealthMetric `/api/v1/health-metrics`
 
+분석 저장·조회 플로우 상세는 [api-health-metric-analysis.md](./api-health-metric-analysis.md) 참조.
+
 | Method | Path | 설명 |
 |--------|------|------|
 | POST | `/analyses` | 건강 지표 분석 저장, `data: null` 응답 |
@@ -101,6 +103,7 @@ OCR 업로드 플로우 상세는 [api-record-ocr.md](./api-record-ocr.md) 참�
 | `001` ~ `008` | (기존) |
 | `009_add_analysis_schema` | analysis_jobs, summaries, mission_candidates, mission_templates seed, user_missions |
 | `010_add_health_metric_analysis_record_id` | health_metric_analyses.record_id 및 checkup_records 연결 |
+| `011_normalize_health_metric_analysis` | HealthMetric 분석 결과 정규화 저장 테이블 |
 
 ## 다음 구현 우선순위
 
