@@ -26,7 +26,7 @@ _MAX_REGEN = 2
 
 class MissionPipeline:
     def __init__(self, llm: LLMClient | None = None) -> None:
-        self.llm = llm or LLMClient()
+        self.llm = llm or LLMClient.for_provider()
         self.context_agent = ContextAgent()
         self.generator = Generator(self.llm)
 

@@ -50,7 +50,7 @@ def _normalize_type(raw: str, title: str = "") -> str:
 
 class Generator:
     def __init__(self, llm: LLMClient | None = None) -> None:
-        self.llm = llm or LLMClient()
+        self.llm = llm or LLMClient.for_provider()
 
     async def generate(
         self,
