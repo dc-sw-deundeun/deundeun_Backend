@@ -1,0 +1,15 @@
+{
+  "_doc": "mission_pool 조건 id → 외부 의학 KG(#9)의 MONDO disease id. kg/mappings/mapping_table.json(한국 검진 finding↔MONDO)에서 추출. (:Condition)-[:MAPS_TO]->(:Disease {mondo_id}) 조인과, #9 disease_disease 이웃을 mission_pool 어휘로 되돌리는 역매핑에 사용. label은 mission_pool(pool.condition_label)이 단일 출처. 그룹노드 mondo_id는 밑줄 결합(PrimeKG 실제 노드 id).",
+  "map": {
+    "hypertension": "1200_1134_15512_5080_100078",
+    "type2_diabetes": "5148",
+    "prediabetes": "6920",
+    "dyslipidemia": "21187_11237_11470",
+    "obesity": "11122",
+    "fatty_liver": "43693_13209_4790_21104",
+    "ckd": "5300",
+    "anemia": "2280",
+    "cardiovascular_disease": "4995",
+    "gout": "5393"
+  }
+}

@@ -113,6 +113,19 @@ class RecordRepository:
         )
         return [(record, metric) for record, metric in self._db.execute(stmt).all()]
 
+    def get_latest_verified_record(self, user_id: int) -> CheckupRecord | None:
+        """user의 가장 최근 VERIFIED 검진 레코드(측정일 우선, 없으면 생성일). PKG 조립의 1차 소스."""
+        event_at = func.coalesce(CheckupRecord.measured_at, CheckupRecord.created_at)
+        return self._db.scalar(
+            select(CheckupRecord)
+            .where(
+                CheckupRecord.user_id == user_id,
+                CheckupRecord.verification_status == VerificationStatus.VERIFIED.value,
+            )
+            .order_by(event_at.desc(), CheckupRecord.id.desc())
+            .limit(1)
+        )
+
     def get_record_fresh(self, record_id: int) -> CheckupRecord | None:
         stmt = (
             select(CheckupRecord)

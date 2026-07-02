@@ -1,3 +1,4 @@
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -42,6 +43,8 @@ from app.domains.health_metric.schemas import (
 from app.domains.ocr.status import VerificationStatus
 from app.domains.record.models import CheckupMetricResult, CheckupRecord
 from app.domains.record.repository import RecordRepository
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -817,7 +820,26 @@ class HealthMetricAnalysisService:
         self._db.commit()
         self._db.refresh(analysis)
 
+        self._rebuild_pkg_snapshot(user_id)
+
         return self._to_response(analysis)
+
+    def _rebuild_pkg_snapshot(self, user_id: int) -> None:
+        """분석 저장 직후 PKG 스냅샷 재빌드 훅 (best-effort — 분석 저장엔 영향 없음).
+
+        검진 파생 데이터가 갱신됐으니 개인 지식그래프(pkg_snapshots)를 최신으로 유지한다.
+        검증된 검진이 없는 단독 분석이면 스킵(NotFound), 그 외 실패도 경고만 남긴다.
+        """
+        from app.domains.pkg.dependencies import build_pkg_service
+
+        try:
+            build_pkg_service(self._db).build_pkg(user_id)
+        except NotFoundException:
+            logger.debug("PKG rebuild skipped: no verified checkup (user_id=%s)", user_id)
+        except Exception:
+            # 훅 이후에도 세션이 이어지므로 aborted transaction을 남기지 않도록 정리 후 로깅.
+            self._db.rollback()
+            logger.warning("PKG rebuild after analysis failed (user_id=%s)", user_id, exc_info=True)
 
     def get(self, analysis_id: int, user_id: int) -> HealthMetricAnalysisResponse:
         analysis = self._repo.get_for_user(analysis_id, user_id)
