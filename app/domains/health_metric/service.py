@@ -909,7 +909,9 @@ class HealthMetricAnalysisService:
                 )
             )
 
-        for index, (source, result, detail) in enumerate(zip(sources, results, details, strict=True)):
+        for index, (source, result, detail) in enumerate(
+            zip(sources, results, details, strict=True)
+        ):
             item = HealthMetricAnalysisItem(
                 analysis_id=analysis.id,
                 input_metric_code=source.metric_code,
@@ -981,9 +983,7 @@ class HealthMetricAnalysisService:
         measured_at: datetime | None,
     ) -> dict[str, list[HealthMetricTrendPoint]]:
         grouped: dict[str, list[HealthMetricTrendPoint]] = {
-            item.canonical_test_code: []
-            for item in results
-            if item.canonical_test_code is not None
+            item.canonical_test_code: [] for item in results if item.canonical_test_code is not None
         }
         if not grouped:
             return {}
@@ -1000,10 +1000,10 @@ class HealthMetricAnalysisService:
                 grouped[code].append(HealthMetricTrendPoint(label=label, value=float(item.value)))
 
         current_label = (measured_at or datetime.now(UTC)).date().isoformat()
-        for item in results:
-            if item.canonical_test_code in grouped:
-                grouped[item.canonical_test_code].append(
-                    HealthMetricTrendPoint(label=current_label, value=item.value)
+        for result in results:
+            if result.canonical_test_code in grouped:
+                grouped[result.canonical_test_code].append(
+                    HealthMetricTrendPoint(label=current_label, value=result.value)
                 )
         return grouped
 
@@ -1115,9 +1115,7 @@ class HealthMetricAnalysisService:
                 ),
                 recommendations=HealthMetricRecommendations(
                     title=(
-                        item.recommendations[0].title
-                        if item.recommendations
-                        else "맞춤 추천 습관"
+                        item.recommendations[0].title if item.recommendations else "맞춤 추천 습관"
                     ),
                     items=[recommendation.body for recommendation in item.recommendations],
                 ),
@@ -1162,7 +1160,7 @@ class HealthMetricAnalysisService:
         self, analysis: HealthMetricAnalysis
     ) -> dict[str, list[HealthMetricTrendPoint]]:
         codes = {item.canonical_test_code for item in analysis.items}
-        grouped = {code: [] for code in codes}
+        grouped: dict[str, list[HealthMetricTrendPoint]] = {code: [] for code in codes}
         if not analysis.user_id:
             return grouped
         for previous_analysis in self._repo.list_for_user(analysis.user_id):

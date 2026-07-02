@@ -92,10 +92,16 @@ def upgrade() -> None:
         sa.Column("value_text", sa.String(length=50), nullable=False),
         sa.Column("badge_text", sa.String(length=100), nullable=False),
         sa.Column("sort_order", sa.Integer(), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
     )
-    op.create_index("ix_hmai_analysis_sort", "health_metric_analysis_items", ["analysis_id", "sort_order"])
-    op.create_index("ix_hmai_code_value", "health_metric_analysis_items", ["canonical_test_code", "value"])
+    op.create_index(
+        "ix_hmai_analysis_sort", "health_metric_analysis_items", ["analysis_id", "sort_order"]
+    )
+    op.create_index(
+        "ix_hmai_code_value", "health_metric_analysis_items", ["canonical_test_code", "value"]
+    )
     op.create_index("ix_hmai_status", "health_metric_analysis_items", ["status"])
 
     op.create_table(

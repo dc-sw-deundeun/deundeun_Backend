@@ -39,7 +39,9 @@ class HealthMetricAnalysis(Base):
     measured_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     overall_title: Mapped[str | None] = mapped_column(String(100), nullable=True)
     overall_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
-    normal_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    normal_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
     caution_count: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0, server_default="0"
     )
