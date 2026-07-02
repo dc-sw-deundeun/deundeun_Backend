@@ -41,6 +41,34 @@ services:
       retries: ${POSTGRES_HEALTHCHECK_RETRIES:-5}
       start_period: ${POSTGRES_HEALTHCHECK_START_PERIOD:-10s}
 
+  neo4j:
+    # 외부 의학 KG(#9)가 baked-in된 read-only 이미지. (PKG(#23)는 앱 Postgres로 이전 — 앱은 Neo4j 미접속)
+    #   로컬: docker compose -f docker/docker-compose.yml up -d neo4j
+    image: ${MEDICAL_KG_IMAGE:-deundeun/medical-kg-neo4j:v1}
+    container_name: ${NEO4J_CONTAINER_NAME:-deundeun-neo4j}
+    restart: ${NEO4J_RESTART_POLICY:-unless-stopped}
+    environment:
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:-change-me}
+      NEO4J_server_bolt_advertised__address: localhost:${NEO4J_BOLT_PORT:-7687}
+      NEO4J_server_http_advertised__address: localhost:${NEO4J_HTTP_PORT:-7474}
+    ports:
+      - "${NEO4J_BIND:-127.0.0.1}:${NEO4J_BOLT_PORT:-7687}:7687"
+      - "${NEO4J_BIND:-127.0.0.1}:${NEO4J_HTTP_PORT:-7474}:7474"
+    volumes:
+      - neo4jdata:/data
+    networks:
+      - deundeun
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "cypher-shell -u neo4j -p ${NEO4J_PASSWORD:-change-me} 'RETURN 1' || exit 1",
+        ]
+      interval: ${NEO4J_HEALTHCHECK_INTERVAL:-10s}
+      timeout: ${NEO4J_HEALTHCHECK_TIMEOUT:-10s}
+      retries: ${NEO4J_HEALTHCHECK_RETRIES:-10}
+      start_period: ${NEO4J_HEALTHCHECK_START_PERIOD:-40s}
+
   api:
     profiles: ["deploy"]
     image: ${IMAGE_TAG:-deundeun/backend:latest}
@@ -104,3 +132,5 @@ networks:
 volumes:
   pgdata:
     name: ${COMPOSE_PROJECT_NAME:-deundeun}_pgdata
+  neo4jdata:
+    name: ${COMPOSE_PROJECT_NAME:-deundeun}_neo4jdata
