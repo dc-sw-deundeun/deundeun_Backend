@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
 from app.domains.pkg.models import PkgSnapshot
@@ -16,16 +17,29 @@ class PkgRepository:
     def upsert_snapshot(
         self, user_id: int, *, payload: dict, source_record_id: int | None
     ) -> PkgSnapshot:
-        """유저당 1행 스냅샷을 교체 저장한다(idempotent replace)."""
-        snapshot = self.get_by_user(user_id)
-        if snapshot is None:
-            snapshot = PkgSnapshot(
-                user_id=user_id, payload=payload, source_record_id=source_record_id
+        """유저당 1행 스냅샷을 원자적으로 교체 저장한다.
+
+        get→insert/update 분기는 동시 요청(GET 조회 + 분석 훅 재빌드)에서 TOCTOU 레이스로
+        스냅샷이 유실될 수 있어, Postgres INSERT ... ON CONFLICT(user_id) DO UPDATE로 원자 upsert 한다.
+        """
+        now = datetime.now(timezone.utc)
+        stmt = (
+            pg_insert(PkgSnapshot)
+            .values(
+                user_id=user_id,
+                payload=payload,
+                source_record_id=source_record_id,
+                built_at=now,
             )
-            self.db.add(snapshot)
-        else:
-            snapshot.payload = payload
-            snapshot.source_record_id = source_record_id
-            snapshot.built_at = datetime.now(timezone.utc)
+            .on_conflict_do_update(
+                index_elements=["user_id"],
+                set_={"payload": payload, "source_record_id": source_record_id, "built_at": now},
+            )
+        )
+        self.db.execute(stmt)
         self.db.flush()
+        # Core upsert는 ORM identity map을 우회하므로, 이후 조회가 stale 캐시를 보지 않게 만료시킨다.
+        self.db.expire_all()
+        snapshot = self.get_by_user(user_id)
+        assert snapshot is not None  # 방금 upsert 했으므로 항상 존재
         return snapshot

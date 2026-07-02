@@ -837,6 +837,8 @@ class HealthMetricAnalysisService:
         except NotFoundException:
             logger.debug("PKG rebuild skipped: no verified checkup (user_id=%s)", user_id)
         except Exception:
+            # 훅 이후에도 세션이 이어지므로 aborted transaction을 남기지 않도록 정리 후 로깅.
+            self._db.rollback()
             logger.warning("PKG rebuild after analysis failed (user_id=%s)", user_id, exc_info=True)
 
     def get(self, analysis_id: int, user_id: int) -> HealthMetricAnalysisResponse:
