@@ -35,6 +35,4 @@ async def search_diseases(
     service: DiseaseSearchService = Depends(get_disease_search_service),
 ):
     results = await service.search(q)
-    return DiseaseSearchResponse(
-        results=[DiseaseResult.model_validate(r) for r in results]
-    )
+    return DiseaseSearchResponse(results=[DiseaseResult.model_validate(r) for r in results])

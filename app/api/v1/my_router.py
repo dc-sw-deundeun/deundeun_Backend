@@ -100,7 +100,9 @@ async def get_connected_apps(
     connections = repo.list_wearable_connections(current_user.id)
     existing = {c.provider: c.status for c in connections}
     apps = [
-        ConnectedAppStatus(provider=p.value, status=existing.get(p.value, WearableStatus.DISCONNECTED.value))
+        ConnectedAppStatus(
+            provider=p.value, status=existing.get(p.value, WearableStatus.DISCONNECTED.value)
+        )
         for p in WearableProvider
     ]
     return ConnectedAppsResponse(apps=apps)

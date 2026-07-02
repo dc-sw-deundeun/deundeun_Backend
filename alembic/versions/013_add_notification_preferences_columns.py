@@ -19,13 +19,25 @@ def upgrade() -> None:
     op.create_table(
         "notification_preferences",
         sa.Column("id", sa.Integer(), primary_key=True),
-        sa.Column("user_id", sa.Integer(), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "user_id", sa.Integer(), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+        ),
         sa.Column("mission_alarm_enabled", sa.Boolean(), nullable=False, server_default="true"),
         sa.Column("record_alarm_enabled", sa.Boolean(), nullable=False, server_default="true"),
         sa.Column("email_alarm_enabled", sa.Boolean(), nullable=False, server_default="true"),
         sa.Column("push_alarm_enabled", sa.Boolean(), nullable=False, server_default="true"),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
         sa.UniqueConstraint("user_id", name="uq_notification_preferences_user"),
     )
     op.create_index("ix_notification_preferences_user_id", "notification_preferences", ["user_id"])
