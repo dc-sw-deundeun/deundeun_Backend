@@ -46,6 +46,51 @@ def _metric_list(service: RecordService, user_id: int, record_id: int) -> list[d
         "PNG/JPEG 이미지를 base64 문자열 배열로 업로드합니다. data URI와 줄바꿈 포함 base64도 허용합니다. "
         "응답의 metrics를 화면에서 확인·수정한 뒤 `POST /records/checkups`로 저장하세요."
     ),
+    openapi_extra={
+        "responses": {
+            "200": {
+                "content": {
+                    "application/json": {
+                        "example": {
+                            "success": True,
+                            "message": "OCR 처리가 완료되었습니다.",
+                            "data": {
+                                "page_count": 1,
+                                "failed_pages": [],
+                                "ocr_status": "COMPLETED",
+                                "content_hash": "a3f1e2d4b5c6a7e8f9012345678901234567890123456789012345678901234",
+                                "metrics": [
+                                    {
+                                        "metric_code": "fasting_glucose",
+                                        "metric_name": "공복혈당",
+                                        "value": "95",
+                                        "unit": "mg/dL",
+                                        "confidence": 0.97,
+                                        "raw_text": "공복혈당 95",
+                                        "page_index": 0,
+                                        "low_confidence": False,
+                                        "out_of_range": False,
+                                    },
+                                    {
+                                        "metric_code": "bmi",
+                                        "metric_name": "체질량지수",
+                                        "value": "22.5",
+                                        "unit": "kg/m²",
+                                        "confidence": 0.95,
+                                        "raw_text": "BMI 22.5",
+                                        "page_index": 0,
+                                        "low_confidence": False,
+                                        "out_of_range": False,
+                                    },
+                                ],
+                            },
+                            "error_code": None,
+                        }
+                    }
+                }
+            }
+        }
+    },
 )
 async def preview_checkup_ocr(
     body: MultiImageUploadRequest,
@@ -123,6 +168,41 @@ async def preview_checkup_ocr(
         "OCR preview 응답의 `ocr_status`, `failed_pages`, `content_hash`, `metrics`를 전달해 "
         "검진 기록을 저장합니다. 같은 `content_hash`는 중복 업로드로 처리됩니다."
     ),
+    openapi_extra={
+        "responses": {
+            "200": {
+                "content": {
+                    "application/json": {
+                        "example": {
+                            "success": True,
+                            "message": "검진 기록을 저장했습니다.",
+                            "data": {
+                                "record_id": 1,
+                                "verification_status": "UNVERIFIED",
+                                "metrics": [
+                                    {
+                                        "metric_id": 1,
+                                        "metric_code": "fasting_glucose",
+                                        "metric_name": "공복혈당",
+                                        "value": "95",
+                                        "unit": "mg/dL",
+                                        "status": "normal",
+                                        "reference_min": 70.0,
+                                        "reference_max": 100.0,
+                                        "confidence": 0.97,
+                                        "low_confidence": False,
+                                        "source": "OCR",
+                                        "is_edited": False,
+                                    }
+                                ],
+                            },
+                            "error_code": None,
+                        }
+                    }
+                }
+            }
+        }
+    },
 )
 def commit_checkup(
     body: CommitCheckupRequest,
@@ -191,6 +271,38 @@ def create_manual_checkup(
     "/checkups",
     summary="[프론트 사용] 검진 기록 목록 조회",
     description="인증된 사용자의 검진 기록 목록을 페이지 단위로 조회합니다.",
+    openapi_extra={
+        "responses": {
+            "200": {
+                "content": {
+                    "application/json": {
+                        "example": {
+                            "success": True,
+                            "message": "요청이 성공했습니다.",
+                            "data": {
+                                "items": [
+                                    {
+                                        "record_id": 1,
+                                        "source_type": "OCR",
+                                        "verification_status": "VERIFIED",
+                                        "analysis_status": "COMPLETED",
+                                        "ocr_status": "COMPLETED",
+                                        "measured_at": "2026-06-01T09:00:00Z",
+                                        "created_at": "2026-06-01T09:05:00Z",
+                                        "metric_count": 12,
+                                    }
+                                ],
+                                "page": 1,
+                                "size": 20,
+                                "total": 1,
+                            },
+                            "error_code": None,
+                        }
+                    }
+                }
+            }
+        }
+    },
 )
 def list_checkups(
     page: int = Query(1, ge=1),
@@ -206,6 +318,48 @@ def list_checkups(
     "/checkups/{record_id}",
     summary="[프론트 사용] 검진 기록 상세 조회",
     description="검진 기록의 상태, 측정일, 지표 목록을 조회합니다.",
+    openapi_extra={
+        "responses": {
+            "200": {
+                "content": {
+                    "application/json": {
+                        "example": {
+                            "success": True,
+                            "message": "요청이 성공했습니다.",
+                            "data": {
+                                "record_id": 1,
+                                "source_type": "OCR",
+                                "verification_status": "VERIFIED",
+                                "analysis_status": "COMPLETED",
+                                "ocr_status": "COMPLETED",
+                                "measured_at": "2026-06-01T09:00:00Z",
+                                "verified_at": "2026-06-01T09:10:00Z",
+                                "created_at": "2026-06-01T09:05:00Z",
+                                "overall_status": "caution",
+                                "metrics": [
+                                    {
+                                        "metric_id": 1,
+                                        "metric_code": "fasting_glucose",
+                                        "metric_name": "공복혈당",
+                                        "value": "105",
+                                        "unit": "mg/dL",
+                                        "status": "caution",
+                                        "reference_min": 70.0,
+                                        "reference_max": 100.0,
+                                        "confidence": 0.97,
+                                        "low_confidence": False,
+                                        "source": "OCR",
+                                        "is_edited": False,
+                                    }
+                                ],
+                            },
+                            "error_code": None,
+                        }
+                    }
+                }
+            }
+        }
+    },
 )
 def get_checkup(
     record_id: int,
@@ -312,6 +466,25 @@ def bulk_update_metrics(
         "사용자 확인이 끝난 검진 기록을 VERIFIED로 전환합니다. "
         "온보딩 INITIAL_CHECKUP 단계 사용자는 CHECKUP_VERIFIED 단계로 전이됩니다."
     ),
+    openapi_extra={
+        "responses": {
+            "200": {
+                "content": {
+                    "application/json": {
+                        "example": {
+                            "success": True,
+                            "message": "검수를 완료했습니다.",
+                            "data": {
+                                "record_id": 1,
+                                "verification_status": "VERIFIED",
+                            },
+                            "error_code": None,
+                        }
+                    }
+                }
+            }
+        }
+    },
 )
 def verify_checkup(
     record_id: int,
