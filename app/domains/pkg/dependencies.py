@@ -9,10 +9,15 @@ from app.domains.pkg.service import PkgService
 from app.domains.record.repository import RecordRepository
 
 
-def get_pkg_service(db: Session = Depends(get_db)) -> PkgService:
+def build_pkg_service(db: Session) -> PkgService:
+    """FastAPI Depends 없이 서비스 레이어(health_metric 훅 등)에서 쓰는 빌더."""
     return PkgService(
         RecordRepository(db),
         AnalysisRepository(db),
         HealthMetricAnalysisRepository(db),
         PkgRepository(db),
     )
+
+
+def get_pkg_service(db: Session = Depends(get_db)) -> PkgService:
+    return build_pkg_service(db)

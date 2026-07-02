@@ -58,3 +58,47 @@ def test_persist_failure_keeps_pkg_response(db_session) -> None:
 
     assert pkg.conditions == ["hypertension"]
     assert _snapshot_count(db_session) == 0
+
+
+def _create_analysis(db, user_id):
+    """health_metric 분석 생성 (프로덕션 경로 그대로) — 훅이 PKG 스냅샷을 재빌드해야 한다."""
+    import asyncio
+
+    from app.domains.health_metric.schemas import (
+        HealthMetricAnalysisCreateRequest,
+        HealthMetricAnalysisMetricInput,
+    )
+    from app.domains.health_metric.service import HealthMetricAnalysisService
+
+    request = HealthMetricAnalysisCreateRequest(
+        sex="male",
+        metrics=[
+            HealthMetricAnalysisMetricInput(
+                metric_code="fasting_glucose", metric_name="공복혈당", value="130"
+            )
+        ],
+    )
+    return asyncio.run(HealthMetricAnalysisService(db).create(request, user_id, None))
+
+
+def test_analysis_create_rebuilds_pkg_snapshot(db_session) -> None:
+    # 검증된 검진이 있는 유저가 분석을 저장하면 → 훅이 PKG 스냅샷을 자동 재빌드
+    _create_user(db_session, 21)
+    _seed_record(db_session, 21, [("systolic_bp", "150")])
+    assert PkgRepository(db_session).get_by_user(21) is None  # 아직 스냅샷 없음
+
+    _create_analysis(db_session, 21)
+
+    snapshot = PkgRepository(db_session).get_by_user(21)
+    assert snapshot is not None
+    assert snapshot.payload["conditions"] == ["hypertension"]
+
+
+def test_analysis_create_without_checkup_skips_snapshot(db_session) -> None:
+    # 검증된 검진이 없는 단독 분석 → 훅은 스킵(NotFound), 분석 저장은 정상
+    _create_user(db_session, 22)
+
+    response = _create_analysis(db_session, 22)
+
+    assert response is not None  # 분석 저장 자체는 성공
+    assert PkgRepository(db_session).get_by_user(22) is None  # 스냅샷은 없음
