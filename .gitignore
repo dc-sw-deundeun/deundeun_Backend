@@ -143,6 +143,8 @@ docs/*
 !docs/development-environment.md
 !docs/implementation-status.md
 !docs/api-record-ocr.md
+!docs/api-health-metric-analysis.md
+!docs/api-character-growth.md
 .github/ISSUE_TEMPLATE/config.yml
 .github/ISSUE_TEMPLATE/phase-*.yml
 

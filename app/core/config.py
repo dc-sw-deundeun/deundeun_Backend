@@ -39,7 +39,6 @@ class Settings(BaseSettings):
     clova_studio_model: str = "HCX-005"
     clova_studio_timeout_seconds: float = 30.0
 
-    health_metric_evaluate_rate_limit_per_minute: int = 20
     health_metric_analysis_rate_limit_per_minute: int = 10
 
     cors_allow_origins: list[str] | str = []

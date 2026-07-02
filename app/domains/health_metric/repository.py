@@ -56,3 +56,12 @@ class HealthMetricAnalysisRepository:
             .order_by(HealthMetricAnalysis.created_at.desc(), HealthMetricAnalysis.id.desc())
             .limit(1)
         )
+
+    def list_for_user(self, user_id: int) -> list[HealthMetricAnalysis]:
+        return list(
+            self.db.scalars(
+                select(HealthMetricAnalysis)
+                .where(HealthMetricAnalysis.user_id == user_id)
+                .order_by(HealthMetricAnalysis.created_at.asc(), HealthMetricAnalysis.id.asc())
+            )
+        )

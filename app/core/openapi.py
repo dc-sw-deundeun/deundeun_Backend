@@ -33,13 +33,13 @@ Mission API는 아직 stub이며, "오늘의 미션으로 받기" HTTP API는 �
 1. `POST /records/checkups/ocr-preview` — 이미지 base64 배열 업로드, OCR preview 확인
 2. `POST /records/checkups` — 사용자가 확인·수정한 preview 결과를 검진 기록으로 저장
 3. `POST /records/checkups/{record_id}/verify` — 검진 검수 완료 및 온보딩 단계 전환
-4. `POST /health-metrics/analyses` — `record_id` + label/value metrics로 HealthMetric 분석 저장
-5. `GET /health-metrics/analyses/{analysis_id}` 또는 `GET /records/checkups/{record_id}/analysis` — 저장 분석 재조회
+4. `POST /health-metrics/analyses` — 프론트가 확정한 metric 배열로 HealthMetric 분석 저장
+5. `GET /health-metrics/analyses/{analysis_id}` — 저장 분석 재조회
 
 ### HealthMetric 분석 흐름
-- `POST /health-metrics/evaluate`: 로그인 없는 비저장 프리뷰입니다.
-- `POST /health-metrics/analyses`: 인증 필요. `record_id`를 전달하면 사용자 소유 VERIFIED 기록만 허용하고, 성공 시 `CheckupRecord.analysis_status=COMPLETED`로 갱신합니다.
-- 응답은 `analysis_id`, `record_id`, `results`, `explanation`, `ui.summary`, `ui.details`를 포함합니다. 연결된 record가 있으면 `ui.details[].trend.points`에 과거 지표 추이가 포함됩니다.
+- `POST /health-metrics/analyses`: 인증 필요. `sex`, `measured_at`, `metrics[]`를 받아 분석을 저장합니다.
+- 생성 응답은 `data: null`입니다. 분석 결과는 GET `/health-metrics/analyses/{analysis_id}`로 조회합니다.
+- GET 응답은 `analysis_id`, `record_id`, `results`, `explanation`, `ui.summary`, `ui.details`를 포함합니다. `ui.details[].trend.points`에는 이전 HealthMetric 분석 이력이 포함됩니다.
 
 ### Legacy Analysis Stub
 `/api/v1/analysis/*`는 Phase 4 Stub MVP 호환용입니다. 신규 프론트 화면은 `/health-metrics/*`를 사용하세요.

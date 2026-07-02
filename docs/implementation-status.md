@@ -1,6 +1,6 @@
 # 구현 현황
 
-> 기준일: 2026-06-30
+> 기준일: 2026-07-02
 > 실행 중인 서버의 Swagger/OpenAPI가 API 계약의 최종 기준입니다. 이 문서는 팀 공유용 요약입니다.
 
 범례: 구현, 부분, stub
@@ -14,7 +14,7 @@
 | Record / OCR | 구현 | 가능 |
 | HealthMetric | 구현 | 가능 |
 | Analysis | legacy stub | 프론트 작업 제외 |
-| Mission / Character | stub | 501 응답 |
+| Mission / Character | 부분 | Character 성장/동물 해금 API 구현 브랜치 진행 중 |
 | Home | stub | 501 응답 |
 | Notification | stub | 501 응답 |
 | My / Support | stub | 501 응답 |
@@ -66,13 +66,14 @@ OCR 업로드 플로우 상세는 [api-record-ocr.md](./api-record-ocr.md) 참�
 
 ### HealthMetric `/api/v1/health-metrics`
 
+분석 저장·조회 플로우 상세는 [api-health-metric-analysis.md](./api-health-metric-analysis.md) 참조.
+
 | Method | Path | 설명 |
 |--------|------|------|
-| POST | `/evaluate` | 건강 지표 평가(비저장 프리뷰) |
-| POST | `/analyses` | 건강 지표 분석 저장, full UI 응답 반환 |
+| POST | `/analyses` | 건강 지표 분석 저장, `data: null` 응답 |
 | GET | `/analyses/{analysis_id}` | 저장된 건강 지표 분석 조회 |
 
-`POST /analyses`에 `record_id`를 전달하면 사용자 소유 VERIFIED 검진 기록만 허용하며, 성공 시 `CheckupRecord.analysis_status=COMPLETED`로 갱신합니다. 저장/조회 응답은 `analysis_id`, `record_id`, `results`, `explanation`, `ui.summary`, `ui.details`를 포함하고, record 연결 시 detail trend points를 포함합니다.
+`POST /analyses`는 프론트가 확정한 `sex`, `measured_at`, `metrics[]`를 받아 분석을 저장합니다. 생성 응답은 결과 본문을 반환하지 않으며, 저장 분석 조회 응답은 `analysis_id`, `record_id`, `results`, `explanation`, `ui.summary`, `ui.details`를 포함합니다. detail trend points는 이전 HealthMetric 분석 이력을 기준으로 구성합니다.
 
 ### Analysis `/api/v1/analysis` (Legacy Phase 4 Stub)
 
@@ -85,12 +86,22 @@ OCR 업로드 플로우 상세는 [api-record-ocr.md](./api-record-ocr.md) 참�
 
 신규 프론트 화면은 `/api/v1/analysis/*`를 호출하지 않고 HealthMetric 분석 API를 사용합니다.
 
+### Character `/api/v1/characters` (구현 브랜치 진행 중)
+
+상세 계약은 [api-character-growth.md](./api-character-growth.md) 참조.
+
+| Method | Path | 설명 |
+|--------|------|------|
+| GET | `/me` | 내 캐릭터 성장 상태와 보유 동물 목록 조회 |
+| GET | `/animals` | 전체 동물 카탈로그와 내 locked/unlocked 상태 조회 |
+
+`POST /me/experience`, `PATCH /me/stage`는 서버/내부 placeholder이며 프론트 공개 API가 아닙니다.
+
 ## Stub API
 
 | Prefix | 상태 |
 |--------|------|
 | `/api/v1/missions` | 미션 API 미완성 (UserMission DB 레코드는 Phase 4에서 생성됨) |
-| `/api/v1/characters` | 성장/캐릭터 도메인 미완성 |
 | `/api/v1/home` | 홈 aggregation 미완성 |
 | `/api/v1/notifications` | 알림 도메인 미완성 |
 | `/api/v1/my` | 마이페이지·지원 기능 미완성 |
@@ -102,6 +113,8 @@ OCR 업로드 플로우 상세는 [api-record-ocr.md](./api-record-ocr.md) 참�
 | `001` ~ `008` | (기존) |
 | `009_add_analysis_schema` | analysis_jobs, summaries, mission_candidates, mission_templates seed, user_missions |
 | `010_add_health_metric_analysis_record_id` | health_metric_analyses.record_id 및 checkup_records 연결 |
+| `012_normalize_health_metric_analysis` | HealthMetric 분석 결과 정규화 저장 테이블 |
+| `011_add_character_growth_schema` | character_profiles, character_growth_logs, character_owned_animals |
 
 ## 다음 구현 우선순위
 
