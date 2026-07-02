@@ -84,7 +84,13 @@ async def delete_account(current_user: CurrentUser = Depends(get_current_user)):
 @router.get(
     "/connected-apps",
     response_model=ConnectedAppsResponse,
-    summary="연동 앱 목록 조회",
+    summary="[프론트 사용] 연동 앱 목록 조회",
+    description=(
+        "현재 사용자의 헬스 앱 연동 상태를 반환합니다.\n\n"
+        "- 지원 provider: `APPLE_HEALTH`, `SAMSUNG_HEALTH`, `GOOGLE_FIT`\n"
+        "- 한 번도 설정하지 않은 앱은 `DISCONNECTED`로 반환됩니다.\n"
+        "- status 값: `CONNECTED` / `DISCONNECTED`"
+    ),
 )
 async def get_connected_apps(
     current_user: CurrentUser = Depends(get_current_user),
@@ -103,7 +109,13 @@ async def get_connected_apps(
 @router.patch(
     "/connected-apps/{provider}",
     response_model=ConnectedAppToggleResponse,
-    summary="연동 앱 상태 토글",
+    summary="[프론트 사용] 연동 앱 상태 토글",
+    description=(
+        "연동 앱 상태를 `CONNECTED ↔ DISCONNECTED`로 토글합니다.\n\n"
+        "- `provider` 경로 파라미터: `APPLE_HEALTH` / `SAMSUNG_HEALTH` / `GOOGLE_FIT`\n"
+        "- 현재 CONNECTED이면 DISCONNECTED, DISCONNECTED(또는 미설정)이면 CONNECTED로 전환합니다.\n"
+        "- 지원하지 않는 provider 값은 400을 반환합니다."
+    ),
 )
 async def toggle_connected_app(
     provider: str,
@@ -126,13 +138,25 @@ async def toggle_connected_app(
         status=new_status.value,
         scopes=None,
     )
+    db.commit()
+    db.refresh(conn)
     return ConnectedAppToggleResponse(provider=conn.provider, status=conn.status)
 
 
 @router.get(
     "/notification-settings",
     response_model=NotificationSettingsResponse,
-    summary="알림 설정 조회",
+    summary="[프론트 사용] 알림 설정 조회",
+    description=(
+        "현재 사용자의 알림 설정을 반환합니다.\n\n"
+        "알림 설정이 없는 경우 모든 항목을 `true`로 자동 초기화한 뒤 반환합니다.\n\n"
+        "| 필드 | 화면 이름 |\n"
+        "|------|-----------|\n"
+        "| `mission_alarm_enabled` | 미션 리마인드 |\n"
+        "| `record_alarm_enabled` | 기록 리마인드 |\n"
+        "| `email_alarm_enabled` | 식단 기록 알림 |\n"
+        "| `push_alarm_enabled` | 주간 리포트 |"
+    ),
 )
 async def get_notification_settings(
     current_user: CurrentUser = Depends(get_current_user),
@@ -164,14 +188,32 @@ async def get_notification_settings(
 @router.patch(
     "/notification-settings",
     response_model=NotificationSettingsResponse,
-    summary="알림 설정 업데이트",
+    summary="[프론트 사용] 알림 설정 업데이트",
+    description=(
+        "알림 설정을 부분 업데이트합니다. 변경할 항목만 포함해 전송하세요.\n\n"
+        "모든 필드가 optional이며, null을 전송하면 해당 필드는 변경되지 않습니다.\n\n"
+        "**예시** — 미션 리마인드만 끄기:\n"
+        "```json\n"
+        '{"mission_alarm_enabled": false}\n'
+        "```"
+    ),
 )
 async def update_notification_settings(
     body: NotificationSettingsUpdateRequest,
     current_user: CurrentUser = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    update_data = body.model_dump(exclude_none=True) or _NOTIFICATION_DEFAULTS
+    update_data = body.model_dump(exclude_none=True)
+    if not update_data:
+        pref = db.query(NotificationPreference).filter_by(user_id=current_user.id).first()
+        if pref is None:
+            return NotificationSettingsResponse(**_NOTIFICATION_DEFAULTS)
+        return NotificationSettingsResponse(
+            mission_alarm_enabled=pref.mission_alarm_enabled,
+            record_alarm_enabled=pref.record_alarm_enabled,
+            email_alarm_enabled=pref.email_alarm_enabled,
+            push_alarm_enabled=pref.push_alarm_enabled,
+        )
     insert_values = {**_NOTIFICATION_DEFAULTS, **update_data, "user_id": current_user.id}
     stmt = (
         pg_insert(NotificationPreference)
