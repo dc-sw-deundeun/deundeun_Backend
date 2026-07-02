@@ -6,12 +6,20 @@ from sqlalchemy.orm import Session
 
 from app.core.exceptions import ConflictException, NotFoundException, UnprocessableEntityException
 from app.domains.health_metric.explanation_service import HealthMetricExplanationService
-from app.domains.health_metric.models import HealthMetricAnalysis
+from app.domains.health_metric.models import (
+    HealthMetricAnalysis,
+    HealthMetricAnalysisHighlight,
+    HealthMetricAnalysisItem,
+    HealthMetricAnalysisItemRange,
+    HealthMetricAnalysisItemRecommendation,
+    HealthMetricAnalysisRangeSegment,
+)
 from app.domains.health_metric.repository import (
     HealthMetricAnalysisRepository,
     HealthMetricRepository,
 )
 from app.domains.health_metric.schemas import (
+    HealthMetricActiveRangeSegment,
     HealthMetricAnalysisCreateRequest,
     HealthMetricAnalysisMetricInput,
     HealthMetricAnalysisResponse,
@@ -20,6 +28,7 @@ from app.domains.health_metric.schemas import (
     HealthMetricEvaluationRequest,
     HealthMetricExplanation,
     HealthMetricInput,
+    HealthMetricItemExplanation,
     HealthMetricMeaning,
     HealthMetricOverallSummary,
     HealthMetricRangeBar,
@@ -54,6 +63,16 @@ class MetricRule:
     name: str
     evaluator: Callable[[float, EvaluationContext], Evaluation]
     unit: str | None = None
+
+
+@dataclass(frozen=True)
+class EvaluationSource:
+    metric_code: str
+    metric_name: str
+    value: str | None
+    unit: str | None
+    raw_text: str | None
+    metric_input: HealthMetricInput
 
 
 STATUS_LABELS = {
@@ -680,20 +699,50 @@ def _range_bar(item: HealthMetricEvaluationItem) -> HealthMetricRangeBar | None:
     min_value, max_value, segment_specs = config
     marker = max(min(item.value, max_value), min_value)
     marker_percent = round(((marker - min_value) / (max_value - min_value)) * 100, 2)
+    segments = [
+        HealthMetricRangeSegment(
+            label=label,
+            from_value=from_value,
+            to_value=to_value,
+            color=color,
+        )
+        for label, from_value, to_value, color in segment_specs
+    ]
     return HealthMetricRangeBar(
         min=min_value,
         max=max_value,
         marker=item.value,
         marker_percent=marker_percent,
-        segments=[
-            HealthMetricRangeSegment(
-                label=label,
-                from_value=from_value,
-                to_value=to_value,
-                color=color,
-            )
-            for label, from_value, to_value, color in segment_specs
-        ],
+        segments=segments,
+        active_segment=_active_segment(marker, segments),
+    )
+
+
+def _active_segment(
+    marker: float, segments: list[HealthMetricRangeSegment]
+) -> HealthMetricActiveRangeSegment | None:
+    if not segments:
+        return None
+    segment = next(
+        (segment for segment in segments if segment.from_value <= marker <= segment.to_value),
+        None,
+    )
+    if segment is None:
+        segment = segments[0] if marker < segments[0].from_value else segments[-1]
+
+    span = segment.to_value - segment.from_value
+    if span <= 0:
+        marker_percent = 100.0
+    else:
+        clamped_marker = max(min(marker, segment.to_value), segment.from_value)
+        marker_percent = round(((clamped_marker - segment.from_value) / span) * 100, 2)
+
+    return HealthMetricActiveRangeSegment(
+        label=segment.label,
+        from_value=segment.from_value,
+        to_value=segment.to_value,
+        color=segment.color,
+        marker_percent=marker_percent,
     )
 
 
@@ -709,7 +758,12 @@ class HealthMetricAnalysisService:
         user_id: int,
         measured_at: datetime | None,
     ) -> HealthMetricAnalysisResponse:
-        evaluation_request = self._to_evaluation_request(request)
+        sources = self._to_evaluation_sources(request)
+        evaluation_request = HealthMetricEvaluationRequest(
+            sex=request.sex,
+            measured_at=request.measured_at,
+            metrics=[source.metric_input for source in sources],
+        )
         results = HealthMetricService().evaluate_metrics(evaluation_request)
         if not results:
             raise UnprocessableEntityException(
@@ -725,17 +779,21 @@ class HealthMetricAnalysisService:
             results=results,
             measured_at=measured_at,
         )
+        summary = build_summary_view(results=results, explanation=explanation)
 
         analysis = HealthMetricAnalysis(
             user_id=user_id,
             record_id=None,
             sex=request.sex,
             measured_at=measured_at,
-            request_payload=request.model_dump(mode="json"),
-            results_payload=[item.model_dump(mode="json") for item in results],
-            explanation_payload=explanation.model_dump(mode="json"),
-            summary_payload={},
-            details_payload=[],
+            overall_title=summary.overall.title,
+            overall_summary=summary.overall.summary,
+            normal_count=summary.overall.counts.get("normal", 0),
+            caution_count=summary.overall.counts.get("caution", 0),
+            risk_count=summary.overall.counts.get("risk", 0),
+            unknown_count=summary.overall.counts.get("unknown", 0),
+            explanation_status=explanation.status,
+            disclaimer=explanation.disclaimer,
         )
         self._repo.save(analysis)
 
@@ -748,8 +806,14 @@ class HealthMetricAnalysisService:
             analysis_id=analysis.id,
             trend_points_by_code=trend_points_by_code,
         )
-        analysis.summary_payload = summary.model_dump(mode="json")
-        analysis.details_payload = [detail.model_dump(mode="json") for detail in details]
+        analysis.overall_title = summary.overall.title
+        self._save_normalized_children(
+            analysis=analysis,
+            sources=sources,
+            results=results,
+            explanation=explanation,
+            details=details,
+        )
         self._db.commit()
         self._db.refresh(analysis)
 
@@ -789,25 +853,18 @@ class HealthMetricAnalysisService:
             )
         return record
 
-    def _to_evaluation_request(
+    def _to_evaluation_sources(
         self, request: HealthMetricAnalysisCreateRequest
-    ) -> HealthMetricEvaluationRequest:
-        metrics = [
-            metric
-            for metric in (
-                self._to_evaluation_metric(metric) for metric in request.metrics
-            )
-            if metric is not None
+    ) -> list[EvaluationSource]:
+        return [
+            source
+            for source in (self._to_evaluation_source(metric) for metric in request.metrics)
+            if source is not None
         ]
-        return HealthMetricEvaluationRequest(
-            sex=request.sex,
-            measured_at=request.measured_at,
-            metrics=metrics,
-        )
 
-    def _to_evaluation_metric(
+    def _to_evaluation_source(
         self, metric: HealthMetricAnalysisMetricInput
-    ) -> HealthMetricInput | None:
+    ) -> EvaluationSource | None:
         value = _parse_metric_value(metric.value)
         if value is None:
             return None
@@ -820,11 +877,101 @@ class HealthMetricAnalysisService:
         if rule_code not in METRIC_RULES:
             return None
 
-        return HealthMetricInput(
+        metric_input = HealthMetricInput(
             label=canonical,
             value=value,
             unit=metric.unit or None,
         )
+        return EvaluationSource(
+            metric_code=metric.metric_code,
+            metric_name=metric.metric_name,
+            value=metric.value,
+            unit=metric.unit,
+            raw_text=metric.raw_text,
+            metric_input=metric_input,
+        )
+
+    def _save_normalized_children(
+        self,
+        *,
+        analysis: HealthMetricAnalysis,
+        sources: list[EvaluationSource],
+        results: list[HealthMetricEvaluationItem],
+        explanation: HealthMetricExplanation,
+        details: list[HealthMetricDetailView],
+    ) -> None:
+        for index, highlight in enumerate(explanation.highlights):
+            self._db.add(
+                HealthMetricAnalysisHighlight(
+                    analysis_id=analysis.id,
+                    body=highlight,
+                    sort_order=index,
+                )
+            )
+
+        for index, (source, result, detail) in enumerate(zip(sources, results, details, strict=True)):
+            item = HealthMetricAnalysisItem(
+                analysis_id=analysis.id,
+                input_metric_code=source.metric_code,
+                input_metric_name=source.metric_name,
+                canonical_test_code=result.canonical_test_code or "",
+                display_name=result.name or source.metric_name,
+                value=result.value,
+                unit=result.unit,
+                raw_text=source.raw_text,
+                status=result.status,
+                status_label=result.status_label,
+                matched_rule=result.matched_rule,
+                note=result.note,
+                explanation_title=detail.meaning.title,
+                explanation_body=detail.meaning.body,
+                value_text=detail.metric.value_text,
+                badge_text=detail.metric.badge_text,
+                sort_order=index,
+            )
+            self._db.add(item)
+            self._db.flush()
+
+            if detail.metric.range_bar is not None:
+                self._save_range(item.id, detail.metric.range_bar)
+
+            for recommendation_index, recommendation in enumerate(detail.recommendations.items):
+                self._db.add(
+                    HealthMetricAnalysisItemRecommendation(
+                        item_id=item.id,
+                        title=detail.recommendations.title,
+                        body=recommendation,
+                        sort_order=recommendation_index,
+                    )
+                )
+
+    def _save_range(self, item_id: int, range_bar: HealthMetricRangeBar) -> None:
+        active = range_bar.active_segment
+        self._db.add(
+            HealthMetricAnalysisItemRange(
+                item_id=item_id,
+                range_min=range_bar.min,
+                range_max=range_bar.max,
+                marker=range_bar.marker,
+                marker_percent=range_bar.marker_percent,
+                active_label=active.label if active else None,
+                active_from_value=active.from_value if active else None,
+                active_to_value=active.to_value if active else None,
+                active_color=active.color if active else None,
+                active_marker_percent=active.marker_percent if active else None,
+            )
+        )
+        for index, segment in enumerate(range_bar.segments):
+            self._db.add(
+                HealthMetricAnalysisRangeSegment(
+                    item_id=item_id,
+                    label=segment.label,
+                    from_value=segment.from_value,
+                    to_value=segment.to_value,
+                    color=segment.color,
+                    sort_order=index,
+                )
+            )
 
     def _analysis_trend_points_by_code(
         self,
@@ -846,13 +993,11 @@ class HealthMetricAnalysisService:
             if event_at is None:
                 continue
             label = event_at.date().isoformat()
-            for item in analysis.results_payload:
-                code = item.get("canonical_test_code") if isinstance(item, dict) else None
+            for item in analysis.items:
+                code = item.canonical_test_code
                 if code not in grouped:
                     continue
-                value = item.get("value") if isinstance(item, dict) else None
-                if isinstance(value, (int, float)):
-                    grouped[code].append(HealthMetricTrendPoint(label=label, value=float(value)))
+                grouped[code].append(HealthMetricTrendPoint(label=label, value=float(item.value)))
 
         current_label = (measured_at or datetime.now(UTC)).date().isoformat()
         for item in results:
@@ -906,12 +1051,79 @@ class HealthMetricAnalysisService:
         return grouped
 
     def _to_response(self, analysis: HealthMetricAnalysis) -> HealthMetricAnalysisResponse:
+        if not analysis.items and analysis.results_payload is not None:
+            return self._legacy_payload_response(analysis)
+
+        trend_points_by_code = self._stored_analysis_trend_points_by_code(analysis)
         results = [
-            HealthMetricEvaluationItem.model_validate(item) for item in analysis.results_payload
+            HealthMetricEvaluationItem(
+                input_label=item.input_metric_name,
+                canonical_test_code=item.canonical_test_code,
+                name=item.display_name,
+                value=float(item.value),
+                unit=item.unit,
+                status=item.status,
+                status_label=item.status_label,
+                matched_rule=item.matched_rule,
+                note=item.note,
+            )
+            for item in analysis.items
         ]
-        explanation = HealthMetricExplanation.model_validate(analysis.explanation_payload)
-        summary = HealthMetricSummaryView.model_validate(analysis.summary_payload)
-        details = [HealthMetricDetailView.model_validate(item) for item in analysis.details_payload]
+        item_explanations = [
+            HealthMetricItemExplanation(
+                canonical_test_code=item.canonical_test_code,
+                input_label=item.input_metric_name,
+                title=item.display_name,
+                explanation=item.explanation_body,
+                status_label=item.status_label,
+            )
+            for item in analysis.items
+        ]
+        explanation = HealthMetricExplanation(
+            status=analysis.explanation_status or "stored",
+            summary=analysis.overall_summary or "",
+            highlights=[highlight.body for highlight in analysis.highlights],
+            item_explanations=item_explanations,
+            disclaimer=analysis.disclaimer or "",
+        )
+        summary = HealthMetricSummaryView(
+            analysis_id=analysis.id,
+            overall=HealthMetricOverallSummary(
+                title=analysis.overall_title or "",
+                summary=analysis.overall_summary or "",
+                counts={
+                    "normal": analysis.normal_count,
+                    "caution": analysis.caution_count,
+                    "risk": analysis.risk_count,
+                    "unknown": analysis.unknown_count,
+                },
+            ),
+            cards=[_summary_card_from_analysis_item(item) for item in analysis.items],
+        )
+        details = [
+            HealthMetricDetailView(
+                analysis_id=analysis.id,
+                metric=_summary_card_from_analysis_item(item),
+                range_bar=_range_bar_from_analysis_item(item),
+                trend=HealthMetricTrend(
+                    title="최근 추이",
+                    points=trend_points_by_code.get(item.canonical_test_code, []),
+                ),
+                meaning=HealthMetricMeaning(
+                    title=item.explanation_title,
+                    body=item.explanation_body,
+                ),
+                recommendations=HealthMetricRecommendations(
+                    title=(
+                        item.recommendations[0].title
+                        if item.recommendations
+                        else "맞춤 추천 습관"
+                    ),
+                    items=[recommendation.body for recommendation in item.recommendations],
+                ),
+            )
+            for item in analysis.items
+        ]
         return HealthMetricAnalysisResponse(
             analysis_id=analysis.id,
             record_id=analysis.record_id,
@@ -923,12 +1135,103 @@ class HealthMetricAnalysisService:
             },
         )
 
+    def _legacy_payload_response(
+        self, analysis: HealthMetricAnalysis
+    ) -> HealthMetricAnalysisResponse:
+        results = [
+            HealthMetricEvaluationItem.model_validate(item)
+            for item in (analysis.results_payload or [])
+        ]
+        explanation = HealthMetricExplanation.model_validate(analysis.explanation_payload or {})
+        summary = HealthMetricSummaryView.model_validate(analysis.summary_payload or {})
+        details = [
+            HealthMetricDetailView.model_validate(item) for item in (analysis.details_payload or [])
+        ]
+        return HealthMetricAnalysisResponse(
+            analysis_id=analysis.id,
+            record_id=analysis.record_id,
+            results=results,
+            explanation=explanation,
+            ui={
+                "summary": summary.model_dump(mode="json"),
+                "details": [detail.model_dump(mode="json") for detail in details],
+            },
+        )
+
+    def _stored_analysis_trend_points_by_code(
+        self, analysis: HealthMetricAnalysis
+    ) -> dict[str, list[HealthMetricTrendPoint]]:
+        codes = {item.canonical_test_code for item in analysis.items}
+        grouped = {code: [] for code in codes}
+        if not analysis.user_id:
+            return grouped
+        for previous_analysis in self._repo.list_for_user(analysis.user_id):
+            if previous_analysis.id > analysis.id:
+                continue
+            event_at = previous_analysis.measured_at or previous_analysis.created_at
+            if event_at is None:
+                continue
+            label = event_at.date().isoformat()
+            for item in previous_analysis.items:
+                if item.canonical_test_code in grouped:
+                    grouped[item.canonical_test_code].append(
+                        HealthMetricTrendPoint(label=label, value=float(item.value))
+                    )
+        return grouped
+
 
 def _canonical_record_metric(metric: CheckupMetricResult) -> str | None:
     return (
         RECORD_METRIC_CODE_ALIASES.get(metric.metric_code.lower())
         or _canonical_label(metric.metric_code)
         or _canonical_label(metric.metric_name)
+    )
+
+
+def _summary_card_from_analysis_item(item: HealthMetricAnalysisItem) -> HealthMetricSummaryCard:
+    return HealthMetricSummaryCard(
+        code=item.canonical_test_code,
+        label=item.display_name,
+        value=float(item.value),
+        unit=item.unit,
+        status=item.status,
+        status_label=item.status_label,
+        value_text=item.value_text,
+        badge_text=item.badge_text,
+        range_bar=_range_bar_from_analysis_item(item),
+    )
+
+
+def _range_bar_from_analysis_item(item: HealthMetricAnalysisItem) -> HealthMetricRangeBar | None:
+    stored_range = item.range
+    if stored_range is None:
+        return None
+
+    active_segment = None
+    if stored_range.active_label is not None:
+        active_segment = HealthMetricActiveRangeSegment(
+            label=stored_range.active_label,
+            from_value=float(stored_range.active_from_value or 0),
+            to_value=float(stored_range.active_to_value or 0),
+            color=stored_range.active_color or "",
+            marker_percent=float(stored_range.active_marker_percent or 0),
+        )
+
+    return HealthMetricRangeBar(
+        min=float(stored_range.range_min),
+        max=float(stored_range.range_max),
+        marker=float(stored_range.marker),
+        marker_percent=float(stored_range.marker_percent),
+        segments=[
+            HealthMetricRangeSegment(
+                label=segment.label,
+                from_value=float(segment.from_value),
+                to_value=float(segment.to_value),
+                color=segment.color,
+            )
+            for segment in item.range_segments
+        ],
+        active_segment=active_segment,
     )
 
 

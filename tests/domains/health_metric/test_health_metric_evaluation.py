@@ -13,7 +13,12 @@ from app.core.rate_limit import rate_limiter
 from app.database.base import Base
 from app.database.session import get_db
 from app.domains.health_metric.explanation_service import HealthMetricExplanationService
-from app.domains.health_metric.models import HealthMetricAnalysis
+from app.domains.health_metric.models import (
+    HealthMetricAnalysis,
+    HealthMetricAnalysisItem,
+    HealthMetricAnalysisItemRange,
+    HealthMetricAnalysisRangeSegment,
+)
 from app.domains.health_metric.schemas import HealthMetricEvaluationRequest, HealthMetricInput
 from app.domains.health_metric.service import (
     HealthMetricService,
@@ -165,6 +170,9 @@ def test_builds_summary_and_detail_view_models() -> None:
     assert summary.overall.title == "관리가 필요해요"
     assert summary.overall.counts["risk"] == 1
     assert summary.cards[0].range_bar is not None
+    assert summary.cards[0].range_bar.active_segment is not None
+    assert summary.cards[0].range_bar.active_segment.label == "매우 높음 190~"
+    assert summary.cards[0].range_bar.active_segment.marker_percent == 0
     assert details[0].metric.code == "LDL"
     assert details[0].meaning.body
     assert details[0].recommendations.items
@@ -315,6 +323,33 @@ def test_create_analysis_from_metric_array_returns_void_and_get_returns_result(
         assert create_response.status_code == 200
         assert create_response.json()["data"] is None
         analysis = db_session.query(HealthMetricAnalysis).one()
+        items = (
+            db_session.query(HealthMetricAnalysisItem)
+            .filter(HealthMetricAnalysisItem.analysis_id == analysis.id)
+            .order_by(HealthMetricAnalysisItem.sort_order)
+            .all()
+        )
+        assert analysis.results_payload is None
+        assert analysis.details_payload is None
+        assert analysis.overall_title == "관리가 필요해요"
+        assert [item.canonical_test_code for item in items] == ["FPG", "LDL"]
+        assert items[0].input_metric_code == "fasting_glucose"
+        assert float(items[0].value) == 126.0
+        assert items[0].raw_text == "126"
+        stored_range = (
+            db_session.query(HealthMetricAnalysisItemRange)
+            .filter(HealthMetricAnalysisItemRange.item_id == items[0].id)
+            .one()
+        )
+        assert float(stored_range.marker) == 126.0
+        assert stored_range.active_label == "위험 126~"
+        assert float(stored_range.active_marker_percent) == 0.0
+        assert (
+            db_session.query(HealthMetricAnalysisRangeSegment)
+            .filter(HealthMetricAnalysisRangeSegment.item_id == items[0].id)
+            .count()
+            == 3
+        )
 
         get_response = client.get(f"/api/v1/health-metrics/analyses/{analysis.id}")
         assert get_response.status_code == 200

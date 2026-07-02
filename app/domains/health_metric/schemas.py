@@ -112,12 +112,17 @@ class HealthMetricRangeSegment(BaseModel):
     color: str
 
 
+class HealthMetricActiveRangeSegment(HealthMetricRangeSegment):
+    marker_percent: float
+
+
 class HealthMetricRangeBar(BaseModel):
     min: float
     max: float
     marker: float
     marker_percent: float
     segments: list[HealthMetricRangeSegment]
+    active_segment: HealthMetricActiveRangeSegment | None = None
 
 
 class HealthMetricSummaryCard(BaseModel):
