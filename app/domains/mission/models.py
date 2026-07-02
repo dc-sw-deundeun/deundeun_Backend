@@ -61,3 +61,33 @@ class MissionStatistics(Base):
     __tablename__ = "mission_statistics"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+
+class MissionGenerationRun(Base):
+    """미션 생성 멱등 로그 — 유저·날짜당 1행으로 스케줄러/이벤트 중복 생성을 막는다.
+
+    UNIQUE(user_id, generation_date) + `INSERT ... ON CONFLICT DO NOTHING`로 원자적 claim한다.
+    다중 인스턴스/중복 틱에도 한 유저는 하루 1회만 생성되고, status로 관측·재시도한다.
+    """
+
+    __tablename__ = "mission_generation_runs"
+    __table_args__ = (
+        UniqueConstraint("user_id", "generation_date", name="uq_mission_gen_runs_user_date"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    generation_date: Mapped[date] = mapped_column(Date, nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="pending"
+    )  # pending | generated | failed | skipped
+    source: Mapped[str | None] = mapped_column(String(20), nullable=True)  # scheduler | event
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    mission_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    error_code: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=_now, onupdate=_now
+    )

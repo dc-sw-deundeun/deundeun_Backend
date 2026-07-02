@@ -20,6 +20,7 @@ _APP_TABLES = (
     "character_profiles",
     "wearable_connections",
     "pkg_snapshots",
+    "mission_generation_runs",
     "users",
     "health_metric_analyses",
     "analysis_mission_candidates",
