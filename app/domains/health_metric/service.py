@@ -759,17 +759,17 @@ class HealthMetricAnalysisService:
         measured_at: datetime | None,
     ) -> HealthMetricAnalysisResponse:
         sources = self._to_evaluation_sources(request)
+        if not sources:
+            raise UnprocessableEntityException(
+                message="분석 가능한 건강검진 항목이 없습니다.",
+                error_code="NO_ANALYZABLE_HEALTH_METRICS",
+            )
         evaluation_request = HealthMetricEvaluationRequest(
             sex=request.sex,
             measured_at=request.measured_at,
             metrics=[source.metric_input for source in sources],
         )
         results = HealthMetricService().evaluate_metrics(evaluation_request)
-        if not results:
-            raise UnprocessableEntityException(
-                message="분석 가능한 건강검진 항목이 없습니다.",
-                error_code="NO_ANALYZABLE_HEALTH_METRICS",
-            )
         explanation = await HealthMetricExplanationService().build_explanation(
             request=evaluation_request,
             results=results,

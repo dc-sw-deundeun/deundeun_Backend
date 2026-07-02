@@ -1,7 +1,7 @@
 """Normalize health metric analysis results
 
-Revision ID: 011
-Revises: 010
+Revision ID: 012
+Revises: 011
 Create Date: 2026-07-02
 
 """
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 
 from alembic import op
 
-revision: str = "011"
-down_revision: str | None = "010"
+revision: str = "012"
+down_revision: str | None = "011"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

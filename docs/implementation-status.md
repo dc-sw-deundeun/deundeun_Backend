@@ -113,7 +113,7 @@ OCR 업로드 플로우 상세는 [api-record-ocr.md](./api-record-ocr.md) 참�
 | `001` ~ `008` | (기존) |
 | `009_add_analysis_schema` | analysis_jobs, summaries, mission_candidates, mission_templates seed, user_missions |
 | `010_add_health_metric_analysis_record_id` | health_metric_analyses.record_id 및 checkup_records 연결 |
-| `011_normalize_health_metric_analysis` | HealthMetric 분석 결과 정규화 저장 테이블 |
+| `012_normalize_health_metric_analysis` | HealthMetric 분석 결과 정규화 저장 테이블 |
 | `011_add_character_growth_schema` | character_profiles, character_growth_logs, character_owned_animals |
 
 ## 다음 구현 우선순위
