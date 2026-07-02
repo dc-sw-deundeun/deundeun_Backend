@@ -21,7 +21,7 @@ from app.domains.mission.schemas import PKG, PipelineConfig
 from app.domains.pkg import graph
 from app.domains.pkg.adapter import derive_from_evaluated
 
-_FIXTURE = Path("docs/pkg/sample_checkup.json")
+_FIXTURE = Path(__file__).parent / "fixtures" / "sample_checkup.json"
 
 
 def _load() -> dict:

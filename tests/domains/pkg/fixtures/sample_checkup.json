@@ -1,0 +1,19 @@
+{
+  "_doc": "PKG 생성 입력 목데이터 = health_metric 평가 요청(HealthMetricEvaluationRequest, 라벨 기반). HealthMetricService.evaluate_metrics로 룰검증하면 canonical_test_code+status '결과물'이 나오고, 그 결과물을 PKG로 만든다(app/domains/pkg/adapter.derive_from_evaluated). 프로덕션에선 이 결과물이 HealthMetricAnalysis.results_payload로 영속되어 PkgService가 소비한다. E2E: docs/pkg/e2e_walkthrough.md, tests/domains/pkg/test_end_to_end.py.",
+  "user_id": 1001,
+  "sex": "male",
+  "metrics": [
+    { "label": "수축기혈압", "value": 152 },
+    { "label": "이완기혈압", "value": 96 },
+    { "label": "공복혈당", "value": 138 },
+    { "label": "총콜레스테롤", "value": 245 },
+    { "label": "LDL", "value": 172 },
+    { "label": "중성지방", "value": 210 },
+    { "label": "HDL", "value": 38 },
+    { "label": "BMI", "value": 31.2 },
+    { "label": "크레아티닌", "value": 1.8 },
+    { "label": "e-GFR", "value": 41 },
+    { "label": "AST", "value": 48 },
+    { "label": "ALT", "value": 44 }
+  ]
+}
