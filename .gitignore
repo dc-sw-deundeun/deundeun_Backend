@@ -154,6 +154,8 @@ docs/*
 .claude
 .superpowers
 .venv_py311
+.omc/
+manifest.json
 
 # 연구용 ablation 실험 (백엔드 레포 비추적)
 experiments/
