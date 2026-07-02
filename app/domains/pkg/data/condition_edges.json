@@ -1,0 +1,34 @@
+{
+  "_doc": "조건 → 합병증 의학 엣지 시드. 외부 의학 KG(#9)의 PrimeKG disease_disease 관계와 kg/mappings/mapping_table.json(한국 검진 finding→MONDO)에서 오프라인으로 추출해 mission_pool 어휘로 정규화한 정적 서브그래프. 유저 무관·읽기전용. dst는 모두 mission_pool conditions id라 한국어 label은 mission_pool이 단일 출처. #9 Neo4j 기동 시 scripts/extract_edges_from_kg.py로 재생성 가능.",
+  "edges": {
+    "hypertension": [
+      {"rel": "disease_disease", "dst": "cardiovascular_disease", "attrs": {"risk": "high"}}
+    ],
+    "dyslipidemia": [
+      {"rel": "disease_disease", "dst": "cardiovascular_disease", "attrs": {}}
+    ],
+    "type2_diabetes": [
+      {"rel": "disease_disease", "dst": "ckd", "attrs": {}},
+      {"rel": "disease_disease", "dst": "cardiovascular_disease", "attrs": {}}
+    ],
+    "prediabetes": [
+      {"rel": "disease_disease", "dst": "type2_diabetes", "attrs": {}}
+    ],
+    "obesity": [
+      {"rel": "disease_disease", "dst": "type2_diabetes", "attrs": {}},
+      {"rel": "disease_disease", "dst": "dyslipidemia", "attrs": {}},
+      {"rel": "disease_disease", "dst": "hypertension", "attrs": {}}
+    ],
+    "fatty_liver": [
+      {"rel": "disease_disease", "dst": "dyslipidemia", "attrs": {}},
+      {"rel": "disease_disease", "dst": "type2_diabetes", "attrs": {}}
+    ],
+    "ckd": [
+      {"rel": "disease_disease", "dst": "cardiovascular_disease", "attrs": {}},
+      {"rel": "disease_disease", "dst": "anemia", "attrs": {}}
+    ],
+    "gout": [
+      {"rel": "disease_disease", "dst": "cardiovascular_disease", "attrs": {}}
+    ]
+  }
+}
