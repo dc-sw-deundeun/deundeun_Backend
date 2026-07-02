@@ -12,6 +12,11 @@ from app.domains.auth.models import (  # noqa: F401
     EmailVerification,
     RefreshToken,
 )
+from app.domains.character.models import (  # noqa: F401
+    CharacterGrowthLog,
+    CharacterOwnedAnimal,
+    CharacterProfile,
+)
 from app.domains.health_metric.models import (  # noqa: F401
     HealthMetricAnalysis,
     HealthMetricReference,

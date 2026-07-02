@@ -7,6 +7,8 @@ from app.core.security import decode_token
 from app.database.session import get_db, session_scope
 from app.domains.auth.repository import AuthRepository
 from app.domains.auth.service import AuthService
+from app.domains.character.repository import CharacterRepository
+from app.domains.character.service import CharacterService
 from app.domains.onboarding.repository import OnboardingRepository
 from app.domains.onboarding.service import OnboardingService
 from app.domains.user.models import User, UserStatus
@@ -41,6 +43,10 @@ def get_user_repository(db: Session = Depends(get_db)) -> UserRepository:
 
 def get_wearable_client_dep() -> WearableClient:
     return get_wearable_client()
+
+
+def get_character_service(db: Session = Depends(get_db)) -> CharacterService:
+    return CharacterService(CharacterRepository(db))
 
 
 def get_onboarding_service(
