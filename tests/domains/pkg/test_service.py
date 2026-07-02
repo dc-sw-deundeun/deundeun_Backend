@@ -145,6 +145,23 @@ def test_get_pkg_endpoint_returns_pkg(client, db_session) -> None:
         app.dependency_overrides.pop(get_current_user, None)
 
 
+def test_get_pkg_endpoint_rejects_other_user(client, db_session) -> None:
+    # IDOR 방지: 다른 사용자의 PKG를 조회하면 403
+    _create_user(db_session, 8)
+    _seed_record(db_session, 8, [("systolic_bp", "150")])
+
+    from app.core.dependencies import get_current_user
+    from app.domains.user.schemas import CurrentUser
+    from app.main import app
+
+    app.dependency_overrides[get_current_user] = lambda: CurrentUser(id=999)
+    try:
+        res = client.get("/api/v1/pkg/8")  # 남의 user_id
+        assert res.status_code == 403
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+
 def test_get_pkg_endpoint_404(client, db_session) -> None:
     from app.core.dependencies import get_current_user
     from app.domains.user.schemas import CurrentUser

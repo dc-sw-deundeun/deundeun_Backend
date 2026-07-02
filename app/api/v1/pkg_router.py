@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends
 
 from app.core.dependencies import get_current_user
+from app.core.exceptions import ForbiddenException
 from app.core.response import success_response
 from app.domains.pkg.dependencies import get_pkg_service
 from app.domains.pkg.service import PkgService
@@ -23,5 +24,8 @@ def get_pkg(
     current_user: CurrentUser = Depends(get_current_user),
     service: PkgService = Depends(get_pkg_service),
 ):
+    # 소유권 검증(IDOR 방지): 로그인 사용자는 본인 PKG만 조회 가능.
+    if current_user.id != user_id:
+        raise ForbiddenException(message="다른 사용자의 PKG에 접근할 수 없습니다.")
     pkg = service.build_pkg(user_id)
     return success_response(data=pkg.model_dump(mode="json"))
