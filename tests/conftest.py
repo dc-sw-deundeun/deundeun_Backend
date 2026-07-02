@@ -16,6 +16,7 @@ _APP_TABLES = (
     "email_verifications",
     "consent_histories",
     "wearable_connections",
+    "pkg_snapshots",
     "users",
     "health_metric_analyses",
     "analysis_mission_candidates",
