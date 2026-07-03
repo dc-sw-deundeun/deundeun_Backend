@@ -16,6 +16,8 @@ from app.domains.mission.generation_service import MissionGenerationService
 from app.domains.mission.models import MissionGenerationRun
 from app.domains.mission.repository import MissionRepository
 from app.domains.mission.scheduler import run_daily_generation_tick
+from app.domains.mission.service import MissionService
+from app.domains.mission.timeutil import local_date
 from app.domains.pkg.dependencies import build_pkg_service
 from tests.domains.pkg.test_service import _create_user, _seed_record
 
@@ -96,3 +98,21 @@ def test_scheduler_tick_generates_only_for_snapshot_users(db_session) -> None:
     n1 = len(repo.list_for_date(201, seoul_today))
     asyncio.run(run_daily_generation_tick())
     assert len(repo.list_for_date(201, seoul_today)) == n1
+
+
+def test_get_today_missions_returns_generated(db_session) -> None:
+    """GET /today 서비스: 로컬 오늘 배정된 미션을 payload 펼쳐 반환, 없으면 빈 목록."""
+    _create_user(db_session, 301)
+    _seed_record(db_session, 301, [("systolic_bp", "150")])
+    today = local_date("Asia/Seoul")
+    asyncio.run(
+        MissionGenerationService(db_session).generate_for_user(301, today, source="scheduler")
+    )
+
+    items = MissionService(db_session).get_today_missions(301)
+    assert len(items) >= 1
+    assert items[0].title  # payload title 펼침
+    assert items[0].status == "ASSIGNED"
+
+    _create_user(db_session, 302)  # 미션 없음
+    assert MissionService(db_session).get_today_missions(302) == []

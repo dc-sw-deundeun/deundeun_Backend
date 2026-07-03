@@ -1,12 +1,10 @@
+from datetime import date, datetime
+
 from pydantic import BaseModel, Field
 
 # ---------------------------------------------------------------------------
 # 라우터/영속화용 placeholder (프로덕션 엔드포인트, 추후 확정)
 # ---------------------------------------------------------------------------
-
-
-class TodayMissionsResponse(BaseModel):
-    pass
 
 
 class MissionCompleteRequest(BaseModel):
@@ -185,3 +183,27 @@ class MissionSet(BaseModel):
     missions: list[GeneratedMission] = Field(default_factory=list)
     disclaimer: str = ""
     meta: GenerationMeta = Field(default_factory=GenerationMeta)
+
+
+# ---------------------------------------------------------------------------
+# 라우터 응답 뷰 (user_missions 인스턴스 → 프론트 표시)
+# ---------------------------------------------------------------------------
+
+
+class MissionItem(BaseModel):
+    """오늘의 미션 1건 — user_missions 인스턴스(엔진 생성분)의 표시용 뷰."""
+
+    id: int
+    status: str
+    assigned_date: date
+    xp_reward: int
+    template_code: str | None = None
+    completed_at: datetime | None = None
+    # payload(GeneratedMission)에서 펼친 표시 필드
+    title: str = ""
+    rationale: str = ""
+    mission_type: str = ""
+    difficulty: int = 1
+    execution: Execution = Field(default_factory=Execution)
+    grounded_on: list[str] = Field(default_factory=list)
+    source: str = "generated"

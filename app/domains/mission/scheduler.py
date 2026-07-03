@@ -6,29 +6,17 @@ API 없이 백그라운드에서만 동작한다. mission_generation_runs UNIQUE
 """
 
 import logging
-from datetime import date, datetime
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler  # type: ignore[import-untyped]
 
 from app.database.session import session_scope
 from app.domains.mission.generation_service import MissionGenerationService
+from app.domains.mission.timeutil import local_date
 from app.domains.pkg.repository import PkgRepository
 
 logger = logging.getLogger(__name__)
 
 _TICK_JOB_ID = "mission_daily_generation"
-_DEFAULT_TZ = "Asia/Seoul"
-
-
-def _local_date(tz: str) -> date:
-    """유저 timezone의 현재 로컬 날짜. 알 수 없는 tz는 기본 서울로 폴백한다."""
-    try:
-        zone = ZoneInfo(tz)
-    except (ZoneInfoNotFoundError, ValueError):
-        logger.warning("unknown timezone %r; falling back to %s", tz, _DEFAULT_TZ)
-        zone = ZoneInfo(_DEFAULT_TZ)
-    return datetime.now(zone).date()
 
 
 async def run_daily_generation_tick() -> None:
@@ -38,7 +26,7 @@ async def run_daily_generation_tick() -> None:
 
     generated = 0
     for user_id, tz in targets:
-        target_date = _local_date(tz)
+        target_date = local_date(tz)
         try:
             with session_scope() as db:
                 created = await MissionGenerationService(db).generate_for_user(
