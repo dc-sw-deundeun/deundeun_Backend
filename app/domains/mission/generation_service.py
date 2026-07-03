@@ -44,6 +44,10 @@ class MissionGenerationService:
                 self._db.commit()
                 return False
 
+            # history(완료율·최근 미션)는 동적 — 정적 스냅샷 대신 생성 시점 값으로 overlay.
+            # success_rate<0.3이면 엔진이 미션 강도를 낮춘다(완료→다음 생성 피드백 루프).
+            pkg.history = self._missions.build_history(user_id, today=target_date)
+
             exclude = set(self._missions.recent_template_codes(user_id, today=target_date))
             mission_set = await MissionPipeline().generate_missions(
                 pkg, _GEN_CONFIG, n=_DAILY_N, exclude_template_ids=exclude

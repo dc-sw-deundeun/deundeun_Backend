@@ -5,7 +5,7 @@ DB 픽스처(db_session, Postgres testcontainers) 사용.
 """
 
 import asyncio
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -17,6 +17,7 @@ from app.domains.mission.models import MissionGenerationRun
 from app.domains.mission.policy import local_date_for_timezone
 from app.domains.mission.repository import MissionRepository
 from app.domains.mission.scheduler import run_daily_generation_tick
+from app.domains.mission.schemas import GeneratedMission
 from app.domains.mission.service import MissionService
 from app.domains.pkg.dependencies import build_pkg_service
 from tests.domains.pkg.test_service import _create_user, _seed_record
@@ -146,3 +147,22 @@ def test_complete_mission_marks_completed_and_is_idempotent(db_session) -> None:
         svc.complete_mission(402, mission_id)
     with pytest.raises(NotFoundException):
         svc.complete_mission(401, 999999)
+
+
+def test_build_history_reflects_past_completions(db_session) -> None:
+    """완료 이력 → PKG.history(success_rate 14일창 + 최근 title). 생성 시 overlay 소스."""
+    _create_user(db_session, 501)
+    today = date(2026, 7, 3)
+    past = today - timedelta(days=2)  # 만료(assigned_date < today)이면서 14일창 내
+    repo = MissionRepository(db_session)
+    for i in range(4):
+        m = GeneratedMission(title=f"미션{i}", template_id=f"t{i}", mission_type="diet")
+        row = repo.save_generated_mission(user_id=501, assigned_date=past, mission=m)
+        if i == 0:
+            row.status = "COMPLETED"  # 4건 중 1건 완료 → 0.25
+    db_session.flush()
+
+    history = repo.build_history(501, today=today)
+    assert history.success_rate == 0.25
+    assert len(history.recent_mission_titles) == 4
+    assert "미션0" in history.recent_mission_titles

@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.domains.mission.constants import DEFAULT_MISSION_TEMPLATE_CODE
 from app.domains.mission.models import MissionGenerationRun, MissionTemplate, UserMission
-from app.domains.mission.schemas import GeneratedMission
+from app.domains.mission.schemas import GeneratedMission, History
 
 
 class MissionRepository:
@@ -169,6 +169,38 @@ class MissionRepository:
             .distinct()
         )
         return [c for c in rows if c]
+
+    def recent_mission_titles(
+        self, user_id: int, *, today: date, days: int = 14, limit: int = 10
+    ) -> list[str]:
+        """최근 days간 배정 미션의 title 목록(최신순·중복 제거). payload 없는 행은 제외."""
+        since = today - timedelta(days=days)
+        rows = self._db.scalars(
+            select(UserMission.payload)
+            .where(
+                UserMission.user_id == user_id,
+                UserMission.assigned_date >= since,
+                UserMission.payload.is_not(None),
+            )
+            .order_by(UserMission.assigned_date.desc(), UserMission.id.desc())
+        )
+        titles: list[str] = []
+        seen: set[str] = set()
+        for payload in rows:
+            title = (payload or {}).get("title")
+            if title and title not in seen:
+                seen.add(title)
+                titles.append(title)
+            if len(titles) >= limit:
+                break
+        return titles
+
+    def build_history(self, user_id: int, *, today: date) -> History:
+        """미션 완료 이력 → PKG.history(동적). 생성 시점에 계산해 PKG에 overlay한다."""
+        return History(
+            success_rate=self.success_rate(user_id, today=today),
+            recent_mission_titles=self.recent_mission_titles(user_id, today=today),
+        )
 
 
 class MissionGenerationRunRepository:
