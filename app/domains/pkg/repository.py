@@ -5,6 +5,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
 from app.domains.pkg.models import PkgSnapshot
+from app.domains.user.models import User, UserStatus
 
 
 class PkgRepository:
@@ -13,6 +14,16 @@ class PkgRepository:
 
     def get_by_user(self, user_id: int) -> PkgSnapshot | None:
         return self.db.scalar(select(PkgSnapshot).where(PkgSnapshot.user_id == user_id))
+
+    def list_snapshot_user_targets(self) -> list[tuple[int, str]]:
+        """PKG 스냅샷을 가진 활성 유저의 (user_id, timezone) 목록 — 스케줄러 생성 대상."""
+        rows = self.db.execute(
+            select(PkgSnapshot.user_id, User.timezone)
+            .join(User, User.id == PkgSnapshot.user_id)
+            .where(User.status == UserStatus.ACTIVE)
+            .order_by(PkgSnapshot.user_id)
+        ).all()
+        return [(user_id, tz) for user_id, tz in rows]
 
     def upsert_snapshot(
         self, user_id: int, *, payload: dict, source_record_id: int | None

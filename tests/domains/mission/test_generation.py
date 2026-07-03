@@ -5,7 +5,8 @@ DB 픽스처(db_session, Postgres testcontainers) 사용.
 """
 
 import asyncio
-from datetime import date
+from datetime import date, datetime
+from zoneinfo import ZoneInfo
 
 import pytest
 from sqlalchemy import select
@@ -14,6 +15,8 @@ from app.core.config import settings
 from app.domains.mission.generation_service import MissionGenerationService
 from app.domains.mission.models import MissionGenerationRun
 from app.domains.mission.repository import MissionRepository
+from app.domains.mission.scheduler import run_daily_generation_tick
+from app.domains.pkg.dependencies import build_pkg_service
 from tests.domains.pkg.test_service import _create_user, _seed_record
 
 _TODAY = date(2026, 7, 3)
@@ -32,9 +35,7 @@ def _gen(db, user_id: int) -> bool:
 
 
 def _gen_run(db, user_id: int) -> MissionGenerationRun | None:
-    return db.scalar(
-        select(MissionGenerationRun).where(MissionGenerationRun.user_id == user_id)
-    )
+    return db.scalar(select(MissionGenerationRun).where(MissionGenerationRun.user_id == user_id))
 
 
 def test_generate_creates_missions_and_logs(db_session) -> None:
@@ -74,3 +75,24 @@ def test_generate_skips_without_verified_checkup(db_session) -> None:
     assert MissionRepository(db_session).list_for_date(103, _TODAY) == []
     run = _gen_run(db_session, 103)
     assert run is not None and run.status == "skipped"
+
+
+def test_scheduler_tick_generates_only_for_snapshot_users(db_session) -> None:
+    """매시 틱: PKG 스냅샷 보유 활성 유저만 생성, 스냅샷 없는 유저는 건너뛴다."""
+    _create_user(db_session, 201)
+    _seed_record(db_session, 201, [("systolic_bp", "150")])
+    build_pkg_service(db_session).build_pkg(201)  # 스냅샷 영속(commit)
+
+    _create_user(db_session, 202)  # 스냅샷 없음 → 대상 아님
+
+    asyncio.run(run_daily_generation_tick())
+
+    seoul_today = datetime.now(ZoneInfo("Asia/Seoul")).date()
+    repo = MissionRepository(db_session)
+    assert len(repo.list_for_date(201, seoul_today)) >= 1
+    assert repo.list_for_date(202, seoul_today) == []
+
+    # 두 번째 틱은 멱등(claim 실패) → 중복 생성 없음
+    n1 = len(repo.list_for_date(201, seoul_today))
+    asyncio.run(run_daily_generation_tick())
+    assert len(repo.list_for_date(201, seoul_today)) == n1

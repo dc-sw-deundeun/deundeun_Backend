@@ -28,11 +28,28 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             logger.warning("DB 연결 실패: %s", e)
 
+    scheduler = _start_mission_scheduler(engine)
+
     yield
 
+    if scheduler is not None:
+        scheduler.shutdown(wait=False)
+        logger.info("미션 스케줄러 종료.")
     if engine is not None:
         engine.dispose()
         logger.info("DB 엔진 종료.")
+
+
+def _start_mission_scheduler(engine):
+    """미션 생성 스케줄러를 기동한다. DB 없음/test 환경/비활성 설정이면 건너뛴다."""
+    if engine is None or settings.app_env == "test" or not settings.mission_scheduler_enabled:
+        return None
+    from app.domains.mission.scheduler import create_scheduler
+
+    scheduler = create_scheduler()
+    scheduler.start()
+    logger.info("미션 생성 스케줄러 기동(매시 틱).")
+    return scheduler
 
 
 app = FastAPI(
