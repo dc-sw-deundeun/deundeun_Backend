@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import func
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
@@ -222,7 +223,7 @@ async def update_notification_settings(
         .values(**insert_values)
         .on_conflict_do_update(
             constraint="uq_notification_preferences_user",
-            set_=update_data,
+            set_={**update_data, "updated_at": func.now()},
         )
         .returning(NotificationPreference)
     )

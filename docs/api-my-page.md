@@ -109,7 +109,7 @@
 {
   "mission_alarm_enabled": true,
   "record_alarm_enabled": true,
-  "email_alarm_enabled": false,
+  "email_alarm_enabled": true,
   "push_alarm_enabled": true
 }
 ```

@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 from typing import Any
@@ -24,14 +25,15 @@ def _get_neo4j() -> Neo4jClient | None:
 
 class DiseaseSearchService:
     async def search(self, query: str) -> list[dict[str, Any]]:
-        neo4j_data = self._get_neo4j_reference(query)
-        return await self._generate_with_ai(query, neo4j_data)
+        neo4j_data = await self._get_neo4j_reference(query)
+        results = await self._generate_with_ai(query, neo4j_data)
+        return results[:5]
 
-    def _get_neo4j_reference(self, query: str) -> list[dict[str, Any]]:
+    async def _get_neo4j_reference(self, query: str) -> list[dict[str, Any]]:
         client = _get_neo4j()
         if client is None:
             return []
-        return client.search_diseases(query, limit=5)
+        return await asyncio.to_thread(client.search_diseases, query, limit=5)
 
     async def _generate_with_ai(
         self, query: str, reference: list[dict[str, Any]]
@@ -46,10 +48,10 @@ class DiseaseSearchService:
         system_prompt = (
             "당신은 의학 정보 전문가입니다. 사용자가 입력한 질환/증상 키워드에 맞는 "
             "질환 정보를 한국어로 반환하세요. "
-            "응답은 반드시 JSON 배열 형태여야 합니다: "
-            '[{"name": "질환명(한국어)", "description": "간단한 설명(2-3문장)", '
-            '"symptoms": ["증상1", "증상2", ...]}]. '
-            "최대 5개 질환을 반환하세요. 결과가 없으면 빈 배열 []을 반환하세요."
+            "응답은 반드시 JSON 객체 형태여야 합니다: "
+            '{"results": [{"name": "질환명(한국어)", "description": "간단한 설명(2-3문장)", '
+            '"symptoms": ["증상1", "증상2", ...]}]}. '
+            '최대 5개 질환을 반환하세요. 결과가 없으면 {"results": []}를 반환하세요.'
         )
         user_prompt = f"검색어: {query}{ref_text}"
 
@@ -73,7 +75,13 @@ class DiseaseSearchService:
                 )
                 response.raise_for_status()
                 data = response.json()
-                text = data["output"][0]["content"][0]["text"]
+                msg_output = next(
+                    (o for o in data.get("output", []) if o.get("type") == "message"),
+                    None,
+                )
+                if msg_output is None:
+                    return self._fallback(query, reference)
+                text = msg_output["content"][0]["text"]
                 parsed = json.loads(text)
                 if isinstance(parsed, list):
                     return parsed
