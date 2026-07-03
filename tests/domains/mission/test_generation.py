@@ -166,3 +166,30 @@ def test_build_history_reflects_past_completions(db_session) -> None:
     assert history.success_rate == 0.25
     assert len(history.recent_mission_titles) == 4
     assert "미션0" in history.recent_mission_titles
+
+
+def test_regenerate_for_checkup_preserves_completed(db_session) -> None:
+    """새 검진 재생성: 완료분은 보존, 미완료는 삭제 후 새 PKG로 재생성."""
+    _create_user(db_session, 601)
+    _seed_record(db_session, 601, [("systolic_bp", "150"), ("fasting_glucose", "130")])
+    today = local_date_for_timezone("Asia/Seoul")
+    gen = MissionGenerationService(db_session)
+    asyncio.run(gen.generate_for_user(601, today, source="scheduler"))
+
+    repo = MissionRepository(db_session)
+    before = repo.list_for_date(601, today)
+    assert len(before) >= 2
+    completed_id = before[0].id
+    before[0].status = "COMPLETED"
+    db_session.commit()
+    incomplete_ids = {m.id for m in before[1:]}  # 재생성 시 삭제 대상
+
+    asyncio.run(gen.regenerate_for_checkup(601, today))
+
+    after = repo.list_for_date(601, today)
+    ids_after = {m.id for m in after}
+    assert completed_id in ids_after  # 완료분 보존
+    assert incomplete_ids.isdisjoint(ids_after)  # 옛 미완료분 삭제됨
+    assert any(m.status == "ASSIGNED" for m in after)  # 새 생성분 존재
+    run = _gen_run(db_session, 601)
+    assert run is not None and run.status == "generated" and run.source == "event"

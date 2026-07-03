@@ -226,6 +226,21 @@ class MissionGenerationRunRepository:
         self._db.flush()
         return claimed
 
+    def delete_for_date(self, user_id: int, generation_date: date) -> int:
+        """유저·날짜 생성 로그 삭제 — 새 검진 재생성 시 claim을 다시 열어준다."""
+        rows = list(
+            self._db.scalars(
+                select(MissionGenerationRun).where(
+                    MissionGenerationRun.user_id == user_id,
+                    MissionGenerationRun.generation_date == generation_date,
+                )
+            )
+        )
+        for row in rows:
+            self._db.delete(row)
+        self._db.flush()
+        return len(rows)
+
     def mark(
         self,
         user_id: int,

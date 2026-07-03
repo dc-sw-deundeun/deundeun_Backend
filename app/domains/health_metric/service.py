@@ -820,26 +820,55 @@ class HealthMetricAnalysisService:
         self._db.commit()
         self._db.refresh(analysis)
 
-        self._rebuild_pkg_snapshot(user_id)
+        if self._rebuild_pkg_snapshot(user_id):
+            # PKG가 새 검진으로 바뀌었으니 당일 미션을 무효화·재생성(best-effort).
+            await self._regenerate_today_missions(user_id)
 
         return self._to_response(analysis)
 
-    def _rebuild_pkg_snapshot(self, user_id: int) -> None:
+    def _rebuild_pkg_snapshot(self, user_id: int) -> bool:
         """분석 저장 직후 PKG 스냅샷 재빌드 훅 (best-effort — 분석 저장엔 영향 없음).
 
         검진 파생 데이터가 갱신됐으니 개인 지식그래프(pkg_snapshots)를 최신으로 유지한다.
         검증된 검진이 없는 단독 분석이면 스킵(NotFound), 그 외 실패도 경고만 남긴다.
+        재빌드 성공 시 True(→ 미션 재생성 트리거), 스킵/실패 시 False.
         """
         from app.domains.pkg.dependencies import build_pkg_service
 
         try:
             build_pkg_service(self._db).build_pkg(user_id)
+            return True
         except NotFoundException:
             logger.debug("PKG rebuild skipped: no verified checkup (user_id=%s)", user_id)
+            return False
         except Exception:
             # 훅 이후에도 세션이 이어지므로 aborted transaction을 남기지 않도록 정리 후 로깅.
             self._db.rollback()
             logger.warning("PKG rebuild after analysis failed (user_id=%s)", user_id, exc_info=True)
+            return False
+
+    async def _regenerate_today_missions(self, user_id: int) -> None:
+        """새 검진 후 당일 미션 재생성 훅 (best-effort — 검진 저장엔 영향 없음).
+
+        재생성은 미션 엔진(LLM 파이프라인)을 타므로 test 환경에서는 건너뛴다(실 호출·오염 방지).
+        """
+        from app.core.config import settings
+
+        if settings.app_env == "test":
+            return
+        from app.domains.mission.generation_service import MissionGenerationService
+        from app.domains.mission.policy import local_date_for_timezone
+        from app.domains.user.repository import UserRepository
+
+        try:
+            user = UserRepository(self._db).find_by_id(user_id)
+            target_date = local_date_for_timezone(user.timezone if user is not None else None)
+            await MissionGenerationService(self._db).regenerate_for_checkup(user_id, target_date)
+        except Exception:
+            self._db.rollback()
+            logger.warning(
+                "mission regeneration after checkup failed (user_id=%s)", user_id, exc_info=True
+            )
 
     def get(self, analysis_id: int, user_id: int) -> HealthMetricAnalysisResponse:
         analysis = self._repo.get_for_user(analysis_id, user_id)

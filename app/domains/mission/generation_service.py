@@ -68,6 +68,17 @@ class MissionGenerationService:
             logger.warning("mission generation failed (user_id=%s)", user_id, exc_info=True)
             return False
 
+    async def regenerate_for_checkup(self, user_id: int, target_date: date) -> bool:
+        """새 검진 이벤트: PKG가 바뀌었으니 당일 미완료 미션을 무효화하고 재생성한다.
+
+        완료분은 보존(이미 획득), 미완료(ASSIGNED)만 삭제하고 gen_log를 지워 claim을 다시 연 뒤
+        새 PKG로 재생성한다. 재생성은 best-effort(generate_for_user가 실패를 흡수)다.
+        """
+        self._missions.delete_incomplete_for_date(user_id, target_date)
+        self._runs.delete_for_date(user_id, target_date)
+        self._db.commit()
+        return await self.generate_for_user(user_id, target_date, source="event")
+
     def _load_pkg(self, user_id: int) -> PKG | None:
         """미리 빌드된 스냅샷을 우선 사용하고, 없으면 build_pkg(검증검진 없으면 None)."""
         snapshot = self._pkg_repo.get_by_user(user_id)
