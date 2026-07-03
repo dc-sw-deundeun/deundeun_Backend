@@ -139,7 +139,8 @@ def test_complete_mission_marks_completed_and_is_idempotent(db_session) -> None:
 
     # 멱등: 재요청해도 예외 없이 COMPLETED 유지
     svc.complete_mission(401, mission_id)
-    assert repo.get_for_user(mission_id, 401).status == "COMPLETED"
+    again = repo.get_for_user(mission_id, 401)
+    assert again is not None and again.status == "COMPLETED"
 
     # 남의 미션/없는 미션 → 404
     _create_user(db_session, 402)
