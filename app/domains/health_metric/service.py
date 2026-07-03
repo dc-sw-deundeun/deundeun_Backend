@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -45,6 +46,27 @@ from app.domains.record.models import CheckupMetricResult, CheckupRecord
 from app.domains.record.repository import RecordRepository
 
 logger = logging.getLogger(__name__)
+
+# 검진 후 미션 재생성 백그라운드 태스크의 강한 참조(GC 방지). 완료 시 콜백으로 제거된다.
+_BACKGROUND_TASKS: set[asyncio.Task] = set()
+
+
+async def _run_checkup_regeneration(user_id: int) -> None:
+    """새 검진 후 당일 미션 재생성 워커 — 독립 세션에서 best-effort로 실행."""
+    from app.database.session import session_scope
+    from app.domains.mission.generation_service import MissionGenerationService
+    from app.domains.mission.policy import local_date_for_timezone
+    from app.domains.user.repository import UserRepository
+
+    try:
+        with session_scope() as db:
+            user = UserRepository(db).find_by_id(user_id)
+            target_date = local_date_for_timezone(user.timezone if user is not None else None)
+            await MissionGenerationService(db).regenerate_for_checkup(user_id, target_date)
+    except Exception:
+        logger.warning(
+            "mission regeneration after checkup failed (user_id=%s)", user_id, exc_info=True
+        )
 
 
 @dataclass(frozen=True)
@@ -848,27 +870,18 @@ class HealthMetricAnalysisService:
             return False
 
     async def _regenerate_today_missions(self, user_id: int) -> None:
-        """새 검진 후 당일 미션 재생성 훅 (best-effort — 검진 저장엔 영향 없음).
+        """새 검진 후 당일 미션 재생성 훅 — 요청 경로를 막지 않게 백그라운드 태스크로 오프로드.
 
-        재생성은 미션 엔진(LLM 파이프라인)을 타므로 test 환경에서는 건너뛴다(실 호출·오염 방지).
+        재생성은 미션 엔진(LLM)을 타 응답을 지연시키므로 fire-and-forget으로 뺀다. 워커는
+        요청 세션(응답 후 닫힘) 대신 독립 세션을 연다. test 환경에선 건너뛴다(실 호출·오염 방지).
         """
         from app.core.config import settings
 
         if settings.app_env == "test":
             return
-        from app.domains.mission.generation_service import MissionGenerationService
-        from app.domains.mission.policy import local_date_for_timezone
-        from app.domains.user.repository import UserRepository
-
-        try:
-            user = UserRepository(self._db).find_by_id(user_id)
-            target_date = local_date_for_timezone(user.timezone if user is not None else None)
-            await MissionGenerationService(self._db).regenerate_for_checkup(user_id, target_date)
-        except Exception:
-            self._db.rollback()
-            logger.warning(
-                "mission regeneration after checkup failed (user_id=%s)", user_id, exc_info=True
-            )
+        task = asyncio.create_task(_run_checkup_regeneration(user_id))
+        _BACKGROUND_TASKS.add(task)  # GC로 태스크가 사라지지 않게 강한 참조 유지
+        task.add_done_callback(_BACKGROUND_TASKS.discard)
 
     def get(self, analysis_id: int, user_id: int) -> HealthMetricAnalysisResponse:
         analysis = self._repo.get_for_user(analysis_id, user_id)
