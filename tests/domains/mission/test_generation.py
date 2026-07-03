@@ -169,6 +169,53 @@ def test_build_history_reflects_past_completions(db_session) -> None:
     assert "미션0" in history.recent_mission_titles
 
 
+def test_generate_failure_records_failed_run(db_session, monkeypatch) -> None:
+    """생성 실패 시 claim row가 살아남아 status='failed'·attempts 기록(관측·재시도 계약)."""
+
+    async def _boom(*args, **kwargs):
+        raise RuntimeError("pipeline blew up")
+
+    monkeypatch.setattr(
+        "app.domains.mission.generation_service.MissionPipeline.generate_missions", _boom
+    )
+    _create_user(db_session, 701)
+    _seed_record(db_session, 701, [("systolic_bp", "150")])
+
+    assert _gen(db_session, 701) is False
+    db_session.expire_all()
+    run = _gen_run(db_session, 701)
+    assert run is not None  # rollback이 claim까지 지우지 않음
+    assert run.status == "failed"
+    assert run.error_code == "GENERATION_ERROR"
+    assert run.attempts >= 1
+    assert MissionRepository(db_session).list_for_date(701, _TODAY) == []
+
+
+def test_checkup_regeneration_worker_runs_in_own_session(db_session) -> None:
+    """오프로드 워커: 독립 세션(session_scope)에서 재생성이 도는지 검증."""
+    from app.domains.health_metric.service import _run_checkup_regeneration
+
+    _create_user(db_session, 801)
+    _seed_record(db_session, 801, [("systolic_bp", "150")])
+    build_pkg_service(db_session).build_pkg(801)  # 스냅샷 영속(commit)
+
+    asyncio.run(_run_checkup_regeneration(801))
+
+    today = local_date_for_timezone("Asia/Seoul")
+    assert len(MissionRepository(db_session).list_for_date(801, today)) >= 1
+
+
+def test_context_agent_carries_recent_mission_titles() -> None:
+    """recent_mission_titles가 ContextAgent를 거쳐 컨텍스트로 전달되는지(엔진 소비)."""
+    from app.domains.mission.agents.context_agent import ContextAgent
+    from app.domains.mission.pkg import InMemoryPKG
+    from app.domains.mission.schemas import PKG, History, PipelineConfig
+
+    pkg = PKG(id="u1", history=History(recent_mission_titles=["미션A", "미션B"]))
+    ctx = ContextAgent().build(InMemoryPKG(pkg), PipelineConfig())
+    assert ctx.recent_mission_titles == ["미션A", "미션B"]
+
+
 def test_regenerate_for_checkup_preserves_completed(db_session) -> None:
     """새 검진 재생성: 완료분은 보존, 미완료는 삭제 후 새 PKG로 재생성."""
     _create_user(db_session, 601)
