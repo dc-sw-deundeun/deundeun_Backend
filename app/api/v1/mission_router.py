@@ -28,11 +28,19 @@ async def get_today_missions(
 
 @router.post(
     "/{mission_id}/complete",
-    summary="[프론트 작업 제외] 미션 완료 placeholder",
-    description="미션 도메인은 아직 구현되지 않았습니다. 호출 시 NOT_IMPLEMENTED(501)를 반환합니다.",
+    summary="[프론트 사용] 미션 완료(self-report)",
+    description=(
+        "인증된 사용자가 본인 미션을 완료 처리합니다(self-report). 이미 완료된 미션은 멱등 처리합니다. "
+        "본인 미션이 아니거나 없으면 404."
+    ),
 )
-async def complete_mission(mission_id: int, current_user: CurrentUser = Depends(get_current_user)):
-    return not_implemented_response()
+async def complete_mission(
+    mission_id: int,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    MissionService(db).complete_mission(current_user.id, mission_id)
+    return success_response(message="미션을 완료했습니다.")
 
 
 @router.post(

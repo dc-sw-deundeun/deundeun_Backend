@@ -14,10 +14,10 @@ from sqlalchemy import select
 from app.core.config import settings
 from app.domains.mission.generation_service import MissionGenerationService
 from app.domains.mission.models import MissionGenerationRun
+from app.domains.mission.policy import local_date_for_timezone
 from app.domains.mission.repository import MissionRepository
 from app.domains.mission.scheduler import run_daily_generation_tick
 from app.domains.mission.service import MissionService
-from app.domains.mission.timeutil import local_date
 from app.domains.pkg.dependencies import build_pkg_service
 from tests.domains.pkg.test_service import _create_user, _seed_record
 
@@ -104,7 +104,7 @@ def test_get_today_missions_returns_generated(db_session) -> None:
     """GET /today 서비스: 로컬 오늘 배정된 미션을 payload 펼쳐 반환, 없으면 빈 목록."""
     _create_user(db_session, 301)
     _seed_record(db_session, 301, [("systolic_bp", "150")])
-    today = local_date("Asia/Seoul")
+    today = local_date_for_timezone("Asia/Seoul")
     asyncio.run(
         MissionGenerationService(db_session).generate_for_user(301, today, source="scheduler")
     )
@@ -116,3 +116,33 @@ def test_get_today_missions_returns_generated(db_session) -> None:
 
     _create_user(db_session, 302)  # 미션 없음
     assert MissionService(db_session).get_today_missions(302) == []
+
+
+def test_complete_mission_marks_completed_and_is_idempotent(db_session) -> None:
+    """POST /complete 서비스: 본인 미션 완료(멱등), 없거나 남의 미션은 404."""
+    from app.core.exceptions import NotFoundException
+
+    _create_user(db_session, 401)
+    _seed_record(db_session, 401, [("systolic_bp", "150")])
+    today = local_date_for_timezone("Asia/Seoul")
+    asyncio.run(
+        MissionGenerationService(db_session).generate_for_user(401, today, source="scheduler")
+    )
+    repo = MissionRepository(db_session)
+    mission_id = repo.list_for_date(401, today)[0].id
+
+    svc = MissionService(db_session)
+    svc.complete_mission(401, mission_id)
+    done = repo.get_for_user(mission_id, 401)
+    assert done is not None and done.status == "COMPLETED" and done.completed_at is not None
+
+    # 멱등: 재요청해도 예외 없이 COMPLETED 유지
+    svc.complete_mission(401, mission_id)
+    assert repo.get_for_user(mission_id, 401).status == "COMPLETED"
+
+    # 남의 미션/없는 미션 → 404
+    _create_user(db_session, 402)
+    with pytest.raises(NotFoundException):
+        svc.complete_mission(402, mission_id)
+    with pytest.raises(NotFoundException):
+        svc.complete_mission(401, 999999)

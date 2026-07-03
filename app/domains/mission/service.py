@@ -1,12 +1,16 @@
-from datetime import date
+import logging
+from datetime import date, datetime, timezone
 
 from sqlalchemy.orm import Session
 
+from app.core.exceptions import NotFoundException
 from app.domains.mission.models import UserMission
+from app.domains.mission.policy import local_date_for_timezone
 from app.domains.mission.repository import MissionRepository
 from app.domains.mission.schemas import Execution, MissionItem
-from app.domains.mission.timeutil import local_date
 from app.domains.user.repository import UserRepository
+
+logger = logging.getLogger(__name__)
 
 
 class MissionService:
@@ -22,7 +26,7 @@ class MissionService:
 
     def _local_today(self, user_id: int) -> date:
         user = self._users.find_by_id(user_id)
-        return local_date(user.timezone if user is not None else None)
+        return local_date_for_timezone(user.timezone if user is not None else None)
 
     @staticmethod
     def _to_item(m: UserMission) -> MissionItem:
@@ -44,17 +48,20 @@ class MissionService:
         )
 
     def complete_mission(self, user_id: int, mission_id: int) -> None:
-        """미션을 완료합니다.
+        """미션을 self-report로 완료 처리한다(멱등).
 
-        흐름:
-        1. 미션 존재 여부 확인
-        2. 해당 사용자의 미션인지 확인
-        3. 이미 완료된 미션인지 확인
-        4. 완료 상태로 변경
-        5. CharacterService.gain_exp() 호출 (Phase 4에서 연결)
-        6. NotificationService 로그 저장
+        본인 미션만 완료 가능하고, 이미 완료됐으면 no-op으로 XP 중복 지급을 막는다.
+        완료 상태는 user_missions에 남아 build_pkg의 success_rate(14일창) 소스가 된다.
+        캐릭터 경험치 지급/알림은 Phase 4에서 별도 연결한다.
         """
-        raise NotImplementedError
+        mission = self._missions.get_for_user(mission_id, user_id)
+        if mission is None:
+            raise NotFoundException(message="미션을 찾을 수 없습니다.")
+        if mission.status == "COMPLETED":
+            return  # 멱등: 이미 완료 (재요청·더블탭 안전)
+        mission.status = "COMPLETED"
+        mission.completed_at = datetime.now(timezone.utc)
+        self._db.commit()
 
     def verify_mission(self, user_id: int, mission_id: int) -> None:
         raise NotImplementedError

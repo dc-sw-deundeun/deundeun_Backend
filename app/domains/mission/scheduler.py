@@ -11,7 +11,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler  # type: ignore[impo
 
 from app.database.session import session_scope
 from app.domains.mission.generation_service import MissionGenerationService
-from app.domains.mission.timeutil import local_date
+from app.domains.mission.policy import local_date_for_timezone
 from app.domains.pkg.repository import PkgRepository
 
 logger = logging.getLogger(__name__)
@@ -26,7 +26,7 @@ async def run_daily_generation_tick() -> None:
 
     generated = 0
     for user_id, tz in targets:
-        target_date = local_date(tz)
+        target_date = local_date_for_timezone(tz)
         try:
             with session_scope() as db:
                 created = await MissionGenerationService(db).generate_for_user(
