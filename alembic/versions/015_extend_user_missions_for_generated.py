@@ -27,6 +27,9 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    # 엔진 생성 미션은 template_id가 NULL이라 구 스키마(NOT NULL)로 되돌릴 수 없다.
+    # 롤백 시 해당 행을 제거한 뒤 컬럼 제약을 원복한다(그 행들은 payload에만 존재하므로 유실됨).
+    op.execute("DELETE FROM user_missions WHERE template_id IS NULL")
     op.alter_column("user_missions", "template_id", existing_type=sa.Integer(), nullable=False)
     op.drop_column("user_missions", "completed_at")
     op.drop_column("user_missions", "payload")

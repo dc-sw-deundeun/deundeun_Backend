@@ -210,7 +210,11 @@ class MissionGenerationRunRepository:
         self._db = db
 
     def try_claim(self, user_id: int, generation_date: date, *, source: str = "scheduler") -> bool:
-        """원자적 선점. 새로 꽂히면 True(생성 진행), 이미 있으면 False(스킵)."""
+        """원자적 선점. 새로 꽂히면 True(생성 진행), 이미 있으면 False(스킵).
+
+        claim row는 **즉시 커밋**한다 — 생성 실패 시 서비스가 rollback해도 pending row가
+        살아남아 mark("failed")로 상태·attempts를 남길 수 있다(관측·재시도 계약 유지).
+        """
         stmt = (
             pg_insert(MissionGenerationRun)
             .values(
@@ -223,7 +227,7 @@ class MissionGenerationRunRepository:
             .returning(MissionGenerationRun.id)
         )
         claimed = self._db.execute(stmt).first() is not None
-        self._db.flush()
+        self._db.commit()
         return claimed
 
     def delete_for_date(self, user_id: int, generation_date: date) -> int:
