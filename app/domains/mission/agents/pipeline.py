@@ -30,7 +30,13 @@ class MissionPipeline:
         self.context_agent = ContextAgent()
         self.generator = Generator(self.llm)
 
-    async def generate_missions(self, pkg: PKG, config: PipelineConfig, n: int = 3) -> MissionSet:
+    async def generate_missions(
+        self,
+        pkg: PKG,
+        config: PipelineConfig,
+        n: int = 3,
+        exclude_template_ids: set[str] | None = None,
+    ) -> MissionSet:
         client = InMemoryPKG(pkg)
         verifier = Verifier(client)
         gating = config.M2_graph_constrained or config.M4_verify_gate
@@ -40,7 +46,8 @@ class MissionPipeline:
 
         accepted: list[MissionCandidate] = []
         rejected_all: list[str] = []
-        tried_ids: set[str] = set()  # 이미 시도한 template_id → 재생성 시 제외
+        # 재생성 시 제외할 template_id. 초기값에 최근 배정분(변화 유도)을 넣을 수 있다.
+        tried_ids: set[str] = set(exclude_template_ids or set())
         usage_total = Usage()
         regen = 0
         any_fallback = False
