@@ -21,10 +21,14 @@ GROUNDING_RULE = (
 )
 
 # M1 OFF — LLM이 미션 전체(제목·수치 포함)를 생성
+VARIETY_RULE = (
+    "Avoid repeating the user's recent_missions; prefer fresh actions the user has not done "
+    "lately so daily missions stay varied."
+)
 GEN_SYSTEM_FULL = (
     "You design personalized daily health missions from a user's context (conditions, "
     "medications, wearable stats, optional relation chains). Produce small, concrete missions "
-    f"that address the user's conditions. {GROUNDING_RULE} {GUARDRAIL}"
+    f"that address the user's conditions. {VARIETY_RULE} {GROUNDING_RULE} {GUARDRAIL}"
 )
 
 # M1 ON — 제목/수치는 고정된 미션을 받아 rationale·grounded_on만 채움(숫자 변경 금지)

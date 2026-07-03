@@ -131,6 +131,7 @@ class StructuredContext(BaseModel):
     relations: list[Relation] = Field(default_factory=list)  # M3 ON일 때만 채워짐
     wearable: Wearable = Field(default_factory=Wearable)
     success_rate: float | None = None
+    recent_mission_titles: list[str] = Field(default_factory=list)  # 최근 배정분(반복 회피용)
 
 
 class Execution(BaseModel):

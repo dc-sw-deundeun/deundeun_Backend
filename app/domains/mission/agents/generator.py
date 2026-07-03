@@ -115,6 +115,7 @@ class Generator:
             "allowed_groundings": list(dict.fromkeys(r.cite for r in ctx.relations if r.cite)),
             "steps_avg": ctx.wearable.steps_avg,
             "success_rate": ctx.success_rate,
+            "recent_missions": ctx.recent_mission_titles,  # 최근 배정분 — 반복 피하도록
         }
 
     # ----- 파싱: structured -----
