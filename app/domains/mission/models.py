@@ -1,6 +1,16 @@
 from datetime import date, datetime, timezone
 
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    Date,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database.base import Base
@@ -39,8 +49,9 @@ class UserMission(Base):
     user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    template_id: Mapped[int] = mapped_column(
-        ForeignKey("mission_templates.id"), nullable=False, index=True
+    # 엔진 생성 미션은 DB 템플릿이 없어 nullable. #24 기본미션 경로는 채운다.
+    template_id: Mapped[int | None] = mapped_column(
+        ForeignKey("mission_templates.id"), nullable=True, index=True
     )
     source_record_id: Mapped[int | None] = mapped_column(
         ForeignKey("checkup_records.id", ondelete="SET NULL"), nullable=True, index=True
@@ -48,6 +59,10 @@ class UserMission(Base):
     assigned_date: Mapped[date] = mapped_column(Date, nullable=False)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="ASSIGNED")
     xp_reward: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    # 엔진 미션 인스턴스(하이브리드): 조회용 컬럼 + 표시용 payload.
+    template_code: Mapped[str | None] = mapped_column(String(50), nullable=True)  # 변화/provenance
+    payload: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # GeneratedMission 전체(표시용)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=_now)
 
 
