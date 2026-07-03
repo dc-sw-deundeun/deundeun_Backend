@@ -19,9 +19,7 @@ from app.domains.pkg.repository import PkgRepository
 logger = logging.getLogger(__name__)
 
 # 생성 토글: 안전 템플릿(M1) + KAG 관계(M3) + 안전게이트·병원리퍼럴(M4) + 구조화 출력(M5).
-_GEN_CONFIG = PipelineConfig(
-    M1_template=True, M3_kag=True, M4_verify_gate=True, M5_structured=True
-)
+_GEN_CONFIG = PipelineConfig(M1_template=True, M3_kag=True, M4_verify_gate=True, M5_structured=True)
 _DAILY_N = 3
 
 

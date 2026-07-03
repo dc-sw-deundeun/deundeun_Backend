@@ -35,9 +35,7 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("user_id", "generation_date", name="uq_mission_gen_runs_user_date"),
     )
-    op.create_index(
-        "ix_mission_generation_runs_user_id", "mission_generation_runs", ["user_id"]
-    )
+    op.create_index("ix_mission_generation_runs_user_id", "mission_generation_runs", ["user_id"])
 
 
 def downgrade() -> None:

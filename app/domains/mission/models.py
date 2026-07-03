@@ -61,7 +61,9 @@ class UserMission(Base):
     xp_reward: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     # 엔진 미션 인스턴스(하이브리드): 조회용 컬럼 + 표시용 payload.
     template_code: Mapped[str | None] = mapped_column(String(50), nullable=True)  # 변화/provenance
-    payload: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # GeneratedMission 전체(표시용)
+    payload: Mapped[dict | None] = mapped_column(
+        JSON, nullable=True
+    )  # GeneratedMission 전체(표시용)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=_now)
 
