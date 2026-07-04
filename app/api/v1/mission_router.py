@@ -74,7 +74,7 @@ def get_today_missions(
         "본인 미션이 아니거나 없으면 404."
     ),
 )
-async def complete_mission(
+def complete_mission(
     mission_id: int,
     current_user: CurrentUser = Depends(get_current_user),
     service: MissionService = Depends(get_mission_service),

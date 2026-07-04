@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from typing import Literal, cast
 
 from app.core.exceptions import NotFoundException
 from app.domains.auth.exceptions import InvalidTokenException
@@ -38,7 +39,8 @@ class MissionService:
             mission_id=m.id,
             template_code=m.template_code or (template.code if template else None),
             title=template.title if template else payload.get("title", ""),
-            status=m.status,
+            # DB status는 str이지만 실제 값은 ASSIGNED|COMPLETED뿐(모델 코드 전체가 이 두 값만 씀).
+            status=cast(Literal["ASSIGNED", "COMPLETED"], m.status),
             assigned_date=m.assigned_date,
             xp_reward=m.xp_reward,
             completed_at=m.completed_at,

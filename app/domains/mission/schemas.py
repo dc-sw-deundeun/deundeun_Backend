@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -200,7 +201,7 @@ class TodayMissionItem(BaseModel):
     mission_id: int
     template_code: str | None = None
     title: str = ""
-    status: str = "ASSIGNED"
+    status: Literal["ASSIGNED", "COMPLETED"] = "ASSIGNED"
     assigned_date: date
     xp_reward: int
     completed_at: datetime | None = None
