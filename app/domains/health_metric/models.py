@@ -154,7 +154,6 @@ class HealthMetricAnalysisItemRange(Base):
     __tablename__ = "health_metric_analysis_item_ranges"
     __table_args__ = (
         UniqueConstraint("item_id", name="health_metric_analysis_item_ranges_item_id_key"),
-        Index("ix_hmair_item_id", "item_id"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)

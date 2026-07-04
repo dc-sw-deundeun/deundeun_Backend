@@ -124,8 +124,6 @@ def upgrade() -> None:
         sa.Column("active_color", sa.String(length=20), nullable=True),
         sa.Column("active_marker_percent", sa.Numeric(6, 2), nullable=True),
     )
-    op.create_index("ix_hmair_item_id", "health_metric_analysis_item_ranges", ["item_id"])
-
     op.create_table(
         "health_metric_analysis_range_segments",
         sa.Column("id", sa.Integer(), primary_key=True),
@@ -195,7 +193,6 @@ def downgrade() -> None:
     op.drop_table("health_metric_analysis_item_recommendations")
     op.drop_index("ix_hmars_item_id", table_name="health_metric_analysis_range_segments")
     op.drop_table("health_metric_analysis_range_segments")
-    op.drop_index("ix_hmair_item_id", table_name="health_metric_analysis_item_ranges")
     op.drop_table("health_metric_analysis_item_ranges")
     op.drop_index("ix_hmai_status", table_name="health_metric_analysis_items")
     op.drop_index("ix_hmai_code_value", table_name="health_metric_analysis_items")
