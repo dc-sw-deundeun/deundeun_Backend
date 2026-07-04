@@ -12,6 +12,7 @@ from app.api.v1 import (
     onboarding_router,
     pkg_router,
     record_router,
+    search_router,
 )
 
 api_router = APIRouter(prefix="/api/v1")
@@ -31,3 +32,4 @@ api_router.include_router(
 api_router.include_router(
     notification_router.router, prefix="/notifications", tags=["Notification"]
 )
+api_router.include_router(search_router.router, prefix="/search", tags=["Search"])

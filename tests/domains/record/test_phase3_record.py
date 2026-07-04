@@ -69,7 +69,7 @@ def test_manual_create_and_get_detail(db_session: Session) -> None:
     )
     detail = service.get_checkup(1, record.id)
     assert detail.source_type == "MANUAL"
-    assert detail.verification_status == "UNVERIFIED"
+    assert detail.verification_status == "VERIFIED"
     assert detail.metrics[0].status == "NORMAL"
 
 

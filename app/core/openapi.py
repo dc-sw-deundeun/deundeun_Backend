@@ -16,7 +16,8 @@ _API_DESCRIPTION = """
 
 ### 현재 프론트 연동 가능 영역
 Auth/User, Onboarding, Record/OCR, HealthMetric은 구현되어 있습니다.
-Home, Mission, Character, Notification, My는 후속 Phase용 stub입니다.
+My(마이페이지), Search(질환 검색)가 신규 구현되었습니다.
+Home, Mission, Character, Notification은 후속 Phase용 stub입니다.
 Analysis Stub MVP 라우트는 legacy 호환용으로 유지하지만 신규 프론트 화면에서는 호출하지 않습니다.
 Mission API는 아직 stub이며, "오늘의 미션으로 받기" HTTP API는 후속 Phase에서 구현합니다.
 
@@ -40,6 +41,18 @@ Mission API는 아직 stub이며, "오늘의 미션으로 받기" HTTP API는 �
 - `POST /health-metrics/analyses`: 인증 필요. `sex`, `measured_at`, `metrics[]`를 받아 분석을 저장합니다.
 - 생성 응답은 `data: null`입니다. 분석 결과는 GET `/health-metrics/analyses/{analysis_id}`로 조회합니다.
 - GET 응답은 `analysis_id`, `record_id`, `results`, `explanation`, `ui.summary`, `ui.details`를 포함합니다. `ui.details[].trend.points`에는 이전 HealthMetric 분석 이력이 포함됩니다.
+
+### 마이페이지 흐름
+- `GET /my/connected-apps`: 연동 앱(APPLE_HEALTH, SAMSUNG_HEALTH, GOOGLE_FIT) 목록 및 상태 조회
+- `PATCH /my/connected-apps/{provider}`: 연동 앱 상태 토글 (CONNECTED ↔ DISCONNECTED)
+- `GET /my/notification-settings`: 알림 설정 조회 (없으면 기본값 true로 자동 생성)
+- `PATCH /my/notification-settings`: 알림 설정 부분 업데이트 (변경할 항목만 전송)
+- 비밀번호 변경: `POST /auth/password/reset/request` → `POST /auth/password/reset/confirm` 사용
+
+### 질환 검색 흐름
+- `GET /search/diseases?q=검색어`: 한국어 키워드로 질환 정보 조회
+- 내부적으로 의학 지식 그래프(Neo4j)를 참조하여 AI가 한국어로 설명을 생성합니다.
+- Neo4j 미연결 시에도 OpenAI만으로 결과를 반환합니다.
 
 ### Legacy Analysis Stub
 `/api/v1/analysis/*`는 Phase 4 Stub MVP 호환용입니다. 신규 프론트 화면은 `/health-metrics/*`를 사용하세요.
@@ -84,11 +97,24 @@ _OPENAPI_TAGS = [
     },
     {
         "name": "My",
-        "description": "[프론트 작업 제외] 마이페이지 API는 후속 Phase stub입니다.",
+        "description": (
+            "[프론트 사용] 마이페이지 API. "
+            "연동 앱 관리(GET/PATCH /my/connected-apps), "
+            "알림 설정(GET/PATCH /my/notification-settings) 구현 완료. "
+            "프로필·앱잠금·문의·계정삭제는 후속 Phase stub(501)입니다."
+        ),
     },
     {
         "name": "Notification",
         "description": "[프론트 작업 제외] 알림 API는 후속 Phase stub입니다.",
+    },
+    {
+        "name": "Search",
+        "description": (
+            "[프론트 사용] 질환 검색 API. "
+            "GET /search/diseases?q=키워드 — 한국어 키워드로 질환명·설명·증상 목록을 반환합니다. "
+            "의학 지식 그래프(Neo4j) + AI(OpenAI) 하이브리드 생성."
+        ),
     },
 ]
 

@@ -32,6 +32,10 @@ class Settings(BaseSettings):
     openai_model: str = "gpt-4.1-mini"
     openai_timeout_seconds: float = 20.0
 
+    neo4j_uri: str | None = None
+    neo4j_user: str | None = None
+    neo4j_password: str | None = None
+
     # 미션 생성/실험용 LLM provider 선택: "openai" | "clova"
     llm_provider: str = "openai"
     clova_studio_api_key: str | None = None
