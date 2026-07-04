@@ -1,7 +1,7 @@
 """add notification preferences columns
 
-Revision ID: 013
-Revises: 012_normalize_health_metric_analysis
+Revision ID: 014
+Revises: 013_add_pkg_snapshots
 Create Date: 2026-07-03
 """
 
@@ -9,8 +9,8 @@ import sqlalchemy as sa
 
 from alembic import op
 
-revision = "013"
-down_revision = "012"
+revision = "014"
+down_revision = "013"
 branch_labels = None
 depends_on = None
 
