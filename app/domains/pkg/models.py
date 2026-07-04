@@ -8,7 +8,7 @@ nodes/edges 테이블 대신 JSON 스냅샷 1행이면 충분하다. UNIQUE(user
 
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, ForeignKey, Integer, func
+from sqlalchemy import JSON, DateTime, ForeignKey, Index, Integer, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database.base import Base
@@ -18,13 +18,15 @@ from app.domains.user.models import User  # noqa: F401
 
 class PkgSnapshot(Base):
     __tablename__ = "pkg_snapshots"
+    __table_args__ = (
+        UniqueConstraint("user_id", name="uq_pkg_snapshots_user_id"),
+        Index("ix_pkg_snapshots_user_id", "user_id"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
-        unique=True,
-        index=True,
     )
     source_record_id: Mapped[int | None] = mapped_column(
         ForeignKey("checkup_records.id", ondelete="SET NULL"),
