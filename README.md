@@ -84,7 +84,9 @@ CORS_ALLOW_ORIGINS=["https://www.deundeun.xyz","http://localhost:5173","http://l
 | Record / OCR | 구현 |
 | HealthMetric | 구현 |
 | Analysis | stub |
-| Mission / Character / Home / Notification / My | stub |
+| Character / Home | 구현 |
+| Mission | 부분 (`GET /missions/today` 구현) |
+| Notification / My | stub |
 
 자세한 API 상태는 [docs/implementation-status.md](./docs/implementation-status.md)를 봅니다.
 

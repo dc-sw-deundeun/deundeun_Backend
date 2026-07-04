@@ -15,11 +15,10 @@ _API_DESCRIPTION = """
 - `[프론트 작업 제외]`: 라우트는 열려 있지만 아직 stub이거나 후속 Phase용입니다. 호출 시 `NOT_IMPLEMENTED`(501)를 기대해야 합니다.
 
 ### 현재 프론트 연동 가능 영역
-Auth/User, Onboarding, Record/OCR, HealthMetric은 구현되어 있습니다.
+Auth/User, Onboarding, Record/OCR, HealthMetric, Character, Home은 구현되어 있습니다.
 My(마이페이지), Search(질환 검색)가 신규 구현되었습니다.
-Home, Mission, Character, Notification은 후속 Phase용 stub입니다.
 Analysis Stub MVP 라우트는 legacy 호환용으로 유지하지만 신규 프론트 화면에서는 호출하지 않습니다.
-Mission API는 아직 stub이며, "오늘의 미션으로 받기" HTTP API는 후속 Phase에서 구현합니다.
+Mission API는 `GET /missions/today`만 프론트 사용 구현 API입니다. 완료·인증·캘린더·통계는 후속 Phase용 stub입니다.
 
 ### 인증 흐름
 1. `POST /auth/email/verify/request` — 인증 코드 발송
@@ -41,6 +40,13 @@ Mission API는 아직 stub이며, "오늘의 미션으로 받기" HTTP API는 �
 - `POST /health-metrics/analyses`: 인증 필요. `sex`, `measured_at`, `metrics[]`를 받아 분석을 저장합니다.
 - 생성 응답은 `data: null`입니다. 분석 결과는 GET `/health-metrics/analyses/{analysis_id}`로 조회합니다.
 - GET 응답은 `analysis_id`, `record_id`, `results`, `explanation`, `ui.summary`, `ui.details`를 포함합니다. `ui.details[].trend.points`에는 이전 HealthMetric 분석 이력이 포함됩니다.
+
+### Home / Character / Mission 흐름
+- `GET /home`: 홈 화면용 사용자, 캐릭터 성장, 오늘 미션, 읽지 않은 알림 수를 한 번에 반환합니다.
+- `GET /home/summary`: 홈 상단 위젯용 축약 수치를 반환합니다.
+- `GET /characters/me`: 캐릭터 성장 상태와 실제 보유 동물 컬렉션을 반환합니다.
+- `GET /characters/animals`: 전체 동물 카탈로그와 잠금/해금 상태를 반환합니다.
+- `GET /missions/today`: 사용자 timezone 기준 오늘 배정된 미션 목록과 완료 집계를 반환합니다.
 
 ### 마이페이지 흐름
 - `GET /my/connected-apps`: 연동 앱(APPLE_HEALTH, SAMSUNG_HEALTH, GOOGLE_FIT) 목록 및 상태 조회
@@ -73,11 +79,11 @@ _OPENAPI_TAGS = [
     },
     {
         "name": "Home",
-        "description": "[프론트 작업 제외] 홈 집계 API는 후속 Phase stub입니다.",
+        "description": "[프론트 사용] 홈 화면 집계와 요약 API입니다. 알림 수는 Phase 7 전까지 0 placeholder입니다.",
     },
     {
         "name": "Mission",
-        "description": "[프론트 작업 제외] 미션 API는 Phase 5 예정 stub입니다. HealthMetric 기반 미션 생성 API는 후속 구현 대상입니다.",
+        "description": "[프론트 사용] 오늘의 미션 조회는 구현되어 있습니다. 완료·인증·캘린더·통계 API는 후속 Phase stub입니다.",
     },
     {
         "name": "Record",
@@ -93,7 +99,7 @@ _OPENAPI_TAGS = [
     },
     {
         "name": "Character",
-        "description": "[프론트 작업 제외] 캐릭터·성장 API는 후속 Phase stub입니다.",
+        "description": "[프론트 사용] 캐릭터 성장 상태, 보유 동물 컬렉션, 동물 카탈로그 조회 API입니다.",
     },
     {
         "name": "My",
