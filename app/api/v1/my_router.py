@@ -160,6 +160,22 @@ async def toggle_connected_app(
         "| `email_alarm_enabled` | 식단 기록 알림 |\n"
         "| `push_alarm_enabled` | 주간 리포트 |"
     ),
+    openapi_extra={
+        "responses": {
+            "200": {
+                "content": {
+                    "application/json": {
+                        "example": {
+                            "mission_alarm_enabled": True,
+                            "record_alarm_enabled": True,
+                            "email_alarm_enabled": True,
+                            "push_alarm_enabled": True,
+                        }
+                    }
+                }
+            }
+        }
+    },
 )
 async def get_notification_settings(
     current_user: CurrentUser = Depends(get_current_user),
@@ -200,6 +216,22 @@ async def get_notification_settings(
         '{"mission_alarm_enabled": false}\n'
         "```"
     ),
+    openapi_extra={
+        "responses": {
+            "200": {
+                "content": {
+                    "application/json": {
+                        "example": {
+                            "mission_alarm_enabled": False,
+                            "record_alarm_enabled": True,
+                            "email_alarm_enabled": True,
+                            "push_alarm_enabled": True,
+                        }
+                    }
+                }
+            }
+        }
+    },
 )
 async def update_notification_settings(
     body: NotificationSettingsUpdateRequest,
