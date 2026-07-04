@@ -45,6 +45,9 @@ class Settings(BaseSettings):
 
     health_metric_analysis_rate_limit_per_minute: int = 10
 
+    # 미션 생성 스케줄러(매시 틱) 기동 여부. test 환경/원치 않는 배포에서 끌 수 있다.
+    mission_scheduler_enabled: bool = True
+
     cors_allow_origins: list[str] | str = []
     cors_allow_credentials: bool = True
     cors_allow_methods: list[str] | str = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]

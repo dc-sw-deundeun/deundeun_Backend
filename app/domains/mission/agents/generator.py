@@ -50,7 +50,7 @@ def _normalize_type(raw: str, title: str = "") -> str:
 
 class Generator:
     def __init__(self, llm: LLMClient | None = None) -> None:
-        self.llm = llm or LLMClient()
+        self.llm = llm or LLMClient.for_provider()
 
     async def generate(
         self,
@@ -115,6 +115,7 @@ class Generator:
             "allowed_groundings": list(dict.fromkeys(r.cite for r in ctx.relations if r.cite)),
             "steps_avg": ctx.wearable.steps_avg,
             "success_rate": ctx.success_rate,
+            "recent_missions": ctx.recent_mission_titles,  # 최근 배정분 — 반복 피하도록
         }
 
     # ----- 파싱: structured -----

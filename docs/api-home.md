@@ -12,12 +12,13 @@
 - `GET /api/v1/home`: 홈 화면 전체 데이터
 - `GET /api/v1/home/summary`: 홈 상단/위젯용 축약 데이터
 - `GET /api/v1/missions/today`: 사용자 timezone 기준 오늘 미션
+- `POST /api/v1/missions/{mission_id}/complete`: 미션 self-report 완료
 
 아직 후속 Phase 범위:
 
-- 미션 완료/인증/캘린더/주간 통계
+- 미션 인증/캘린더/주간 통계
 - 알림 저장/읽음 처리
-- 미션 완료에 따른 실제 EXP 지급 루프
+- 미션 완료에 따른 실제 EXP 지급 루프(현재 완료 처리는 상태 전이만 하고 캐릭터 EXP는 지급하지 않음)
 
 ---
 
@@ -69,20 +70,46 @@
     },
     "today_missions": {
       "date": "2026-07-02",
-      "total": 1,
+      "total": 2,
       "completed": 0,
       "items": [
         {
           "mission_id": 1,
           "template_code": "DEFAULT_SELF_CHECK",
           "title": "오늘의 건강 체크",
-          "description": "오늘 하루 건강 상태를 스스로 확인해 보세요.",
-          "category": "HEALTH",
-          "verification_mode": "SELF_CHECK",
-          "xp_reward": 10,
           "status": "ASSIGNED",
           "assigned_date": "2026-07-02",
-          "source_record_id": 3
+          "xp_reward": 10,
+          "completed_at": null,
+          "source_record_id": 3,
+          "rationale": "",
+          "mission_type": "",
+          "difficulty": 1,
+          "execution": { "when": "", "duration_min": null },
+          "grounded_on": [],
+          "source": "generated",
+          "description": "오늘 하루 건강 상태를 스스로 확인해 보세요.",
+          "category": "HEALTH",
+          "verification_mode": "SELF_CHECK"
+        },
+        {
+          "mission_id": 2,
+          "template_code": "walk_after_meal",
+          "title": "식후 15분 걷기",
+          "status": "ASSIGNED",
+          "assigned_date": "2026-07-02",
+          "xp_reward": 0,
+          "completed_at": null,
+          "source_record_id": null,
+          "rationale": "고혈압 관리를 위해 식후 가벼운 운동이 도움이 됩니다.",
+          "mission_type": "exercise",
+          "difficulty": 2,
+          "execution": { "when": "식후", "duration_min": 15 },
+          "grounded_on": ["고혈압->심혈관질환"],
+          "source": "generated",
+          "description": null,
+          "category": null,
+          "verification_mode": null
         }
       ]
     },
@@ -115,7 +142,10 @@
 
 ## GET /api/v1/missions/today
 
-사용자 `timezone` 기준 오늘 배정된 미션을 반환한다. 분석 callback 또는 HealthMetric 흐름에서 생성된 `UserMission` row를 읽는다.
+사용자 `timezone` 기준 오늘 배정된 미션을 반환한다. 미션은 **두 출처**에서 온다 — 응답 shape은 같지만 출처별로 채워지는 필드가 다르다.
+
+1. **레거시 템플릿 기반**(`#24` 기본미션, `assign_default_mission` 등 legacy Analysis 경로가 생성): DB `mission_templates` 행과 연결됨(`template_id` 존재).
+2. **엔진 생성**(스케줄러가 매일 PKG 기반으로 생성, `app.domains.mission.scheduler`): DB 템플릿 행이 없음(`template_id = NULL`), 내용은 LLM/규칙 기반으로 그날그날 만들어짐. **미션 생성 자체는 REST API가 아니라 백그라운드 스케줄러(매시 틱)로 동작** — 이 엔드포인트는 조회만 한다.
 
 ### Response data
 
@@ -125,15 +155,47 @@
 | `total` | `int` | 오늘 미션 총 개수 |
 | `completed` | `int` | `status == "COMPLETED"` 미션 수 |
 | `items[].mission_id` | `int` | 사용자 미션 ID |
-| `items[].template_code` | `string` | 미션 템플릿 코드 |
+| `items[].template_code` | `string\|null` | 미션 템플릿 코드(엔진 생성분은 provenance 문자열, 레거시는 `mission_templates.code`) |
 | `items[].title` | `string` | 미션 제목 |
-| `items[].description` | `string\|null` | 미션 설명 |
-| `items[].category` | `string` | 카테고리 |
-| `items[].verification_mode` | `string` | 검증 방식 |
-| `items[].xp_reward` | `int` | 미션 보상 EXP 값 |
-| `items[].status` | `string` | 현재 상태 |
+| `items[].status` | `"ASSIGNED"\|"COMPLETED"` | 현재 상태 |
 | `items[].assigned_date` | `date` | 배정일 |
-| `items[].source_record_id` | `int\|null` | 미션 생성 원천 검진 기록 |
+| `items[].xp_reward` | `int` | 미션 보상 EXP 값(엔진 생성분은 현재 `0` — EXP 지급 루프 미연결) |
+| `items[].completed_at` | `string\|null` | 완료 처리 시각(ISO datetime), 미완료면 `null` |
+| `items[].source_record_id` | `int\|null` | 미션 생성 원천 검진 기록. 엔진 생성분은 현재 `null`(미설정) |
+| `items[].rationale` | `string` | **엔진 생성분만**: 이 미션을 추천한 이유. 레거시는 `""` |
+| `items[].mission_type` | `string` | **엔진 생성분만**: `diet`\|`exercise`\|`hydration`\|`sleep`\|`stress`\|`checkup_followup`\|`habit`. 레거시는 `""` |
+| `items[].difficulty` | `int` | **엔진 생성분만**: 난이도(1부터). 레거시는 `1` |
+| `items[].execution.when` | `string` | **엔진 생성분만**: 수행 시점(예: "식후"). 레거시는 `""` |
+| `items[].execution.duration_min` | `int\|null` | **엔진 생성분만**: 소요 시간(분) |
+| `items[].grounded_on` | `string[]` | **엔진 생성분만**: 근거로 인용한 PKG 관계. 레거시는 `[]` |
+| `items[].source` | `string` | **엔진 생성분만**: `generated`\|`fallback`(LLM 실패 시 결정적 템플릿 사용) |
+| `items[].description` | `string\|null` | **레거시만**: `mission_templates.description`. 엔진 생성분은 `null` |
+| `items[].category` | `string\|null` | **레거시만**: `mission_templates.category`. 엔진 생성분은 `null`(대신 `mission_type` 사용) |
+| `items[].verification_mode` | `string\|null` | **레거시만**: `mission_templates.verification_mode`. 엔진 생성분은 `null`(완료 방식 매핑은 미정) |
+
+> ⚠️ 이전 계약(레거시 전용)에서는 `template_code`/`category`/`verification_mode`가 항상 non-null 문자열이었다. 엔진 생성 미션이 섞이면서 이 셋은 **nullable로 변경**됐다 — 프론트에서 non-null을 가정한 코드가 있으면 확인이 필요하다.
+
+---
+
+## POST /api/v1/missions/{mission_id}/complete
+
+인증된 사용자가 본인 미션을 self-report로 완료 처리한다.
+
+- 이미 `COMPLETED`인 미션을 다시 호출하면 **멱등**하게 처리한다(에러 없이 그대로 완료 유지, 재요청/더블탭 안전).
+- 본인 미션이 아니거나 존재하지 않으면 `404`.
+- 완료 상태는 `completed_at`에 기록되고, 최근 14일 완료율(`success_rate`)로 계산돼 다음 날 미션 생성 시 난이도 조정에 반영된다.
+- 캐릭터 EXP 지급, 알림 발송은 아직 연결되지 않았다(후속 Phase).
+
+### Response
+
+```json
+{
+  "success": true,
+  "message": "미션을 완료했습니다.",
+  "data": null,
+  "error_code": null
+}
+```
 
 ---
 
@@ -143,3 +205,4 @@
 - 온보딩 완료 시에도 캐릭터 기본 프로필을 미리 생성한다.
 - Home은 `UserRepository`, `CharacterService`, `MissionService`를 조합한다.
 - 알림 수는 Notification Phase 전까지 저장소 조회 없이 `0`으로 고정한다.
+- **미션 생성은 API가 아니라 백그라운드 스케줄러**(매시 틱)가 PKG 기반으로 담당한다. 새 검진이 저장되면 당일 미완료 미션을 무효화하고 재생성한다(완료분은 보존). 프론트는 생성을 트리거할 필요가 없고 `/today`로 조회만 하면 된다.

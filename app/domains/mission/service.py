@@ -1,7 +1,12 @@
+from datetime import datetime, timezone
+from typing import Literal, cast
+
+from app.core.exceptions import NotFoundException
 from app.domains.auth.exceptions import InvalidTokenException
+from app.domains.mission.models import MissionTemplate, UserMission
 from app.domains.mission.policy import local_date_for_timezone
 from app.domains.mission.repository import MissionRepository
-from app.domains.mission.schemas import TodayMissionItem, TodayMissionsResponse
+from app.domains.mission.schemas import Execution, TodayMissionItem, TodayMissionsResponse
 from app.domains.user.models import UserStatus
 from app.domains.user.repository import UserRepository
 
@@ -12,27 +17,14 @@ class MissionService:
         self.user_repo = user_repo
 
     def get_today_missions(self, user_id: int) -> TodayMissionsResponse:
+        """유저 로컬 '오늘' 배정 미션(템플릿 기반 + 엔진 생성분)과 완료 집계."""
         user = self.user_repo.find_by_id(user_id)
         if user is None or user.status != UserStatus.ACTIVE:
             raise InvalidTokenException()
 
         today = local_date_for_timezone(user.timezone)
-        rows = self.repo.list_user_missions_for_date(user_id, today)
-        items = [
-            TodayMissionItem(
-                mission_id=mission.id,
-                template_code=template.code,
-                title=template.title,
-                description=template.description,
-                category=template.category,
-                verification_mode=template.verification_mode,
-                xp_reward=mission.xp_reward,
-                status=mission.status,
-                assigned_date=mission.assigned_date,
-                source_record_id=mission.source_record_id,
-            )
-            for mission, template in rows
-        ]
+        rows = self.repo.list_for_date_with_template(user_id, today)
+        items = [self._to_item(mission, template) for mission, template in rows]
         return TodayMissionsResponse(
             date=today,
             total=len(items),
@@ -40,18 +32,45 @@ class MissionService:
             items=items,
         )
 
-    def complete_mission(self, user_id: int, mission_id: int) -> None:
-        """미션을 완료합니다.
+    @staticmethod
+    def _to_item(m: UserMission, template: MissionTemplate | None) -> TodayMissionItem:
+        payload = m.payload or {}
+        return TodayMissionItem(
+            mission_id=m.id,
+            template_code=m.template_code or (template.code if template else None),
+            title=template.title if template else payload.get("title", ""),
+            # DB status는 str이지만 실제 값은 ASSIGNED|COMPLETED뿐(모델 코드 전체가 이 두 값만 씀).
+            status=cast(Literal["ASSIGNED", "COMPLETED"], m.status),
+            assigned_date=m.assigned_date,
+            xp_reward=m.xp_reward,
+            completed_at=m.completed_at,
+            source_record_id=m.source_record_id,
+            rationale=payload.get("rationale", ""),
+            mission_type=payload.get("mission_type", ""),
+            difficulty=payload.get("difficulty", 1),
+            execution=Execution(**payload.get("execution", {})),
+            grounded_on=payload.get("grounded_on", []),
+            source=payload.get("source", "generated"),
+            description=template.description if template else None,
+            category=template.category if template else None,
+            verification_mode=template.verification_mode if template else None,
+        )
 
-        흐름:
-        1. 미션 존재 여부 확인
-        2. 해당 사용자의 미션인지 확인
-        3. 이미 완료된 미션인지 확인
-        4. 완료 상태로 변경
-        5. CharacterService.gain_exp() 호출 (Phase 4에서 연결)
-        6. NotificationService 로그 저장
+    def complete_mission(self, user_id: int, mission_id: int) -> None:
+        """미션을 self-report로 완료 처리한다(멱등).
+
+        본인 미션만 완료 가능하고, 이미 완료됐으면 no-op으로 XP 중복 지급을 막는다.
+        완료 상태는 user_missions에 남아 build_pkg의 success_rate(14일창) 소스가 된다.
+        캐릭터 경험치 지급/알림은 Phase 4에서 별도 연결한다.
         """
-        raise NotImplementedError
+        mission = self.repo.get_for_user(mission_id, user_id)
+        if mission is None:
+            raise NotFoundException(message="미션을 찾을 수 없습니다.")
+        if mission.status == "COMPLETED":
+            return  # 멱등: 이미 완료 (재요청·더블탭 안전)
+        mission.status = "COMPLETED"
+        mission.completed_at = datetime.now(timezone.utc)
+        self.repo.commit()
 
     def verify_mission(self, user_id: int, mission_id: int) -> None:
         raise NotImplementedError

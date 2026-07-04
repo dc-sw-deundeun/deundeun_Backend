@@ -1,30 +1,11 @@
-from datetime import date
+from datetime import date, datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
 # ---------------------------------------------------------------------------
 # 라우터/영속화용 placeholder (프로덕션 엔드포인트, 추후 확정)
 # ---------------------------------------------------------------------------
-
-
-class TodayMissionItem(BaseModel):
-    mission_id: int
-    template_code: str
-    title: str
-    description: str | None = None
-    category: str
-    verification_mode: str
-    xp_reward: int
-    status: str
-    assigned_date: date
-    source_record_id: int | None = None
-
-
-class TodayMissionsResponse(BaseModel):
-    date: date
-    total: int
-    completed: int
-    items: list[TodayMissionItem]
 
 
 class MissionCompleteRequest(BaseModel):
@@ -151,6 +132,7 @@ class StructuredContext(BaseModel):
     relations: list[Relation] = Field(default_factory=list)  # M3 ON일 때만 채워짐
     wearable: Wearable = Field(default_factory=Wearable)
     success_rate: float | None = None
+    recent_mission_titles: list[str] = Field(default_factory=list)  # 최근 배정분(반복 회피용)
 
 
 class Execution(BaseModel):
@@ -203,3 +185,42 @@ class MissionSet(BaseModel):
     missions: list[GeneratedMission] = Field(default_factory=list)
     disclaimer: str = ""
     meta: GenerationMeta = Field(default_factory=GenerationMeta)
+
+
+# ---------------------------------------------------------------------------
+# 라우터 응답 뷰 (user_missions 인스턴스 → 프론트 표시)
+# ---------------------------------------------------------------------------
+
+
+class TodayMissionItem(BaseModel):
+    """오늘의 미션 1건 — 템플릿 기반(#24 기본미션) + 엔진 생성분을 모두 표현.
+
+    공통 필드는 항상 채워지고, 출처별 필드(엔진 vs 레거시 템플릿)는 없는 쪽이 기본값/None.
+    """
+
+    mission_id: int
+    template_code: str | None = None
+    title: str = ""
+    status: Literal["ASSIGNED", "COMPLETED"] = "ASSIGNED"
+    assigned_date: date
+    xp_reward: int
+    completed_at: datetime | None = None
+    source_record_id: int | None = None
+    # 엔진 생성 미션(payload 기반) 필드
+    rationale: str = ""
+    mission_type: str = ""
+    difficulty: int = 1
+    execution: Execution = Field(default_factory=Execution)
+    grounded_on: list[str] = Field(default_factory=list)
+    source: str = "generated"
+    # 레거시 DB 템플릿(#24 기본미션) 필드 — 엔진 생성분은 None
+    description: str | None = None
+    category: str | None = None
+    verification_mode: str | None = None
+
+
+class TodayMissionsResponse(BaseModel):
+    date: date
+    total: int
+    completed: int
+    items: list[TodayMissionItem]

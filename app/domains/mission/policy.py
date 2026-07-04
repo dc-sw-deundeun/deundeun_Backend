@@ -1,7 +1,10 @@
+import logging
 from datetime import date, datetime, timezone
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-DEFAULT_TIMEZONE = "Asia/Seoul"
+logger = logging.getLogger(__name__)
+
+_DEFAULT_TZ = "Asia/Seoul"
 
 
 def can_complete_mission(user_mission) -> bool:
@@ -38,11 +41,16 @@ def calculate_weekly_statistics(user_missions: list) -> dict:
 
 
 def local_date_for_timezone(timezone_name: str | None, *, now: datetime | None = None) -> date:
+    """주어진 timezone의 로컬 날짜. None/알 수 없는 tz는 기본 서울로 폴백한다.
+
+    미션 생성(스케줄러)과 조회(GET /today)가 동일 규칙으로 '오늘'을 계산해야 맞물린다.
+    """
     current = now or datetime.now(timezone.utc)
     if current.tzinfo is None:
         current = current.replace(tzinfo=timezone.utc)
     try:
-        zone = ZoneInfo(timezone_name or DEFAULT_TIMEZONE)
-    except ZoneInfoNotFoundError:
-        zone = ZoneInfo(DEFAULT_TIMEZONE)
+        zone = ZoneInfo(timezone_name or _DEFAULT_TZ)
+    except (ZoneInfoNotFoundError, ValueError):
+        logger.warning("unknown timezone %r; falling back to %s", timezone_name, _DEFAULT_TZ)
+        zone = ZoneInfo(_DEFAULT_TZ)
     return current.astimezone(zone).date()

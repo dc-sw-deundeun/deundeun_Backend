@@ -14,7 +14,7 @@
 | Record / OCR | 구현 | 가능 |
 | HealthMetric | 구현 | 가능 |
 | Analysis | legacy stub | 프론트 작업 제외 |
-| Mission | 부분 | `GET /missions/today` 가능, 완료·인증·캘린더·통계는 후속 |
+| Mission | 부분 | `GET /today`, `POST /{id}/complete` 가능, 인증·캘린더·통계는 후속 |
 | Character | 구현 | 가능 |
 | Home | 구현 | 가능 |
 | My | 부분 | 연동 앱·알림 설정 가능, 프로필·앱잠금·문의·계정삭제는 stub |
@@ -117,8 +117,11 @@ OCR 업로드 플로우 상세는 [api-record-ocr.md](./api-record-ocr.md) 참�
 | Method | Path | 설명 |
 |--------|------|------|
 | GET | `/today` | 사용자 timezone 기준 오늘 미션 목록과 완료 집계 |
+| POST | `/{mission_id}/complete` | 본인 미션 self-report 완료(멱등) |
 
-`POST /{mission_id}/complete`, `POST /{mission_id}/verify`, `GET /calendar`, `GET /statistics/weekly`, `POST /notifications/send`는 후속 Phase placeholder입니다.
+`POST /{mission_id}/verify`, `GET /calendar`, `GET /statistics/weekly`, `POST /notifications/send`는 후속 Phase placeholder입니다.
+
+미션 생성은 REST API가 아니라 백그라운드 스케줄러(매시 틱, PKG 기반)가 담당합니다. `GET /today`는 조회만 하고, 새 검진 저장 시 당일 미완료 미션을 무효화·재생성합니다. 완료 이력(14일 완료율)은 다음 생성에 반영됩니다.
 
 ### My `/api/v1/my`
 
@@ -166,7 +169,7 @@ Notification 라우터는 후속 Phase용 stub입니다. 현재 알림 설정 �
 
 | Prefix | 상태 |
 |--------|------|
-| `/api/v1/missions/*` | `/today` 외 미션 완료·인증·캘린더·통계·알림 발송 미완성 |
+| `/api/v1/missions/*` | `/today`, `/{id}/complete` 외 미션 인증·캘린더·통계·알림 발송 미완성 |
 | `/api/v1/notifications` | 알림 도메인 미완성 |
 | `/api/v1/my/profile`, `/api/v1/my/app-lock`, `/api/v1/my/support`, `/api/v1/my/account` | 마이페이지 후속 기능 미완성 |
 
@@ -181,10 +184,12 @@ Notification 라우터는 후속 Phase용 stub입니다. 현재 알림 설정 �
 | `012_normalize_health_metric_analysis` | HealthMetric 분석 결과 정규화 저장 테이블 |
 | `013_add_pkg_snapshots` | PKG 스냅샷 영속 테이블 |
 | `014_add_notification_preferences_columns` | My 알림 설정 저장 테이블 |
+| `015_add_mission_generation_runs` | 미션 생성 멱등 로그(유저·날짜당 1회 생성 보장) |
+| `016_extend_user_missions_for_generated` | user_missions에 엔진 생성분 저장 컬럼 추가(`template_code`, `payload`, `completed_at`), `template_id` nullable화 |
 
 ## 다음 구현 우선순위
 
-1. Phase 5 Mission 확장: 미션 완료·인증·캘린더·통계·EXP 지급 루프
+1. Phase 5 Mission 확장: 미션 인증·캘린더·통계, 완료→EXP 지급 루프 연결(현재 완료는 상태 전이만 함)
 2. Notification 알림함·읽음 처리·worker
 3. My 후속 기능: 프로필, 앱잠금, 문의, 계정삭제
 4. Alembic metadata drift 정리
