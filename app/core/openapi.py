@@ -15,10 +15,11 @@ _API_DESCRIPTION = """
 - `[프론트 작업 제외]`: 라우트는 열려 있지만 아직 stub이거나 후속 Phase용입니다. 호출 시 `NOT_IMPLEMENTED`(501)를 기대해야 합니다.
 
 ### 현재 프론트 연동 가능 영역
-Auth/User, Onboarding, Record/OCR, HealthMetric, Character, Home은 구현되어 있습니다.
-My(마이페이지), Search(질환 검색)가 신규 구현되었습니다.
+Auth/User, Onboarding, Record/OCR, HealthMetric, Character, Home, My(마이페이지), Search(질환 검색)는 구현되어 있습니다.
 Analysis Stub MVP 라우트는 legacy 호환용으로 유지하지만 신규 프론트 화면에서는 호출하지 않습니다.
 Mission API는 `GET /missions/today`만 프론트 사용 구현 API입니다. 완료·인증·캘린더·통계는 후속 Phase용 stub입니다.
+PKG API는 미션 엔진/서버 내부 소비용입니다. 신규 프론트 화면에서는 직접 호출하지 않습니다.
+Notification API는 후속 Phase용 stub입니다. 알림 설정 화면은 `/my/notification-settings`를 사용하세요.
 
 ### 인증 흐름
 1. `POST /auth/email/verify/request` — 인증 코드 발송
@@ -60,6 +61,11 @@ Mission API는 `GET /missions/today`만 프론트 사용 구현 API입니다. �
 - 내부적으로 의학 지식 그래프(Neo4j)를 참조하여 AI가 한국어로 설명을 생성합니다.
 - Neo4j 미연결 시에도 OpenAI만으로 결과를 반환합니다.
 
+### PKG / Notification 구분
+- `GET /pkg/{user_id}`: 서버/내부용 개인 지식그래프 조회입니다. 로그인 사용자는 본인 PKG만 조회할 수 있습니다.
+- `/notifications/*`: 후속 Phase용 알림함 placeholder입니다. 호출 시 `NOT_IMPLEMENTED`(501)를 기대해야 합니다.
+- 알림 설정 조회/수정은 구현된 마이페이지 API `GET/PATCH /my/notification-settings`를 사용합니다.
+
 ### Legacy Analysis Stub
 `/api/v1/analysis/*`는 Phase 4 Stub MVP 호환용입니다. 신규 프론트 화면은 `/health-metrics/*`를 사용하세요.
 """
@@ -98,6 +104,14 @@ _OPENAPI_TAGS = [
         "description": "[프론트 작업 제외] Legacy Phase 4 Stub API입니다. 신규 화면은 HealthMetric 분석 API를 사용하세요. callback은 서버/내부용입니다.",
     },
     {
+        "name": "PKG",
+        "description": (
+            "[서버/내부] 개인 지식그래프 조회 API. "
+            "미션 생성 엔진이 소비하는 조건·플래그·엣지 스냅샷을 반환합니다. "
+            "신규 프론트 화면에서는 직접 호출하지 않습니다."
+        ),
+    },
+    {
         "name": "Character",
         "description": "[프론트 사용] 캐릭터 성장 상태, 보유 동물 컬렉션, 동물 카탈로그 조회 API입니다.",
     },
@@ -112,7 +126,10 @@ _OPENAPI_TAGS = [
     },
     {
         "name": "Notification",
-        "description": "[프론트 작업 제외] 알림 API는 후속 Phase stub입니다.",
+        "description": (
+            "[프론트 작업 제외] 알림함 API는 후속 Phase stub입니다. "
+            "알림 설정 화면은 My API의 GET/PATCH /my/notification-settings를 사용하세요."
+        ),
     },
     {
         "name": "Search",

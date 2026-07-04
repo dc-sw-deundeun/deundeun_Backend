@@ -1,6 +1,6 @@
 # 마이페이지 API
 
-> 기준일: 2026-07-03
+> 기준일: 2026-07-04
 > Base URL: `/api/v1/my`
 > 인증: 모든 엔드포인트에 `Authorization: Bearer <access_token>` 헤더 필요
 
@@ -14,8 +14,9 @@
 | 연동 앱 상태 토글 | ✅ 구현 완료 | `PATCH /my/connected-apps/{provider}` |
 | 알림 설정 조회 | ✅ 구현 완료 | `GET /my/notification-settings` |
 | 알림 설정 업데이트 | ✅ 구현 완료 | `PATCH /my/notification-settings` |
-| 비밀번호 변경 | ✅ 기존 Auth API 사용 | `POST /auth/password/reset/request` + `confirm` |
+| 비밀번호 재설정 | ✅ 기존 Auth API 사용 | `POST /auth/password/reset/request` + `confirm` |
 | 프로필 조회 | 🚧 stub (501) | `GET /my/profile` |
+| 비밀번호 변경 | 🚧 stub (501) | `PATCH /my/password` |
 | 앱 잠금 설정 | 🚧 stub (501) | `GET/PATCH /my/app-lock` |
 | 문의 접수 | 🚧 stub (501) | `POST /my/support` |
 | 계정 삭제 | 🚧 stub (501) | `DELETE /my/account` |
@@ -24,7 +25,7 @@
 
 ## 비밀번호 변경
 
-기존 Auth API를 사용합니다. 별도 My 엔드포인트는 없습니다.
+현재 프론트 화면에서는 기존 Auth API를 사용합니다. `/my/password`는 열려 있지만 후속 Phase placeholder이므로 호출하지 않습니다.
 
 ```
 1. POST /api/v1/auth/password/reset/request   ← 이메일로 인증 코드 발송

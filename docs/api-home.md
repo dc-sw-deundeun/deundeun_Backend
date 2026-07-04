@@ -1,6 +1,6 @@
 # Home / Today Mission API
 
-> 기준일: 2026-07-02  
+> 기준일: 2026-07-04
 > 인증: 모든 프론트 사용 엔드포인트에 `Authorization: Bearer <access_token>` 헤더 필요
 
 ## 목적

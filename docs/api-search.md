@@ -1,6 +1,6 @@
 # 질환 검색 API
 
-> 기준일: 2026-07-03
+> 기준일: 2026-07-04
 > Base URL: `/api/v1/search`
 > 인증: `Authorization: Bearer <access_token>` 헤더 필요
 

@@ -1,7 +1,7 @@
 # 아키텍처
 
-> 기준일: 2026-07-02  
-> 현재 백엔드는 FastAPI API 서버이며, 인증·온보딩·검진/OCR·건강지표·캐릭터 성장·홈 집계를 구현했습니다.
+> 기준일: 2026-07-04
+> 현재 백엔드는 FastAPI API 서버이며, 인증·온보딩·검진/OCR·건강지표·캐릭터 성장·홈 집계·마이페이지 일부·질환 검색을 구현했습니다.
 
 ## 전체 구조
 
@@ -12,10 +12,12 @@ Frontend / Mobile App
   -> External services
        - SMTP
        - Clova OCR
-       - External Analysis Server (후속 구현)
+       - OpenAI / medical KG(Neo4j)
+       - External Analysis Server (legacy 호환/후속 정리)
 ```
 
 FastAPI는 검진 AI 분석 모델을 직접 들고 있지 않습니다. 저장형 건강지표 분석은 `health_metric` 도메인이 맡고, legacy `analysis` 라우터는 Phase 4 호환용으로 유지합니다.
+개인 지식그래프(PKG)는 앱 PostgreSQL에 스냅샷으로 저장되며, 외부 medical KG(Neo4j)와 물리적으로 분리합니다.
 
 ## 레이어 규칙
 
@@ -49,7 +51,10 @@ Router에는 비즈니스 로직을 넣지 않습니다. Service는 DB 세부 �
 | `mission` | 부분 | 오늘 미션 조회 구현, 완료·인증·캘린더·통계는 후속 phase |
 | `character` | 구현 | 캐릭터 성장 상태와 보유 동물 컬렉션 |
 | `home` | 구현 | 사용자·캐릭터·오늘 미션·알림 수 집계 |
-| `notification`, `my` | stub | 후속 phase |
+| `my` | 부분 | 연동 앱 관리, 알림 설정 구현. 프로필·앱잠금·문의·계정삭제는 stub |
+| `search` | 구현 | 의학 KG + AI 기반 질환 검색 |
+| `pkg` | 서버/내부 | 미션 엔진용 개인 지식그래프 스냅샷 |
+| `notification` | stub | 알림함·읽음 처리·worker는 후속 phase |
 
 상세 API 상태는 [implementation-status.md](./implementation-status.md)를 기준으로 봅니다.
 
@@ -67,8 +72,10 @@ Router에는 비즈니스 로직을 넣지 않습니다. Service는 DB 세부 �
 /api/v1/missions       # GET /today 구현, 나머지 stub
 /api/v1/characters     # 성장/동물 조회 구현
 /api/v1/home           # 홈 집계 구현
+/api/v1/my             # 연동 앱·알림 설정 구현, 일부 stub
+/api/v1/search         # 질환 검색 구현
+/api/v1/pkg            # 서버/내부 PKG 조회
 /api/v1/notifications  # stub
-/api/v1/my             # stub
 ```
 
 공통 응답 envelope:

@@ -70,7 +70,7 @@ Authorization: Bearer <access_token>
 웹 프론트엔드는 서버 `.env`의 `CORS_ALLOW_ORIGINS`에 origin이 등록되어야 합니다.
 
 ```bash
-CORS_ALLOW_ORIGINS=["https://www.deundeun.xyz","http://localhost:5173","http://localhost:3000"]
+CORS_ALLOW_ORIGINS=["https://www.deundeun.xyz","http://localhost:5173","http://localhost:3000","http://localhost:8081"]
 ```
 
 네이티브 앱은 브라우저 CORS 정책의 영향을 받지 않습니다.
@@ -83,10 +83,12 @@ CORS_ALLOW_ORIGINS=["https://www.deundeun.xyz","http://localhost:5173","http://l
 | Onboarding | 구현 |
 | Record / OCR | 구현 |
 | HealthMetric | 구현 |
-| Analysis | stub |
+| Analysis | legacy stub |
 | Character / Home | 구현 |
 | Mission | 부분 (`GET /missions/today` 구현) |
-| Notification / My | stub |
+| My / Search | 구현 |
+| PKG | 서버/내부 |
+| Notification | stub |
 
 자세한 API 상태는 [docs/implementation-status.md](./docs/implementation-status.md)를 봅니다.
 
@@ -112,6 +114,8 @@ develop push
 |------|------|
 | [docs/README.md](./docs/README.md) | 문서 인덱스 |
 | [docs/implementation-status.md](./docs/implementation-status.md) | API 구현 현황 |
+| [docs/api-my-page.md](./docs/api-my-page.md) | 마이페이지 API |
+| [docs/api-search.md](./docs/api-search.md) | 질환 검색 API |
 | [docs/development-environment.md](./docs/development-environment.md) | 개발·테스트 환경 |
 | [docs/deployment-onprem.md](./docs/deployment-onprem.md) | 온프레미스 배포/CD |
 | [docs/architecture.md](./docs/architecture.md) | 백엔드 구조 |
