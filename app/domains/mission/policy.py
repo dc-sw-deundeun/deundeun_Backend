@@ -1,5 +1,7 @@
 from datetime import date, datetime, timezone
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+DEFAULT_TIMEZONE = "Asia/Seoul"
 
 
 def can_complete_mission(user_mission) -> bool:
@@ -35,8 +37,12 @@ def calculate_weekly_statistics(user_missions: list) -> dict:
     raise NotImplementedError
 
 
-def local_date_for_timezone(timezone_name: str, *, now: datetime | None = None) -> date:
+def local_date_for_timezone(timezone_name: str | None, *, now: datetime | None = None) -> date:
     current = now or datetime.now(timezone.utc)
     if current.tzinfo is None:
         current = current.replace(tzinfo=timezone.utc)
-    return current.astimezone(ZoneInfo(timezone_name)).date()
+    try:
+        zone = ZoneInfo(timezone_name or DEFAULT_TIMEZONE)
+    except ZoneInfoNotFoundError:
+        zone = ZoneInfo(DEFAULT_TIMEZONE)
+    return current.astimezone(zone).date()

@@ -5,6 +5,7 @@
 | 문서 | 목적 |
 |------|------|
 | [implementation-status.md](./implementation-status.md) | 현재 구현된 API와 아직 stub인 영역 |
+| [api-home.md](./api-home.md) | 홈 aggregation과 오늘의 미션 조회 API 가이드 |
 | [api-record-ocr.md](./api-record-ocr.md) | 검진 업로드·OCR 플로우 상세 API 가이드 |
 | [api-health-metric-analysis.md](./api-health-metric-analysis.md) | 건강 지표 분석 저장·조회 플로우 상세 API 가이드 |
 | [api-character-growth.md](./api-character-growth.md) | 캐릭터 성장·동물 해금 API 가이드 |
