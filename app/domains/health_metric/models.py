@@ -1,6 +1,18 @@
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, Float, ForeignKey, Integer, Numeric, String, Text, func
+from sqlalchemy import (
+    JSON,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 import app.domains.auth.models  # noqa: F401
@@ -23,6 +35,10 @@ class HealthMetricReference(Base):
 
 class HealthMetricAnalysis(Base):
     __tablename__ = "health_metric_analyses"
+    __table_args__ = (
+        Index("ix_health_metric_analyses_user_created_at", "user_id", "created_at"),
+        Index("ix_health_metric_analyses_user_measured_at", "user_id", "measured_at"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int | None] = mapped_column(
@@ -78,21 +94,25 @@ class HealthMetricAnalysis(Base):
 
 class HealthMetricAnalysisItem(Base):
     __tablename__ = "health_metric_analysis_items"
+    __table_args__ = (
+        Index("ix_hmai_analysis_sort", "analysis_id", "sort_order"),
+        Index("ix_hmai_code_value", "canonical_test_code", "value"),
+        Index("ix_hmai_status", "status"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     analysis_id: Mapped[int] = mapped_column(
         ForeignKey("health_metric_analyses.id", ondelete="CASCADE"),
         nullable=False,
-        index=True,
     )
     input_metric_code: Mapped[str] = mapped_column(String(50), nullable=False)
     input_metric_name: Mapped[str] = mapped_column(String(100), nullable=False)
-    canonical_test_code: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    canonical_test_code: Mapped[str] = mapped_column(String(50), nullable=False)
     display_name: Mapped[str] = mapped_column(String(100), nullable=False)
     value: Mapped[float] = mapped_column(Numeric(12, 4), nullable=False)
     unit: Mapped[str | None] = mapped_column(String(20), nullable=True)
     raw_text: Mapped[str | None] = mapped_column(String(200), nullable=True)
-    status: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(20), nullable=False)
     status_label: Mapped[str] = mapped_column(String(20), nullable=False)
     matched_rule: Mapped[str | None] = mapped_column(String(100), nullable=True)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -132,13 +152,14 @@ class HealthMetricAnalysisItem(Base):
 
 class HealthMetricAnalysisItemRange(Base):
     __tablename__ = "health_metric_analysis_item_ranges"
+    __table_args__ = (
+        UniqueConstraint("item_id", name="health_metric_analysis_item_ranges_item_id_key"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     item_id: Mapped[int] = mapped_column(
         ForeignKey("health_metric_analysis_items.id", ondelete="CASCADE"),
         nullable=False,
-        unique=True,
-        index=True,
     )
     range_min: Mapped[float] = mapped_column(Numeric(12, 4), nullable=False)
     range_max: Mapped[float] = mapped_column(Numeric(12, 4), nullable=False)
@@ -157,12 +178,15 @@ class HealthMetricAnalysisItemRange(Base):
 
 class HealthMetricAnalysisRangeSegment(Base):
     __tablename__ = "health_metric_analysis_range_segments"
+    __table_args__ = (
+        UniqueConstraint("item_id", "sort_order", name="uq_hmars_item_sort_order"),
+        Index("ix_hmars_item_id", "item_id"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     item_id: Mapped[int] = mapped_column(
         ForeignKey("health_metric_analysis_items.id", ondelete="CASCADE"),
         nullable=False,
-        index=True,
     )
     label: Mapped[str] = mapped_column(String(100), nullable=False)
     from_value: Mapped[float] = mapped_column(Numeric(12, 4), nullable=False)
@@ -177,12 +201,15 @@ class HealthMetricAnalysisRangeSegment(Base):
 
 class HealthMetricAnalysisItemRecommendation(Base):
     __tablename__ = "health_metric_analysis_item_recommendations"
+    __table_args__ = (
+        UniqueConstraint("item_id", "sort_order", name="uq_hmair_item_sort_order"),
+        Index("ix_hmair_recommendations_item_id", "item_id"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     item_id: Mapped[int] = mapped_column(
         ForeignKey("health_metric_analysis_items.id", ondelete="CASCADE"),
         nullable=False,
-        index=True,
     )
     title: Mapped[str] = mapped_column(
         String(100), nullable=False, default="맞춤 추천 습관", server_default="맞춤 추천 습관"
@@ -197,12 +224,15 @@ class HealthMetricAnalysisItemRecommendation(Base):
 
 class HealthMetricAnalysisHighlight(Base):
     __tablename__ = "health_metric_analysis_highlights"
+    __table_args__ = (
+        UniqueConstraint("analysis_id", "sort_order", name="uq_hmah_analysis_sort_order"),
+        Index("ix_hmah_analysis_id", "analysis_id"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     analysis_id: Mapped[int] = mapped_column(
         ForeignKey("health_metric_analyses.id", ondelete="CASCADE"),
         nullable=False,
-        index=True,
     )
     body: Mapped[str] = mapped_column(Text, nullable=False)
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False)

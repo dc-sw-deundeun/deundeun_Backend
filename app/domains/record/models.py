@@ -4,9 +4,11 @@ from sqlalchemy import (
     Boolean,
     DateTime,
     Float,
+    Index,
     Integer,
     String,
     Text,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -19,6 +21,15 @@ def _now() -> datetime:
 
 class CheckupRecord(Base):
     __tablename__ = "checkup_records"
+    __table_args__ = (
+        Index(
+            "uq_checkup_records_user_file_hash",
+            "user_id",
+            "file_hash",
+            unique=True,
+            postgresql_where=text("file_hash IS NOT NULL"),
+        ),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)  # 논리 참조, FK 없음

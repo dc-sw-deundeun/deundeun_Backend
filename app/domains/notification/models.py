@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, UniqueConstraint, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database.base import Base
@@ -29,17 +29,3 @@ class NotificationPreference(Base):
         onupdate=lambda: datetime.now(UTC),
         nullable=False,
     )
-
-
-class NotificationLog(Base):
-    __tablename__ = "notification_logs"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    # user_id, notification_type, channel, title, content, sent_at, status
-
-
-class PushToken(Base):
-    __tablename__ = "push_tokens"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    # user_id, token, device_type, created_at
