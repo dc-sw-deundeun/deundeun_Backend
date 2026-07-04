@@ -1,6 +1,6 @@
 # Character Growth API
 
-> 기준일: 2026-06-30  
+> 기준일: 2026-07-02  
 > Base URL: `/api/v1/characters`  
 > 인증: 모든 프론트 사용 엔드포인트에 `Authorization: Bearer <access_token>` 헤더 필요
 
@@ -16,6 +16,7 @@
 - 레벨업은 “사용자별 동물 보유 컬렉션에 새 동물이 추가됨”이다.
 - 홈 화면은 사용자가 실제 보유한 동물 목록을 렌더링한다.
 - 별도 카탈로그 API는 아직 잠긴 동물까지 포함해 `locked/unlocked` 상태와 mock unlock value를 내려준다.
+- 홈 aggregation 응답의 `character` 블록은 이 문서의 `/me` 응답 shape를 재사용한다. 홈 계약은 [api-home.md](./api-home.md)를 참조한다.
 
 ---
 

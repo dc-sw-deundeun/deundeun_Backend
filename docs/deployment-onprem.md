@@ -404,7 +404,7 @@ API_HOST_PORT=8000
 DATABASE_URL=postgresql+psycopg2://deundeun:<POSTGRES_PASSWORD>@postgres:5432/deundeun
 JWT_SECRET_KEY=<openssl rand -hex 32>
 
-CORS_ALLOW_ORIGINS=["https://www.deundeun.xyz","http://localhost:5173","http://localhost:3000"]
+CORS_ALLOW_ORIGINS=["https://www.deundeun.xyz","http://localhost:5173","http://localhost:3000","http://localhost:8081"]
 TRUSTED_PROXY=true
 TRUSTED_PROXY_CIDRS=["172.16.0.0/12","10.0.0.0/8"]
 
@@ -417,7 +417,7 @@ CLOVA_OCR_SECRET_KEY=...
 > `/opt/deundeun/.env`는 서버에만 두고 Git에 커밋하지 않습니다.
 > 로컬 저장소의 `.env`, `.env.server`는 `.gitignore` 대상입니다. 실제 secret이 들어간 파일은 문서나 커밋에 포함하지 않습니다.
 > `.env.server.example`의 `change-me`·빈 Clova 값은 의도적으로 앱 기동 검증을 실패시키는 기본값입니다. 실제 값으로 바꾼 뒤 배포합니다.
-> `CORS_ALLOW_ORIGINS`에는 API 주소가 아니라 브라우저가 열린 프론트엔드 origin을 JSON 배열로 넣습니다. 예: `["https://www.deundeun.xyz","http://localhost:5173"]`.
+> `CORS_ALLOW_ORIGINS`에는 API 주소가 아니라 브라우저가 열린 프론트엔드 origin을 JSON 배열로 넣습니다. 예: `["https://www.deundeun.xyz","http://localhost:5173","http://localhost:8081"]`.
 
 서버에서 compose 렌더링 확인:
 

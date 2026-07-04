@@ -14,6 +14,9 @@ class MissionRepository:
     def __init__(self, db: Session) -> None:
         self._db = db
 
+    def commit(self) -> None:
+        self._db.commit()
+
     def find_template_by_code(self, code: str) -> MissionTemplate | None:
         return self._db.scalar(
             select(MissionTemplate).where(
@@ -75,6 +78,25 @@ class MissionRepository:
             )
             or 0
         )
+
+    def list_for_date_with_template(
+        self, user_id: int, assigned_date: date
+    ) -> list[tuple[UserMission, MissionTemplate | None]]:
+        """조회용(GET /today): 템플릿 기반(#24 기본미션)·엔진 생성 미션을 함께 반환.
+
+        엔진 생성 미션은 template_id가 NULL이라 INNER JOIN이면 통째로 빠진다 — LEFT JOIN으로
+        두 출처를 공존시킨다(템플릿 없으면 template=None, 서비스가 payload로 필드를 채운다).
+        """
+        rows = self._db.execute(
+            select(UserMission, MissionTemplate)
+            .outerjoin(MissionTemplate, UserMission.template_id == MissionTemplate.id)
+            .where(
+                UserMission.user_id == user_id,
+                UserMission.assigned_date == assigned_date,
+            )
+            .order_by(UserMission.id)
+        ).all()
+        return [(mission, template) for mission, template in rows]
 
     # ----- 엔진 생성 미션 (인스턴스 저장) -----
 

@@ -89,10 +89,10 @@ CI는 pull request와 `develop`, `main` push에서 실행됩니다.
 웹 프론트엔드는 백엔드 `.env`의 `CORS_ALLOW_ORIGINS`에 origin이 있어야 브라우저 요청이 통과합니다.
 
 ```bash
-CORS_ALLOW_ORIGINS=["http://localhost:3000","http://localhost:5173"]
+CORS_ALLOW_ORIGINS=["http://localhost:3000","http://localhost:5173","http://localhost:8081"]
 ```
 
-스테이징 서버는 현재 `https://www.deundeun.xyz`, `http://localhost:5173`, `http://localhost:3000`을 허용하도록 설정했습니다.
+스테이징 서버는 현재 `https://www.deundeun.xyz`, `http://localhost:5173`, `http://localhost:3000`, `http://localhost:8081`을 허용하도록 설정했습니다.
 
 ## 관련 문서
 

@@ -27,9 +27,7 @@ from app.domains.health_metric.models import (  # noqa: F401
     HealthMetricReference,
 )
 from app.domains.mission.models import (  # noqa: F401
-    MissionCompletion,
     MissionGenerationRun,
-    MissionStatistics,
     MissionTemplate,
     UserMission,
 )

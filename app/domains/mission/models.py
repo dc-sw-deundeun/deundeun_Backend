@@ -22,9 +22,10 @@ def _now() -> datetime:
 
 class MissionTemplate(Base):
     __tablename__ = "mission_templates"
+    __table_args__ = (UniqueConstraint("code"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    code: Mapped[str] = mapped_column(String(50), unique=True, nullable=False, index=True)
+    code: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     category: Mapped[str] = mapped_column(String(50), nullable=False)
@@ -66,18 +67,6 @@ class UserMission(Base):
     )  # GeneratedMission 전체(표시용)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=_now)
-
-
-class MissionCompletion(Base):
-    __tablename__ = "mission_completions"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-
-
-class MissionStatistics(Base):
-    __tablename__ = "mission_statistics"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
 
 class MissionGenerationRun(Base):

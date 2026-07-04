@@ -191,20 +191,35 @@ class MissionSet(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class MissionItem(BaseModel):
-    """오늘의 미션 1건 — user_missions 인스턴스(엔진 생성분)의 표시용 뷰."""
+class TodayMissionItem(BaseModel):
+    """오늘의 미션 1건 — 템플릿 기반(#24 기본미션) + 엔진 생성분을 모두 표현.
 
-    id: int
-    status: str
+    공통 필드는 항상 채워지고, 출처별 필드(엔진 vs 레거시 템플릿)는 없는 쪽이 기본값/None.
+    """
+
+    mission_id: int
+    template_code: str | None = None
+    title: str = ""
+    status: str = "ASSIGNED"
     assigned_date: date
     xp_reward: int
-    template_code: str | None = None
     completed_at: datetime | None = None
-    # payload(GeneratedMission)에서 펼친 표시 필드
-    title: str = ""
+    source_record_id: int | None = None
+    # 엔진 생성 미션(payload 기반) 필드
     rationale: str = ""
     mission_type: str = ""
     difficulty: int = 1
     execution: Execution = Field(default_factory=Execution)
     grounded_on: list[str] = Field(default_factory=list)
     source: str = "generated"
+    # 레거시 DB 템플릿(#24 기본미션) 필드 — 엔진 생성분은 None
+    description: str | None = None
+    category: str | None = None
+    verification_mode: str | None = None
+
+
+class TodayMissionsResponse(BaseModel):
+    date: date
+    total: int
+    completed: int
+    items: list[TodayMissionItem]

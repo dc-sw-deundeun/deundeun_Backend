@@ -142,9 +142,12 @@ docs/*
 !docs/deployment-onprem.md
 !docs/development-environment.md
 !docs/implementation-status.md
+!docs/api-home.md
 !docs/api-record-ocr.md
 !docs/api-health-metric-analysis.md
 !docs/api-character-growth.md
+!docs/api-my-page.md
+!docs/api-search.md
 .github/ISSUE_TEMPLATE/config.yml
 .github/ISSUE_TEMPLATE/phase-*.yml
 
@@ -154,6 +157,8 @@ docs/*
 .claude
 .superpowers
 .venv_py311
+.omc/
+manifest.json
 
 # 연구용 ablation 실험 (백엔드 레포 비추적)
 experiments/

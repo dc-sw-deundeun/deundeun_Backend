@@ -20,6 +20,7 @@ from app.domains.mission.scheduler import run_daily_generation_tick
 from app.domains.mission.schemas import GeneratedMission
 from app.domains.mission.service import MissionService
 from app.domains.pkg.dependencies import build_pkg_service
+from app.domains.user.repository import UserRepository
 from tests.domains.pkg.test_service import _create_user, _seed_record
 
 _TODAY = date(2026, 7, 3)
@@ -29,6 +30,10 @@ _TODAY = date(2026, 7, 3)
 def _no_llm(monkeypatch):
     monkeypatch.setattr(settings, "openai_api_key", None)
     monkeypatch.setattr(settings, "clova_studio_api_key", None)
+
+
+def _svc(db) -> MissionService:
+    return MissionService(MissionRepository(db), UserRepository(db))
 
 
 def _gen(db, user_id: int) -> bool:
@@ -110,13 +115,15 @@ def test_get_today_missions_returns_generated(db_session) -> None:
         MissionGenerationService(db_session).generate_for_user(301, today, source="scheduler")
     )
 
-    items = MissionService(db_session).get_today_missions(301)
-    assert len(items) >= 1
-    assert items[0].title  # payload title 펼침
-    assert items[0].status == "ASSIGNED"
+    result = _svc(db_session).get_today_missions(301)
+    assert len(result.items) >= 1
+    assert result.total == len(result.items)
+    assert result.items[0].title  # payload title 펼침
+    assert result.items[0].status == "ASSIGNED"
 
     _create_user(db_session, 302)  # 미션 없음
-    assert MissionService(db_session).get_today_missions(302) == []
+    empty = _svc(db_session).get_today_missions(302)
+    assert empty.items == [] and empty.total == 0 and empty.completed == 0
 
 
 def test_complete_mission_marks_completed_and_is_idempotent(db_session) -> None:
@@ -132,7 +139,7 @@ def test_complete_mission_marks_completed_and_is_idempotent(db_session) -> None:
     repo = MissionRepository(db_session)
     mission_id = repo.list_for_date(401, today)[0].id
 
-    svc = MissionService(db_session)
+    svc = _svc(db_session)
     svc.complete_mission(401, mission_id)
     done = repo.get_for_user(mission_id, 401)
     assert done is not None and done.status == "COMPLETED" and done.completed_at is not None

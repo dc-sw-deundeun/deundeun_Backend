@@ -1,9 +1,9 @@
 # 구현 현황
 
-> 기준일: 2026-07-02
+> 기준일: 2026-07-04
 > 실행 중인 서버의 Swagger/OpenAPI가 API 계약의 최종 기준입니다. 이 문서는 팀 공유용 요약입니다.
 
-범례: 구현, 부분, stub
+범례: 구현, 부분, legacy stub, 서버/내부, stub
 
 ## 요약
 
@@ -14,11 +14,13 @@
 | Record / OCR | 구현 | 가능 |
 | HealthMetric | 구현 | 가능 |
 | Analysis | legacy stub | 프론트 작업 제외 |
-| Mission / Character | 부분 | Character 성장/동물 해금 API 구현 브랜치 진행 중 |
-| Home | stub | 501 응답 |
+| Mission | 부분 | `GET /missions/today` 가능, 완료·인증·캘린더·통계는 후속 |
+| Character | 구현 | 가능 |
+| Home | 구현 | 가능 |
+| My | 부분 | 연동 앱·알림 설정 가능, 프로필·앱잠금·문의·계정삭제는 stub |
+| Search | 구현 | 가능 |
+| PKG | 서버/내부 | 신규 프론트 화면 직접 호출 제외 |
 | Notification | stub | 501 응답 |
-| My / Support | stub | 501 응답 |
-| Search | 미생성 | 라우터 없음 |
 
 ## 구현된 API
 
@@ -86,7 +88,7 @@ OCR 업로드 플로우 상세는 [api-record-ocr.md](./api-record-ocr.md) 참�
 
 신규 프론트 화면은 `/api/v1/analysis/*`를 호출하지 않고 HealthMetric 분석 API를 사용합니다.
 
-### Character `/api/v1/characters` (구현 브랜치 진행 중)
+### Character `/api/v1/characters`
 
 상세 계약은 [api-character-growth.md](./api-character-growth.md) 참조.
 
@@ -97,14 +99,76 @@ OCR 업로드 플로우 상세는 [api-record-ocr.md](./api-record-ocr.md) 참�
 
 `POST /me/experience`, `PATCH /me/stage`는 서버/내부 placeholder이며 프론트 공개 API가 아닙니다.
 
+### Home `/api/v1/home`
+
+상세 계약은 [api-home.md](./api-home.md) 참조.
+
+| Method | Path | 설명 |
+|--------|------|------|
+| GET | `/` | 홈 화면 사용자·캐릭터·오늘 미션·알림 카운트 집계 |
+| GET | `/summary` | 홈 상단/위젯용 축약 집계 |
+
+`unread_notification_count`는 Notification Phase 전까지 항상 `0`입니다.
+
+### Mission `/api/v1/missions`
+
+상세 계약은 [api-home.md](./api-home.md) 참조.
+
+| Method | Path | 설명 |
+|--------|------|------|
+| GET | `/today` | 사용자 timezone 기준 오늘 미션 목록과 완료 집계 |
+
+`POST /{mission_id}/complete`, `POST /{mission_id}/verify`, `GET /calendar`, `GET /statistics/weekly`, `POST /notifications/send`는 후속 Phase placeholder입니다.
+
+### My `/api/v1/my`
+
+상세 계약은 [api-my-page.md](./api-my-page.md) 참조.
+
+| Method | Path | 설명 |
+|--------|------|------|
+| GET | `/connected-apps` | 연동 앱 목록 및 상태 조회 |
+| PATCH | `/connected-apps/{provider}` | 연동 앱 상태 토글 |
+| GET | `/notification-settings` | 알림 설정 조회, 없으면 기본값 자동 생성 |
+| PATCH | `/notification-settings` | 알림 설정 부분 업데이트 |
+
+`GET /profile`, `PATCH /password`, `GET/PATCH /app-lock`, `POST /support`, `DELETE /account`는 후속 Phase placeholder입니다. 비밀번호 재설정은 Auth API를 사용합니다.
+
+### Search `/api/v1/search`
+
+상세 계약은 [api-search.md](./api-search.md) 참조.
+
+| Method | Path | 설명 |
+|--------|------|------|
+| GET | `/diseases?q=검색어` | 의학 KG + AI 기반 질환 검색 |
+
+Neo4j가 연결되어 있으면 의학 지식 그래프 참조 데이터를 사용하고, Neo4j 미연결 시에도 AI 단독 결과를 반환합니다.
+
+### PKG `/api/v1/pkg`
+
+| Method | Path | 설명 |
+|--------|------|------|
+| GET | `/{user_id}` | 개인 지식그래프(PKG) 조회 및 스냅샷 저장 |
+
+PKG는 미션 생성 엔진이 소비하는 서버/내부 계약입니다. 로그인 사용자는 본인 PKG만 조회할 수 있고, 검증된 검진 기록이 없으면 404를 반환합니다. 신규 프론트 화면에서는 직접 호출하지 않습니다.
+
+### Notification `/api/v1/notifications`
+
+| Method | Path | 설명 |
+|--------|------|------|
+| GET | `/` | 알림 목록 placeholder |
+| POST | `/test` | 테스트 알림 발송 placeholder |
+| GET | `/settings` | 알림 설정 placeholder |
+| PATCH | `/settings` | 알림 설정 수정 placeholder |
+
+Notification 라우터는 후속 Phase용 stub입니다. 현재 알림 설정 화면은 My API의 `GET/PATCH /my/notification-settings`를 사용합니다.
+
 ## Stub API
 
 | Prefix | 상태 |
 |--------|------|
-| `/api/v1/missions` | 미션 API 미완성 (UserMission DB 레코드는 Phase 4에서 생성됨) |
-| `/api/v1/home` | 홈 aggregation 미완성 |
+| `/api/v1/missions/*` | `/today` 외 미션 완료·인증·캘린더·통계·알림 발송 미완성 |
 | `/api/v1/notifications` | 알림 도메인 미완성 |
-| `/api/v1/my` | 마이페이지·지원 기능 미완성 |
+| `/api/v1/my/profile`, `/api/v1/my/app-lock`, `/api/v1/my/support`, `/api/v1/my/account` | 마이페이지 후속 기능 미완성 |
 
 ## 마이그레이션
 
@@ -113,15 +177,18 @@ OCR 업로드 플로우 상세는 [api-record-ocr.md](./api-record-ocr.md) 참�
 | `001` ~ `008` | (기존) |
 | `009_add_analysis_schema` | analysis_jobs, summaries, mission_candidates, mission_templates seed, user_missions |
 | `010_add_health_metric_analysis_record_id` | health_metric_analyses.record_id 및 checkup_records 연결 |
-| `012_normalize_health_metric_analysis` | HealthMetric 분석 결과 정규화 저장 테이블 |
 | `011_add_character_growth_schema` | character_profiles, character_growth_logs, character_owned_animals |
+| `012_normalize_health_metric_analysis` | HealthMetric 분석 결과 정규화 저장 테이블 |
+| `013_add_pkg_snapshots` | PKG 스냅샷 영속 테이블 |
+| `014_add_notification_preferences_columns` | My 알림 설정 저장 테이블 |
 
 ## 다음 구현 우선순위
 
-1. Phase 5 Mission/Growth: HealthMetric analysis 기반 미션 생성/수락, `GET /missions/today`, complete/XP, growth
-2. Home aggregation
-3. Legacy Analysis 도메인 제거 또는 migration 정리 정책 확정
-4. Notification/My/Search
+1. Phase 5 Mission 확장: 미션 완료·인증·캘린더·통계·EXP 지급 루프
+2. Notification 알림함·읽음 처리·worker
+3. My 후속 기능: 프로필, 앱잠금, 문의, 계정삭제
+4. Alembic metadata drift 정리
+5. Legacy Analysis 도메인 제거 또는 migration 정리 정책 확정
 
 ## 검증 기준
 

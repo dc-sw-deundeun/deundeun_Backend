@@ -9,6 +9,9 @@ from app.domains.auth.repository import AuthRepository
 from app.domains.auth.service import AuthService
 from app.domains.character.repository import CharacterRepository
 from app.domains.character.service import CharacterService
+from app.domains.home.service import HomeService
+from app.domains.mission.repository import MissionRepository
+from app.domains.mission.service import MissionService
 from app.domains.onboarding.repository import OnboardingRepository
 from app.domains.onboarding.service import OnboardingService
 from app.domains.user.models import User, UserStatus
@@ -47,6 +50,22 @@ def get_wearable_client_dep() -> WearableClient:
 
 def get_character_service(db: Session = Depends(get_db)) -> CharacterService:
     return CharacterService(CharacterRepository(db))
+
+
+def build_mission_service(db: Session) -> MissionService:
+    return MissionService(MissionRepository(db), UserRepository(db))
+
+
+def get_mission_service(db: Session = Depends(get_db)) -> MissionService:
+    return build_mission_service(db)
+
+
+def get_home_service(db: Session = Depends(get_db)) -> HomeService:
+    return HomeService(
+        user_repo=UserRepository(db),
+        character_service=CharacterService(CharacterRepository(db)),
+        mission_service=build_mission_service(db),
+    )
 
 
 def get_onboarding_service(

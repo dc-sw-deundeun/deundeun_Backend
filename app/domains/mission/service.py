@@ -1,50 +1,57 @@
-import logging
-from datetime import date, datetime, timezone
-
-from sqlalchemy.orm import Session
+from datetime import datetime, timezone
 
 from app.core.exceptions import NotFoundException
-from app.domains.mission.models import UserMission
+from app.domains.auth.exceptions import InvalidTokenException
+from app.domains.mission.models import MissionTemplate, UserMission
 from app.domains.mission.policy import local_date_for_timezone
 from app.domains.mission.repository import MissionRepository
-from app.domains.mission.schemas import Execution, MissionItem
+from app.domains.mission.schemas import Execution, TodayMissionItem, TodayMissionsResponse
+from app.domains.user.models import UserStatus
 from app.domains.user.repository import UserRepository
-
-logger = logging.getLogger(__name__)
 
 
 class MissionService:
-    def __init__(self, db: Session) -> None:
-        self._db = db
-        self._missions = MissionRepository(db)
-        self._users = UserRepository(db)
+    def __init__(self, repo: MissionRepository, user_repo: UserRepository) -> None:
+        self.repo = repo
+        self.user_repo = user_repo
 
-    def get_today_missions(self, user_id: int) -> list[MissionItem]:
-        """유저 로컬 '오늘'에 배정된 미션 목록. 아직 생성 전이면 빈 목록."""
-        rows = self._missions.list_for_date(user_id, self._local_today(user_id))
-        return [self._to_item(m) for m in rows]
+    def get_today_missions(self, user_id: int) -> TodayMissionsResponse:
+        """유저 로컬 '오늘' 배정 미션(템플릿 기반 + 엔진 생성분)과 완료 집계."""
+        user = self.user_repo.find_by_id(user_id)
+        if user is None or user.status != UserStatus.ACTIVE:
+            raise InvalidTokenException()
 
-    def _local_today(self, user_id: int) -> date:
-        user = self._users.find_by_id(user_id)
-        return local_date_for_timezone(user.timezone if user is not None else None)
+        today = local_date_for_timezone(user.timezone)
+        rows = self.repo.list_for_date_with_template(user_id, today)
+        items = [self._to_item(mission, template) for mission, template in rows]
+        return TodayMissionsResponse(
+            date=today,
+            total=len(items),
+            completed=sum(1 for item in items if item.status == "COMPLETED"),
+            items=items,
+        )
 
     @staticmethod
-    def _to_item(m: UserMission) -> MissionItem:
+    def _to_item(m: UserMission, template: MissionTemplate | None) -> TodayMissionItem:
         payload = m.payload or {}
-        return MissionItem(
-            id=m.id,
+        return TodayMissionItem(
+            mission_id=m.id,
+            template_code=m.template_code or (template.code if template else None),
+            title=template.title if template else payload.get("title", ""),
             status=m.status,
             assigned_date=m.assigned_date,
             xp_reward=m.xp_reward,
-            template_code=m.template_code,
             completed_at=m.completed_at,
-            title=payload.get("title", ""),
+            source_record_id=m.source_record_id,
             rationale=payload.get("rationale", ""),
             mission_type=payload.get("mission_type", ""),
             difficulty=payload.get("difficulty", 1),
             execution=Execution(**payload.get("execution", {})),
             grounded_on=payload.get("grounded_on", []),
             source=payload.get("source", "generated"),
+            description=template.description if template else None,
+            category=template.category if template else None,
+            verification_mode=template.verification_mode if template else None,
         )
 
     def complete_mission(self, user_id: int, mission_id: int) -> None:
@@ -54,14 +61,14 @@ class MissionService:
         완료 상태는 user_missions에 남아 build_pkg의 success_rate(14일창) 소스가 된다.
         캐릭터 경험치 지급/알림은 Phase 4에서 별도 연결한다.
         """
-        mission = self._missions.get_for_user(mission_id, user_id)
+        mission = self.repo.get_for_user(mission_id, user_id)
         if mission is None:
             raise NotFoundException(message="미션을 찾을 수 없습니다.")
         if mission.status == "COMPLETED":
             return  # 멱등: 이미 완료 (재요청·더블탭 안전)
         mission.status = "COMPLETED"
         mission.completed_at = datetime.now(timezone.utc)
-        self._db.commit()
+        self.repo.commit()
 
     def verify_mission(self, user_id: int, mission_id: int) -> None:
         raise NotImplementedError

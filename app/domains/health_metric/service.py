@@ -910,7 +910,10 @@ class HealthMetricAnalysisService:
         record = self._record_repo.get_record_for_user(user_id, record_id)
         if record is None:
             raise NotFoundException(message="검진 기록을 찾을 수 없습니다.")
-        if record.verification_status != VerificationStatus.VERIFIED.value:
+        if (
+            record.source_type != "MANUAL"
+            and record.verification_status != VerificationStatus.VERIFIED.value
+        ):
             raise ConflictException(
                 message="검수가 완료되지 않은 기록은 분석할 수 없습니다.",
                 error_code="NOT_VERIFIED",

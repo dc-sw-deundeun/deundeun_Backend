@@ -186,6 +186,7 @@ class RecordService:
             "MANUAL",
             ocr_status=OcrStatus.COMPLETED.value,
         )
+        self._record_repo.set_verified(record)
         if request.measured_at is not None:
             record.measured_at = request.measured_at
         rows = self._build_metric_rows(record.id, request.metrics, source=MetricSource.MANUAL.value)
