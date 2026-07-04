@@ -75,3 +75,17 @@ class MissionRepository:
             )
             or 0
         )
+
+    def list_user_missions_for_date(
+        self, user_id: int, assigned_date: date
+    ) -> list[tuple[UserMission, MissionTemplate]]:
+        rows = self._db.execute(
+            select(UserMission, MissionTemplate)
+            .join(MissionTemplate, UserMission.template_id == MissionTemplate.id)
+            .where(
+                UserMission.user_id == user_id,
+                UserMission.assigned_date == assigned_date,
+            )
+            .order_by(UserMission.id)
+        ).all()
+        return [(mission, template) for mission, template in rows]

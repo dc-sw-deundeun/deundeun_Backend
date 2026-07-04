@@ -1,3 +1,5 @@
+from datetime import date
+
 from pydantic import BaseModel, Field
 
 # ---------------------------------------------------------------------------
@@ -5,8 +7,24 @@ from pydantic import BaseModel, Field
 # ---------------------------------------------------------------------------
 
 
+class TodayMissionItem(BaseModel):
+    mission_id: int
+    template_code: str
+    title: str
+    description: str | None = None
+    category: str
+    verification_mode: str
+    xp_reward: int
+    status: str
+    assigned_date: date
+    source_record_id: int | None = None
+
+
 class TodayMissionsResponse(BaseModel):
-    pass
+    date: date
+    total: int
+    completed: int
+    items: list[TodayMissionItem]
 
 
 class MissionCompleteRequest(BaseModel):
