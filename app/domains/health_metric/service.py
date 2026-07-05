@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -46,27 +45,6 @@ from app.domains.record.models import CheckupMetricResult, CheckupRecord
 from app.domains.record.repository import RecordRepository
 
 logger = logging.getLogger(__name__)
-
-# 검진 후 미션 재생성 백그라운드 태스크의 강한 참조(GC 방지). 완료 시 콜백으로 제거된다.
-_BACKGROUND_TASKS: set[asyncio.Task] = set()
-
-
-async def _run_checkup_regeneration(user_id: int) -> None:
-    """새 검진 후 당일 미션 재생성 워커 — 독립 세션에서 best-effort로 실행."""
-    from app.database.session import session_scope
-    from app.domains.mission.generation_service import MissionGenerationService
-    from app.domains.mission.policy import local_date_for_timezone
-    from app.domains.user.repository import UserRepository
-
-    try:
-        with session_scope() as db:
-            user = UserRepository(db).find_by_id(user_id)
-            target_date = local_date_for_timezone(user.timezone if user is not None else None)
-            await MissionGenerationService(db).regenerate_for_checkup(user_id, target_date)
-    except Exception:
-        logger.warning(
-            "mission regeneration after checkup failed (user_id=%s)", user_id, exc_info=True
-        )
 
 
 @dataclass(frozen=True)
@@ -842,46 +820,14 @@ class HealthMetricAnalysisService:
         self._db.commit()
         self._db.refresh(analysis)
 
-        if self._rebuild_pkg_snapshot(user_id):
-            # PKG가 새 검진으로 바뀌었으니 당일 미션을 무효화·재생성(best-effort).
-            await self._regenerate_today_missions(user_id)
+        # 지연 임포트: mission.generation_service -> pkg -> health_metric.metric_evaluator
+        # -> health_metric.service 순환을 피한다(pkg 관련 임포트는 이 모듈에서 항상 지연 로드).
+        from app.domains.mission.generation_service import trigger_checkup_regeneration
+
+        # PKG 재빌드 + 당일 미션 재생성(best-effort, PKG 성공 시에만 재생성 트리거).
+        trigger_checkup_regeneration(user_id, self._db)
 
         return self._to_response(analysis)
-
-    def _rebuild_pkg_snapshot(self, user_id: int) -> bool:
-        """분석 저장 직후 PKG 스냅샷 재빌드 훅 (best-effort — 분석 저장엔 영향 없음).
-
-        검진 파생 데이터가 갱신됐으니 개인 지식그래프(pkg_snapshots)를 최신으로 유지한다.
-        검증된 검진이 없는 단독 분석이면 스킵(NotFound), 그 외 실패도 경고만 남긴다.
-        재빌드 성공 시 True(→ 미션 재생성 트리거), 스킵/실패 시 False.
-        """
-        from app.domains.pkg.dependencies import build_pkg_service
-
-        try:
-            build_pkg_service(self._db).build_pkg(user_id)
-            return True
-        except NotFoundException:
-            logger.debug("PKG rebuild skipped: no verified checkup (user_id=%s)", user_id)
-            return False
-        except Exception:
-            # 훅 이후에도 세션이 이어지므로 aborted transaction을 남기지 않도록 정리 후 로깅.
-            self._db.rollback()
-            logger.warning("PKG rebuild after analysis failed (user_id=%s)", user_id, exc_info=True)
-            return False
-
-    async def _regenerate_today_missions(self, user_id: int) -> None:
-        """새 검진 후 당일 미션 재생성 훅 — 요청 경로를 막지 않게 백그라운드 태스크로 오프로드.
-
-        재생성은 미션 엔진(LLM)을 타 응답을 지연시키므로 fire-and-forget으로 뺀다. 워커는
-        요청 세션(응답 후 닫힘) 대신 독립 세션을 연다. test 환경에선 건너뛴다(실 호출·오염 방지).
-        """
-        from app.core.config import settings
-
-        if settings.app_env == "test":
-            return
-        task = asyncio.create_task(_run_checkup_regeneration(user_id))
-        _BACKGROUND_TASKS.add(task)  # GC로 태스크가 사라지지 않게 강한 참조 유지
-        task.add_done_callback(_BACKGROUND_TASKS.discard)
 
     def get(self, analysis_id: int, user_id: int) -> HealthMetricAnalysisResponse:
         analysis = self._repo.get_for_user(analysis_id, user_id)
