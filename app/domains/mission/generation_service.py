@@ -117,9 +117,15 @@ def trigger_checkup_regeneration(user_id: int, db: Session) -> bool:
         return False
 
     if settings.app_env != "test":
-        task = asyncio.create_task(_run_checkup_regeneration(user_id))
-        _BACKGROUND_TASKS.add(task)  # GC로 태스크가 사라지지 않게 강한 참조 유지
-        task.add_done_callback(_BACKGROUND_TASKS.discard)
+        try:
+            task = asyncio.create_task(_run_checkup_regeneration(user_id))
+            _BACKGROUND_TASKS.add(task)  # GC로 태스크가 사라지지 않게 강한 참조 유지
+            task.add_done_callback(_BACKGROUND_TASKS.discard)
+        except Exception:
+            # 스케줄링 자체가 실패해도(예: 실행 중인 이벤트 루프 없음) 호출부에는 영향 없다.
+            logger.warning(
+                "failed to schedule checkup regeneration (user_id=%s)", user_id, exc_info=True
+            )
     return True
 
 

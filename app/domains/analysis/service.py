@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
@@ -40,6 +41,8 @@ from app.infrastructure.external_analysis.analysis_dto import (
     MissionCandidateDTO,
 )
 from app.infrastructure.external_analysis.signature import verify_analysis_signature
+
+logger = logging.getLogger(__name__)
 
 
 def _now() -> datetime:
@@ -239,7 +242,15 @@ class AnalysisService:
         self._record_repo.set_analysis_status(record, AnalysisStatus.COMPLETED.value)
         self._analysis_repo.commit()
         # #41: legacy 기본미션(DEFAULT_SELF_CHECK) 자동배정 대신 미션 생성 엔진을 트리거한다.
-        trigger_checkup_regeneration(job.user_id, self._db)
+        # best-effort — 트리거가 예기치 않게 실패해도 이미 커밋된 분석 완료 처리에는 영향 없다.
+        try:
+            trigger_checkup_regeneration(job.user_id, self._db)
+        except Exception:
+            logger.warning(
+                "mission generation trigger failed after analysis callback (user_id=%s)",
+                job.user_id,
+                exc_info=True,
+            )
 
     def verify_callback_signature(self, raw_body: bytes, signature: str | None) -> None:
         secret = settings.analysis_callback_secret

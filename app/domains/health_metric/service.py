@@ -825,7 +825,15 @@ class HealthMetricAnalysisService:
         from app.domains.mission.generation_service import trigger_checkup_regeneration
 
         # PKG 재빌드 + 당일 미션 재생성(best-effort, PKG 성공 시에만 재생성 트리거).
-        trigger_checkup_regeneration(user_id, self._db)
+        # 트리거가 예기치 않게 실패해도 이미 커밋된 분석 저장에는 영향 없다.
+        try:
+            trigger_checkup_regeneration(user_id, self._db)
+        except Exception:
+            logger.warning(
+                "mission generation trigger failed after health metric save (user_id=%s)",
+                user_id,
+                exc_info=True,
+            )
 
         return self._to_response(analysis)
 

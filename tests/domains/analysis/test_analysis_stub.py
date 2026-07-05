@@ -82,6 +82,10 @@ def _fake_trigger(triggered: list[int]):
     return _trigger
 
 
+def _raising_trigger(user_id: int, db) -> bool:
+    raise RuntimeError("boom")
+
+
 @pytest.mark.asyncio
 async def test_stub_analysis_triggers_mission_generation(
     db_session: Session, monkeypatch: pytest.MonkeyPatch
@@ -106,6 +110,25 @@ async def test_stub_analysis_triggers_mission_generation(
     # legacy 기본미션(DEFAULT_SELF_CHECK)은 더 이상 동기적으로 배정되지 않는다.
     mission_repo = MissionRepository(db_session)
     assert mission_repo.count_user_missions_for_date(user_id=1, assigned_date=_today_kst()) == 0
+
+
+@pytest.mark.asyncio
+async def test_trigger_failure_does_not_break_callback(
+    db_session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """미션 생성 트리거가 예기치 않게 실패해도 분석 완료 처리는 best-effort로 보존된다."""
+    monkeypatch.setattr(
+        "app.domains.analysis.service.trigger_checkup_regeneration", _raising_trigger
+    )
+    _create_user(db_session, user_id=1, email="trigger-fail@example.com")
+    record_id = _verified_record(db_session, user_id=1)
+    service = build_analysis_service(db_session)
+
+    result = await service.create_analysis_job(record_id, user_id=1)
+
+    assert result.status == AnalysisStatus.COMPLETED.value
+    job_result = service.get_job_result(result.job_id, user_id=1)
+    assert job_result.summary is not None
 
 
 def test_unverified_record_returns_409(
