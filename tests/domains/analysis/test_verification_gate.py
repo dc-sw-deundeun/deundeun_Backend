@@ -9,10 +9,10 @@ from app.domains.record.repository import RecordRepository
 
 def _service(record_repo: RecordRepository) -> AnalysisService:
     return AnalysisService(
+        db=MagicMock(),
         analysis_repo=MagicMock(),
         record_repo=record_repo,
         mission_repo=MagicMock(),
-        onboarding_repo=MagicMock(),
         analysis_client=MagicMock(),
     )
 

@@ -74,8 +74,28 @@ def _today_kst() -> date:
     return local_date_for_timezone("Asia/Seoul")
 
 
+def _fake_trigger(triggered: list[int]):
+    def _trigger(user_id: int, db) -> bool:
+        triggered.append(user_id)
+        return True
+
+    return _trigger
+
+
+def _raising_trigger(user_id: int, db) -> bool:
+    raise RuntimeError("boom")
+
+
 @pytest.mark.asyncio
-async def test_stub_analysis_assigns_default_mission(db_session: Session) -> None:
+async def test_stub_analysis_triggers_mission_generation(
+    db_session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """분석 완료 시 legacy 기본미션 자동배정 대신 엔진 생성 트리거(#41)가 호출된다."""
+    triggered: list[int] = []
+    monkeypatch.setattr(
+        "app.domains.analysis.service.trigger_checkup_regeneration",
+        _fake_trigger(triggered),
+    )
     _create_user(db_session, user_id=1, email="stub-analysis@example.com")
     record_id = _verified_record(db_session, user_id=1)
     service = build_analysis_service(db_session)
@@ -86,8 +106,29 @@ async def test_stub_analysis_assigns_default_mission(db_session: Session) -> Non
     assert job_result.summary is not None
     assert job_result.summary.summary_text
 
+    assert triggered == [1]  # 엔진 생성 트리거로 넘어감
+    # legacy 기본미션(DEFAULT_SELF_CHECK)은 더 이상 동기적으로 배정되지 않는다.
     mission_repo = MissionRepository(db_session)
-    assert mission_repo.count_user_missions_for_date(user_id=1, assigned_date=_today_kst()) == 1
+    assert mission_repo.count_user_missions_for_date(user_id=1, assigned_date=_today_kst()) == 0
+
+
+@pytest.mark.asyncio
+async def test_trigger_failure_does_not_break_callback(
+    db_session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """미션 생성 트리거가 예기치 않게 실패해도 분석 완료 처리는 best-effort로 보존된다."""
+    monkeypatch.setattr(
+        "app.domains.analysis.service.trigger_checkup_regeneration", _raising_trigger
+    )
+    _create_user(db_session, user_id=1, email="trigger-fail@example.com")
+    record_id = _verified_record(db_session, user_id=1)
+    service = build_analysis_service(db_session)
+
+    result = await service.create_analysis_job(record_id, user_id=1)
+
+    assert result.status == AnalysisStatus.COMPLETED.value
+    job_result = service.get_job_result(result.job_id, user_id=1)
+    assert job_result.summary is not None
 
 
 def test_unverified_record_returns_409(
@@ -107,7 +148,14 @@ def test_unverified_record_returns_409(
 
 
 @pytest.mark.asyncio
-async def test_duplicate_callback_is_idempotent(db_session: Session) -> None:
+async def test_duplicate_callback_is_idempotent(
+    db_session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    triggered: list[int] = []
+    monkeypatch.setattr(
+        "app.domains.analysis.service.trigger_checkup_regeneration",
+        _fake_trigger(triggered),
+    )
     _create_user(db_session, user_id=1, email="dup-callback@example.com")
     record_id = _verified_record(db_session, user_id=1)
     analysis_repo = AnalysisRepository(db_session)
@@ -129,8 +177,7 @@ async def test_duplicate_callback_is_idempotent(db_session: Session) -> None:
     service.handle_callback(callback)
     service.handle_callback(callback)
 
-    mission_repo = MissionRepository(db_session)
-    assert mission_repo.count_user_missions_for_date(user_id=1, assigned_date=_today_kst()) == 1
+    assert triggered == [1]  # 중복 콜백은 완료된 job에서 조기 반환 → 재트리거 안 함
     assert analysis_repo.find_summary_by_record_id(record_id) is not None
 
 

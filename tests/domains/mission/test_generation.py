@@ -12,7 +12,10 @@ import pytest
 from sqlalchemy import select
 
 from app.core.config import settings
-from app.domains.mission.generation_service import MissionGenerationService
+from app.domains.mission.generation_service import (
+    MissionGenerationService,
+    trigger_checkup_regeneration,
+)
 from app.domains.mission.models import MissionGenerationRun
 from app.domains.mission.policy import local_date_for_timezone
 from app.domains.mission.repository import MissionRepository
@@ -199,8 +202,11 @@ def test_generate_failure_records_failed_run(db_session, monkeypatch) -> None:
 
 
 def test_checkup_regeneration_worker_runs_in_own_session(db_session) -> None:
-    """오프로드 워커: 독립 세션(session_scope)에서 재생성이 도는지 검증."""
-    from app.domains.health_metric.service import _run_checkup_regeneration
+    """오프로드 워커: 독립 세션(session_scope)에서 재생성이 도는지 검증.
+
+    health_metric·analysis(legacy) 두 도메인이 공유하는 워커(#41)를 검증한다.
+    """
+    from app.domains.mission.generation_service import _run_checkup_regeneration
 
     _create_user(db_session, 801)
     _seed_record(db_session, 801, [("systolic_bp", "150")])
@@ -210,6 +216,21 @@ def test_checkup_regeneration_worker_runs_in_own_session(db_session) -> None:
 
     today = local_date_for_timezone("Asia/Seoul")
     assert len(MissionRepository(db_session).list_for_date(801, today)) >= 1
+
+
+def test_trigger_checkup_regeneration_true_when_pkg_rebuilds(db_session) -> None:
+    """검진 이벤트 공용 훅(#41): PKG 재빌드 성공 시 True. test 환경이라 백그라운드는 건너뛴다."""
+    _create_user(db_session, 901)
+    _seed_record(db_session, 901, [("systolic_bp", "150")])
+
+    assert trigger_checkup_regeneration(901, db_session) is True
+
+
+def test_trigger_checkup_regeneration_false_without_verified_checkup(db_session) -> None:
+    """검증된 검진이 없으면 PKG 재빌드가 스킵되고 False를 반환한다(예외 전파 없음)."""
+    _create_user(db_session, 902)
+
+    assert trigger_checkup_regeneration(902, db_session) is False
 
 
 def test_context_agent_carries_recent_mission_titles() -> None:

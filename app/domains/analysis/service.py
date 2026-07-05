@@ -1,4 +1,7 @@
+import logging
 from datetime import datetime, timezone
+
+from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.exceptions import (
@@ -24,10 +27,9 @@ from app.domains.analysis.schemas import (
 )
 from app.domains.analysis.status import AnalysisStatus
 from app.domains.mission.constants import DEFAULT_MISSION_TEMPLATE_CODE
-from app.domains.mission.policy import local_date_for_timezone
+from app.domains.mission.generation_service import trigger_checkup_regeneration
 from app.domains.mission.repository import MissionRepository
 from app.domains.ocr.status import MetricSource, VerificationStatus
-from app.domains.onboarding.repository import OnboardingRepository
 from app.domains.record.models import CheckupMetricResult
 from app.domains.record.repository import RecordRepository
 from app.infrastructure.external_analysis.analysis_client import AnalysisClient
@@ -40,6 +42,8 @@ from app.infrastructure.external_analysis.analysis_dto import (
 )
 from app.infrastructure.external_analysis.signature import verify_analysis_signature
 
+logger = logging.getLogger(__name__)
+
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
@@ -48,16 +52,16 @@ def _now() -> datetime:
 class AnalysisService:
     def __init__(
         self,
+        db: Session,
         analysis_repo: AnalysisRepository,
         record_repo: RecordRepository,
         mission_repo: MissionRepository,
-        onboarding_repo: OnboardingRepository,
         analysis_client: AnalysisClient,
     ) -> None:
+        self._db = db
         self._analysis_repo = analysis_repo
         self._record_repo = record_repo
         self._mission_repo = mission_repo
-        self._onboarding_repo = onboarding_repo
         self._analysis_client = analysis_client
 
     def ensure_verified(self, record_id: int) -> None:
@@ -236,8 +240,17 @@ class AnalysisService:
             finished=True,
         )
         self._record_repo.set_analysis_status(record, AnalysisStatus.COMPLETED.value)
-        self.assign_default_mission(user_id=job.user_id, source_record_id=job.record_id)
         self._analysis_repo.commit()
+        # #41: legacy 기본미션(DEFAULT_SELF_CHECK) 자동배정 대신 미션 생성 엔진을 트리거한다.
+        # best-effort — 트리거가 예기치 않게 실패해도 이미 커밋된 분석 완료 처리에는 영향 없다.
+        try:
+            trigger_checkup_regeneration(job.user_id, self._db)
+        except Exception:
+            logger.warning(
+                "mission generation trigger failed after analysis callback (user_id=%s)",
+                job.user_id,
+                exc_info=True,
+            )
 
     def verify_callback_signature(self, raw_body: bytes, signature: str | None) -> None:
         secret = settings.analysis_callback_secret
@@ -251,25 +264,6 @@ class AnalysisService:
                 message="callback 서명이 유효하지 않습니다.",
                 error_code="INVALID_CALLBACK_SIGNATURE",
             )
-
-    def assign_default_mission(self, *, user_id: int, source_record_id: int) -> None:
-        template = self._mission_repo.find_default_template()
-        if template is None:
-            return
-
-        user = self._onboarding_repo.get_user_by_id(user_id)
-        timezone_name = user.timezone if user is not None else "Asia/Seoul"
-        assigned_date = local_date_for_timezone(timezone_name)
-
-        if self._mission_repo.find_user_mission_for_date(user_id, template.id, assigned_date):
-            return
-
-        self._mission_repo.create_user_mission(
-            user_id=user_id,
-            template=template,
-            source_record_id=source_record_id,
-            assigned_date=assigned_date,
-        )
 
     def poll_pending_jobs(self) -> None:
         raise NotImplementedError
