@@ -4,6 +4,7 @@
 → user_missions 인스턴스 저장 → gen_log 상태 기록. 유저·날짜당 멱등.
 """
 
+import asyncio
 import logging
 from datetime import date
 
@@ -17,6 +18,10 @@ from app.domains.pkg.dependencies import build_pkg_service
 from app.domains.pkg.repository import PkgRepository
 
 logger = logging.getLogger(__name__)
+
+# 검진 관련 이벤트(HealthMetric 저장·legacy Analysis 콜백) 후 미션 재생성 백그라운드
+# 태스크의 강한 참조(GC 방지). 완료 시 콜백으로 제거된다.
+_BACKGROUND_TASKS: set[asyncio.Task] = set()
 
 # 생성 토글: 안전 템플릿(M1) + KAG 관계(M3) + 안전게이트·병원리퍼럴(M4) + 구조화 출력(M5).
 _GEN_CONFIG = PipelineConfig(M1_template=True, M3_kag=True, M4_verify_gate=True, M5_structured=True)
@@ -88,3 +93,48 @@ class MissionGenerationService:
             return build_pkg_service(self._db).build_pkg(user_id)
         except NotFoundException:
             return None
+
+
+def trigger_checkup_regeneration(user_id: int, db: Session) -> bool:
+    """검진 관련 이벤트(HealthMetric 분석 저장·legacy Analysis 콜백) 공용 훅.
+
+    PKG 스냅샷을 동기로 재빌드(빠름, 단일 upsert)하고, 성공하면 당일 미션 재생성만
+    백그라운드로 오프로드한다(LLM 호출이라 느려서 호출부 응답을 막지 않음). test
+    환경에서는 백그라운드 트리거를 건너뛴다(실 LLM 호출·오염 방지). 두 경우 모두
+    best-effort — 실패해도 호출부(검진 저장/분석 콜백)에는 영향 없다. PKG 재빌드
+    성공 여부를 반환한다(호출부 로깅용).
+    """
+    from app.core.config import settings
+
+    try:
+        build_pkg_service(db).build_pkg(user_id)
+    except NotFoundException:
+        logger.debug("PKG rebuild skipped: no verified checkup (user_id=%s)", user_id)
+        return False
+    except Exception:
+        db.rollback()
+        logger.warning("PKG rebuild failed (user_id=%s)", user_id, exc_info=True)
+        return False
+
+    if settings.app_env != "test":
+        task = asyncio.create_task(_run_checkup_regeneration(user_id))
+        _BACKGROUND_TASKS.add(task)  # GC로 태스크가 사라지지 않게 강한 참조 유지
+        task.add_done_callback(_BACKGROUND_TASKS.discard)
+    return True
+
+
+async def _run_checkup_regeneration(user_id: int) -> None:
+    """검진 후 당일 미션 재생성 워커 — 독립 세션에서 best-effort로 실행."""
+    from app.database.session import session_scope
+    from app.domains.mission.policy import local_date_for_timezone
+    from app.domains.user.repository import UserRepository
+
+    try:
+        with session_scope() as db:
+            user = UserRepository(db).find_by_id(user_id)
+            target_date = local_date_for_timezone(user.timezone if user is not None else None)
+            await MissionGenerationService(db).regenerate_for_checkup(user_id, target_date)
+    except Exception:
+        logger.warning(
+            "mission regeneration after checkup failed (user_id=%s)", user_id, exc_info=True
+        )
