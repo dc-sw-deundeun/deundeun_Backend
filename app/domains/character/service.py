@@ -1,3 +1,5 @@
+import logging
+
 from app.core.exceptions import BadRequestException
 from app.domains.auth.exceptions import InvalidTokenException
 from app.domains.character import policy
@@ -11,6 +13,8 @@ from app.domains.character.schemas import (
 )
 from app.domains.mission.policy import calculate_exp_reward
 from app.domains.user.models import UserStatus
+
+logger = logging.getLogger(__name__)
 
 
 class CharacterService:
@@ -55,7 +59,7 @@ class CharacterService:
         profile.total_exp = after_total_exp
         profile.level = after_level
 
-        self.repo.save_growth_log(
+        growth_log = self.repo.save_growth_log(
             CharacterGrowthLog(
                 character_profile_id=profile.id,
                 user_id=user_id,
@@ -70,16 +74,24 @@ class CharacterService:
                 note=note,
             )
         )
+        growth_log_id = growth_log.id
         owned_animals = self._sync_owned_animals(profile)
         self.repo.db.commit()
         self.repo.db.refresh(profile)
-        return CharacterGainExpResponse(
+        response = CharacterGainExpResponse(
             profile=self._to_response(profile, owned_animals=owned_animals),
             exp_gained=amount,
             level_before=before_level,
             level_after=after_level,
             leveled_up=after_level > before_level,
         )
+        if response.leveled_up:
+            self._notify_level_up(
+                user_id=user_id,
+                growth_log_id=growth_log_id,
+                after_level=after_level,
+            )
+        return response
 
     def gain_mock_mission_exp(
         self, user_id: int, mission_type: str, mission_id: int | str | None = None
@@ -158,3 +170,22 @@ class CharacterService:
             unlocked_level=animal.unlocked_level,
             unlocked_at=animal.unlocked_at,
         )
+
+    def _notify_level_up(self, *, user_id: int, growth_log_id: int, after_level: int) -> None:
+        from app.domains.notification.repository import NotificationRepository
+        from app.domains.notification.service import NotificationService
+
+        try:
+            NotificationService(NotificationRepository(self.repo.db)).notify_level_up(
+                user_id=user_id,
+                growth_log_id=growth_log_id,
+                after_level=after_level,
+            )
+        except Exception:
+            self.repo.db.rollback()
+            logger.warning(
+                "LEVEL_UP notification failed (user_id=%s, growth_log_id=%s)",
+                user_id,
+                growth_log_id,
+                exc_info=True,
+            )

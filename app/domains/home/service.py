@@ -2,6 +2,7 @@ from app.domains.auth.exceptions import InvalidTokenException
 from app.domains.character.service import CharacterService
 from app.domains.home.schemas import HomeResponse, HomeSummaryResponse, HomeUserBlock
 from app.domains.mission.service import MissionService
+from app.domains.notification.service import NotificationService
 from app.domains.user.models import OnboardingStep, UserStatus
 from app.domains.user.repository import UserRepository
 
@@ -14,10 +15,12 @@ class HomeService:
         user_repo: UserRepository,
         character_service: CharacterService,
         mission_service: MissionService,
+        notification_service: NotificationService,
     ) -> None:
         self.user_repo = user_repo
         self.character_service = character_service
         self.mission_service = mission_service
+        self.notification_service = notification_service
 
     def get_home(self, user_id: int) -> HomeResponse:
         """홈 메인 데이터를 반환합니다.
@@ -35,6 +38,7 @@ class HomeService:
 
         character = self.character_service.get_my_character(user_id)
         today_missions = self.mission_service.get_today_missions(user_id)
+        unread_notification_count = self.notification_service.count_unread(user_id)
         onboarding_step = getattr(user.onboarding_step, "value", user.onboarding_step)
 
         return HomeResponse(
@@ -46,7 +50,7 @@ class HomeService:
             ),
             character=character,
             today_missions=today_missions,
-            unread_notification_count=0,
+            unread_notification_count=unread_notification_count,
         )
 
     def get_summary(self, user_id: int) -> HomeSummaryResponse:
