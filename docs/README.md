@@ -10,6 +10,7 @@
 | [api-health-metric-analysis.md](./api-health-metric-analysis.md) | 건강 지표 분석 저장·조회 플로우 상세 API 가이드 |
 | [api-character-growth.md](./api-character-growth.md) | 캐릭터 성장·동물 해금 API 가이드 |
 | [api-my-page.md](./api-my-page.md) | 마이페이지 연동 앱·알림 설정 API 가이드 |
+| [api-notification.md](./api-notification.md) | 알림함 목록·읽음 처리 API 가이드 |
 | [api-search.md](./api-search.md) | 질환 검색 API 가이드 |
 | [development-environment.md](./development-environment.md) | 로컬 개발, 테스트, CI 기준 환경 |
 | [deployment-onprem.md](./deployment-onprem.md) | 온프레미스 스테이징 서버와 CD 설정 |

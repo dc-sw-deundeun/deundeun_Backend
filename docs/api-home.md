@@ -1,24 +1,25 @@
 # Home / Today Mission API
 
-> 기준일: 2026-07-04
+> 기준일: 2026-07-06
 > 인증: 모든 프론트 사용 엔드포인트에 `Authorization: Bearer <access_token>` 헤더 필요
 
 ## 목적
 
 홈 화면은 사용자 정보, 캐릭터 성장 상태, 오늘의 미션, 알림 카운트를 한 번에 렌더링한다. `HomeService`는 각 도메인 서비스를 조합하며, 홈 전용 DB 테이블은 만들지 않는다.
 
-현재 Phase 6 범위:
+현재 구현 범위:
 
 - `GET /api/v1/home`: 홈 화면 전체 데이터
 - `GET /api/v1/home/summary`: 홈 상단/위젯용 축약 데이터
 - `GET /api/v1/missions/today`: 사용자 timezone 기준 오늘 미션
 - `POST /api/v1/missions/{mission_id}/complete`: 미션 self-report 완료
+- Notification inbox 기반 `unread_notification_count`
 
 아직 후속 Phase 범위:
 
 - 미션 인증/캘린더/주간 통계
-- 알림 저장/읽음 처리
-- 미션 완료에 따른 실제 EXP 지급 루프(현재 완료 처리는 상태 전이만 하고 캐릭터 EXP는 지급하지 않음)
+- push / 리마인드 알림 worker
+- 미션 완료→EXP→LEVEL_UP (Phase 5 확장, Phase 7과 별도)
 
 ---
 
@@ -36,7 +37,7 @@
 | `user.onboarding_completed` | `boolean` | 온보딩 완료 여부 |
 | `character` | `object` | 캐릭터 성장 상태. `/characters/me` 응답과 같은 shape |
 | `today_missions` | `object` | 오늘 미션 집계. `/missions/today` 응답과 같은 shape |
-| `unread_notification_count` | `int` | Phase 7 전까지 항상 `0` |
+| `unread_notification_count` | `int` | Notification inbox의 미읽음 알림 수 |
 
 예시:
 
@@ -136,7 +137,7 @@
 | `owned_animal_count` | `int` | 보유 동물 수 |
 | `today_mission_total` | `int` | 오늘 미션 총 개수 |
 | `today_mission_completed` | `int` | 오늘 완료된 미션 수 |
-| `unread_notification_count` | `int` | Phase 7 전까지 항상 `0` |
+| `unread_notification_count` | `int` | Notification inbox의 미읽음 알림 수 |
 
 ---
 
@@ -203,6 +204,7 @@
 
 - 캐릭터 프로필이 없는 기존 사용자는 `/home` 또는 `/characters/me` 호출 시 기본 프로필과 `frog` 보유 row가 lazy 생성된다.
 - 온보딩 완료 시에도 캐릭터 기본 프로필을 미리 생성한다.
-- Home은 `UserRepository`, `CharacterService`, `MissionService`를 조합한다.
-- 알림 수는 Notification Phase 전까지 저장소 조회 없이 `0`으로 고정한다.
+- Home은 `UserRepository`, `CharacterService`, `MissionService`, `NotificationService`를 조합한다.
+- 알림 수는 Notification inbox의 미읽음 row를 조회한다. 설정 API는 `/my/notification-settings`(정본), 알림함은 `/notifications` — [api-notification.md](./api-notification.md).
+- `POST /missions/{id}/complete`는 상태 전이만 하며 EXP·LEVEL_UP 알림과 연결되지 않는다(Phase 5 확장).
 - **미션 생성은 API가 아니라 백그라운드 스케줄러**(매시 틱)가 PKG 기반으로 담당한다. 새 검진이 저장되면 당일 미완료 미션을 무효화하고 재생성한다(완료분은 보존). 프론트는 생성을 트리거할 필요가 없고 `/today`로 조회만 하면 된다.

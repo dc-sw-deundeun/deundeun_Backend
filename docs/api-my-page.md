@@ -4,6 +4,8 @@
 > Base URL: `/api/v1/my`
 > 인증: 모든 엔드포인트에 `Authorization: Bearer <access_token>` 헤더 필요
 
+**알림 설정 정본 (D-BE-004, 옵션 A)**: 알림 on/off 설정은 이 라우터의 `GET/PATCH /notification-settings`만 사용합니다. `/api/v1/notifications/settings`는 제공하지 않습니다. 알림함(목록·읽음)은 `/api/v1/notifications` — [api-notification.md](./api-notification.md).
+
 ---
 
 ## 구현 현황

@@ -15,11 +15,11 @@ _API_DESCRIPTION = """
 - `[프론트 작업 제외]`: 라우트는 열려 있지만 아직 stub이거나 후속 Phase용입니다. 호출 시 `NOT_IMPLEMENTED`(501)를 기대해야 합니다.
 
 ### 현재 프론트 연동 가능 영역
-Auth/User, Onboarding, Record/OCR, HealthMetric, Character, Home, My(마이페이지), Search(질환 검색)는 구현되어 있습니다.
+Auth/User, Onboarding, Record/OCR, HealthMetric, Character, Home, My(마이페이지), Notification, Search(질환 검색)는 구현되어 있습니다.
 Analysis Stub MVP 라우트는 legacy 호환용으로 유지하지만 신규 프론트 화면에서는 호출하지 않습니다.
-Mission API는 `GET /missions/today`만 프론트 사용 구현 API입니다. 완료·인증·캘린더·통계는 후속 Phase용 stub입니다.
+Mission API는 `GET /missions/today`, `POST /missions/{id}/complete`를 프론트 사용 구현 API로 제공합니다. 인증·캘린더·통계는 후속 Phase용 stub입니다.
 PKG API는 미션 엔진/서버 내부 소비용입니다. 신규 프론트 화면에서는 직접 호출하지 않습니다.
-Notification API는 후속 Phase용 stub입니다. 알림 설정 화면은 `/my/notification-settings`를 사용하세요.
+Notification API는 알림함 목록·읽음 처리를 제공합니다. 알림 설정 화면은 `/my/notification-settings`를 사용하세요.
 
 ### 인증 흐름
 1. `POST /auth/email/verify/request` — 인증 코드 발송
@@ -48,6 +48,7 @@ Notification API는 후속 Phase용 stub입니다. 알림 설정 화면은 `/my/
 - `GET /characters/me`: 캐릭터 성장 상태와 실제 보유 동물 컬렉션을 반환합니다.
 - `GET /characters/animals`: 전체 동물 카탈로그와 잠금/해금 상태를 반환합니다.
 - `GET /missions/today`: 사용자 timezone 기준 오늘 배정된 미션 목록과 완료 집계를 반환합니다.
+- `POST /missions/{id}/complete`: 본인 미션을 self-report로 완료 처리합니다. 캐릭터 EXP 지급은 후속 Phase입니다.
 
 ### 마이페이지 흐름
 - `GET /my/connected-apps`: 연동 앱(APPLE_HEALTH, SAMSUNG_HEALTH, GOOGLE_FIT) 목록 및 상태 조회
@@ -63,8 +64,9 @@ Notification API는 후속 Phase용 stub입니다. 알림 설정 화면은 `/my/
 
 ### PKG / Notification 구분
 - `GET /pkg/{user_id}`: 서버/내부용 개인 지식그래프 조회입니다. 로그인 사용자는 본인 PKG만 조회할 수 있습니다.
-- `/notifications/*`: 후속 Phase용 알림함 placeholder입니다. 호출 시 `NOT_IMPLEMENTED`(501)를 기대해야 합니다.
-- 알림 설정 조회/수정은 구현된 마이페이지 API `GET/PATCH /my/notification-settings`를 사용합니다.
+- `GET /notifications`: 알림함 목록을 페이지네이션으로 조회합니다.
+- `PATCH /notifications/{id}/read`: 알림을 읽음 처리합니다.
+- 알림 설정 조회/수정은 마이페이지 API `GET/PATCH /my/notification-settings`를 사용합니다.
 
 ### Legacy Analysis Stub
 `/api/v1/analysis/*`는 Phase 4 Stub MVP 호환용입니다. 신규 프론트 화면은 `/health-metrics/*`를 사용하세요.
@@ -85,11 +87,11 @@ _OPENAPI_TAGS = [
     },
     {
         "name": "Home",
-        "description": "[프론트 사용] 홈 화면 집계와 요약 API입니다. 알림 수는 Phase 7 전까지 0 placeholder입니다.",
+        "description": "[프론트 사용] 홈 화면 집계와 요약 API입니다. 알림 수는 Notification inbox의 미읽음 수를 반환합니다.",
     },
     {
         "name": "Mission",
-        "description": "[프론트 사용] 오늘의 미션 조회는 구현되어 있습니다. 완료·인증·캘린더·통계 API는 후속 Phase stub입니다.",
+        "description": "[프론트 사용] 오늘의 미션 조회와 self-report 완료 처리가 구현되어 있습니다. 인증·캘린더·통계 API는 후속 Phase stub입니다.",
     },
     {
         "name": "Record",
@@ -127,7 +129,7 @@ _OPENAPI_TAGS = [
     {
         "name": "Notification",
         "description": (
-            "[프론트 작업 제외] 알림함 API는 후속 Phase stub입니다. "
+            "[프론트 사용] 알림함 목록 조회와 읽음 처리 API입니다. "
             "알림 설정 화면은 My API의 GET/PATCH /my/notification-settings를 사용하세요."
         ),
     },
