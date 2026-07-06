@@ -173,19 +173,21 @@ class CharacterService:
 
     def _notify_level_up(self, *, user_id: int, growth_log_id: int, after_level: int) -> None:
         from app.domains.notification.repository import NotificationRepository
-        from app.domains.notification.service import NotificationService
+        from app.domains.notification.service import NotificationService, run_notification_safely
 
-        try:
+        def notify() -> None:
             NotificationService(NotificationRepository(self.repo.db)).notify_level_up(
                 user_id=user_id,
                 growth_log_id=growth_log_id,
                 after_level=after_level,
+                commit=False,
             )
-        except Exception:
-            self.repo.db.rollback()
-            logger.warning(
-                "LEVEL_UP notification failed (user_id=%s, growth_log_id=%s)",
-                user_id,
-                growth_log_id,
-                exc_info=True,
-            )
+
+        run_notification_safely(
+            self.repo.db,
+            notify,
+            logger,
+            "LEVEL_UP notification failed (user_id=%s, growth_log_id=%s)",
+            user_id,
+            growth_log_id,
+        )

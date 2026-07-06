@@ -9,8 +9,10 @@ from app.domains.character.service import CharacterService
 from app.domains.notification.models import Notification
 from app.domains.notification.repository import NotificationRepository
 from app.domains.notification.service import NotificationService
+from app.domains.pkg.repository import PkgRepository
 from app.domains.user.models import User
 from tests.conftest import CapturingEmailClient
+from tests.domains.pkg.test_service import _seed_record
 from tests.test_auth_flow import login_user, signup_user
 
 
@@ -197,6 +199,47 @@ def test_health_metric_analysis_creates_notification(
     )
     assert notification is not None
     assert notification.deep_link == f"deundeun://health-metrics/analyses/{notification.source_id}"
+
+
+def test_analysis_notification_failure_does_not_rollback_pkg_rebuild(
+    client: TestClient,
+    email_client: CapturingEmailClient,
+    db_session: Session,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(settings, "openai_api_key", None)
+    email = "notification-failure@example.com"
+    headers = _auth_headers(client, email_client, email)
+    user = _user_by_email(db_session, email)
+    _seed_record(db_session, user.id, [("systolic_bp", "150")])
+
+    def fail_notify(*args, **kwargs):
+        raise RuntimeError("notification unavailable")
+
+    monkeypatch.setattr(
+        "app.domains.notification.service.NotificationService.notify_analysis_completed",
+        fail_notify,
+    )
+
+    res = client.post(
+        "/api/v1/health-metrics/analyses",
+        headers=headers,
+        json={
+            "sex": "male",
+            "metrics": [
+                {
+                    "metric_code": "fasting_glucose",
+                    "metric_name": "공복혈당",
+                    "value": "130",
+                    "unit": "mg/dL",
+                }
+            ],
+        },
+    )
+
+    assert res.status_code == 200
+    assert PkgRepository(db_session).get_by_user(user.id) is not None
+    assert _notification_count(db_session, user.id) == 0
 
 
 def test_character_level_up_creates_notification(db_session: Session) -> None:

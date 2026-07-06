@@ -1,4 +1,8 @@
+import logging
+from collections.abc import Callable
 from datetime import UTC, datetime
+
+from sqlalchemy.orm import Session
 
 from app.core.exceptions import NotFoundException
 from app.domains.notification.models import Notification
@@ -7,6 +11,21 @@ from app.domains.notification.schemas import NotificationItemResponse, Notificat
 
 ANALYSIS_COMPLETED = "ANALYSIS_COMPLETED"
 LEVEL_UP = "LEVEL_UP"
+
+
+def run_notification_safely(
+    db: Session,
+    action: Callable[[], object],
+    logger: logging.Logger,
+    message: str,
+    *log_args: object,
+) -> None:
+    try:
+        with db.begin_nested():
+            action()
+        db.commit()
+    except Exception:
+        logger.warning(message, *log_args, exc_info=True)
 
 
 class NotificationService:
@@ -50,9 +69,9 @@ class NotificationService:
         return self._repo.count_unread(user_id)
 
     def notify_analysis_completed(
-        self, *, user_id: int, analysis_id: int
+        self, *, user_id: int, analysis_id: int, commit: bool = True
     ) -> NotificationItemResponse:
-        notification = self._repo.create_if_not_exists(
+        return self._create_and_return(
             user_id=user_id,
             notification_type=ANALYSIS_COMPLETED,
             title="건강 분석이 완료됐어요",
@@ -60,9 +79,8 @@ class NotificationService:
             deep_link=f"deundeun://health-metrics/analyses/{analysis_id}",
             source="health_metric",
             source_id=str(analysis_id),
+            commit=commit,
         )
-        self._repo.commit()
-        return self._to_item(notification)
 
     def notify_level_up(
         self,
@@ -70,8 +88,9 @@ class NotificationService:
         user_id: int,
         growth_log_id: int,
         after_level: int,
+        commit: bool = True,
     ) -> NotificationItemResponse:
-        notification = self._repo.create_if_not_exists(
+        return self._create_and_return(
             user_id=user_id,
             notification_type=LEVEL_UP,
             title="캐릭터가 레벨업했어요",
@@ -79,8 +98,32 @@ class NotificationService:
             deep_link="deundeun://characters/me",
             source="character",
             source_id=f"growth_log:{growth_log_id}",
+            commit=commit,
         )
-        self._repo.commit()
+
+    def _create_and_return(
+        self,
+        *,
+        user_id: int,
+        notification_type: str,
+        title: str,
+        body: str,
+        deep_link: str | None,
+        source: str,
+        source_id: str,
+        commit: bool,
+    ) -> NotificationItemResponse:
+        notification = self._repo.create_if_not_exists(
+            user_id=user_id,
+            notification_type=notification_type,
+            title=title,
+            body=body,
+            deep_link=deep_link,
+            source=source,
+            source_id=source_id,
+        )
+        if commit:
+            self._repo.commit()
         return self._to_item(notification)
 
     @staticmethod
