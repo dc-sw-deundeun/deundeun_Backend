@@ -835,7 +835,29 @@ class HealthMetricAnalysisService:
                 exc_info=True,
             )
 
-        return self._to_response(analysis)
+        response = self._to_response(analysis)
+        self._notify_analysis_completed(user_id=user_id, analysis_id=analysis.id)
+        return response
+
+    def _notify_analysis_completed(self, *, user_id: int, analysis_id: int) -> None:
+        from app.domains.notification.repository import NotificationRepository
+        from app.domains.notification.service import NotificationService, run_notification_safely
+
+        def notify() -> None:
+            NotificationService(NotificationRepository(self._db)).notify_analysis_completed(
+                user_id=user_id,
+                analysis_id=analysis_id,
+                commit=False,
+            )
+
+        run_notification_safely(
+            self._db,
+            notify,
+            logger,
+            "ANALYSIS_COMPLETED notification failed (user_id=%s, analysis_id=%s)",
+            user_id,
+            analysis_id,
+        )
 
     def get(self, analysis_id: int, user_id: int) -> HealthMetricAnalysisResponse:
         analysis = self._repo.get_for_user(analysis_id, user_id)

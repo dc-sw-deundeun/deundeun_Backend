@@ -12,6 +12,8 @@ from app.domains.character.service import CharacterService
 from app.domains.home.service import HomeService
 from app.domains.mission.repository import MissionRepository
 from app.domains.mission.service import MissionService
+from app.domains.notification.repository import NotificationRepository
+from app.domains.notification.service import NotificationService
 from app.domains.onboarding.repository import OnboardingRepository
 from app.domains.onboarding.service import OnboardingService
 from app.domains.user.models import User, UserStatus
@@ -60,11 +62,20 @@ def get_mission_service(db: Session = Depends(get_db)) -> MissionService:
     return build_mission_service(db)
 
 
+def build_notification_service(db: Session) -> NotificationService:
+    return NotificationService(NotificationRepository(db))
+
+
+def get_notification_service(db: Session = Depends(get_db)) -> NotificationService:
+    return build_notification_service(db)
+
+
 def get_home_service(db: Session = Depends(get_db)) -> HomeService:
     return HomeService(
         user_repo=UserRepository(db),
         character_service=CharacterService(CharacterRepository(db)),
         mission_service=build_mission_service(db),
+        notification_service=build_notification_service(db),
     )
 
 

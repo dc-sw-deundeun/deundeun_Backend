@@ -15,6 +15,7 @@ _APP_TABLES = (
     "refresh_tokens",
     "email_verifications",
     "consent_histories",
+    "notifications",
     "character_owned_animals",
     "character_growth_logs",
     "character_profiles",

@@ -1,7 +1,7 @@
 # 아키텍처
 
-> 기준일: 2026-07-04
-> 현재 백엔드는 FastAPI API 서버이며, 인증·온보딩·검진/OCR·건강지표·캐릭터 성장·홈 집계·마이페이지 일부·질환 검색을 구현했습니다.
+> 기준일: 2026-07-06
+> 현재 백엔드는 FastAPI API 서버이며, 인증·온보딩·검진/OCR·건강지표·캐릭터 성장·홈 집계·마이페이지 일부·알림함·질환 검색을 구현했습니다.
 
 ## 전체 구조
 
@@ -48,13 +48,13 @@ Router에는 비즈니스 로직을 넣지 않습니다. Service는 DB 세부 �
 | `ocr` | 구현 | Clova OCR job, parser, metric dictionary |
 | `health_metric` | 구현 | 건강 지표 평가, reference seed |
 | `analysis` | legacy stub | Phase 4 호환용. 신규 프론트는 HealthMetric 사용 |
-| `mission` | 부분 | 오늘 미션 조회 구현, 완료·인증·캘린더·통계는 후속 phase |
+| `mission` | 부분 | 오늘 미션·self-report complete 구현. complete→EXP·인증·캘린더·통계는 후속 |
 | `character` | 구현 | 캐릭터 성장 상태와 보유 동물 컬렉션 |
 | `home` | 구현 | 사용자·캐릭터·오늘 미션·알림 수 집계 |
 | `my` | 부분 | 연동 앱 관리, 알림 설정 구현. 프로필·앱잠금·문의·계정삭제는 stub |
 | `search` | 구현 | 의학 KG + AI 기반 질환 검색 |
 | `pkg` | 서버/내부 | 미션 엔진용 개인 지식그래프 스냅샷 |
-| `notification` | stub | 알림함·읽음 처리·worker는 후속 phase |
+| `notification` | 구현 | 알림함·읽음·HealthMetric/레벨업 트리거. 설정은 `my`의 `/notification-settings` 정본 |
 
 상세 API 상태는 [implementation-status.md](./implementation-status.md)를 기준으로 봅니다.
 
@@ -69,13 +69,13 @@ Router에는 비즈니스 로직을 넣지 않습니다. Service는 DB 세부 �
 /api/v1/ocr
 /api/v1/health-metrics
 /api/v1/analysis       # legacy stub
-/api/v1/missions       # GET /today 구현, 나머지 stub
+/api/v1/missions       # GET /today, POST /{id}/complete 구현, complete→EXP 미연결
 /api/v1/characters     # 성장/동물 조회 구현
 /api/v1/home           # 홈 집계 구현
 /api/v1/my             # 연동 앱·알림 설정 구현, 일부 stub
 /api/v1/search         # 질환 검색 구현
 /api/v1/pkg            # 서버/내부 PKG 조회
-/api/v1/notifications  # stub
+/api/v1/notifications  # 알림함 목록·읽음 처리 (설정은 /my/notification-settings)
 ```
 
 공통 응답 envelope:

@@ -13,7 +13,7 @@ router = APIRouter()
     summary="[프론트 사용] 홈 화면 데이터 조회",
     description=(
         "홈 화면에서 필요한 사용자 정보, 캐릭터 성장 상태, 오늘의 미션, 읽지 않은 알림 수를 "
-        "한 번에 조회합니다. 알림 수는 Phase 7 전까지 0으로 반환합니다."
+        "한 번에 조회합니다. 알림 수는 Notification inbox의 미읽음 수입니다."
     ),
     dependencies=[Security(bearer_scheme)],
     openapi_extra={

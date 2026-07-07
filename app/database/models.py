@@ -31,7 +31,7 @@ from app.domains.mission.models import (  # noqa: F401
     MissionTemplate,
     UserMission,
 )
-from app.domains.notification.models import NotificationPreference  # noqa: F401
+from app.domains.notification.models import Notification, NotificationPreference  # noqa: F401
 from app.domains.ocr.models import OcrJob  # noqa: F401
 from app.domains.onboarding.models import WearableConnection  # noqa: F401
 from app.domains.pkg.models import PkgSnapshot  # noqa: F401

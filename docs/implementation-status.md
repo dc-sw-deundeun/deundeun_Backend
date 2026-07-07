@@ -1,6 +1,6 @@
 # 구현 현황
 
-> 기준일: 2026-07-04
+> 기준일: 2026-07-06
 > 실행 중인 서버의 Swagger/OpenAPI가 API 계약의 최종 기준입니다. 이 문서는 팀 공유용 요약입니다.
 
 범례: 구현, 부분, legacy stub, 서버/내부, stub
@@ -14,13 +14,13 @@
 | Record / OCR | 구현 | 가능 |
 | HealthMetric | 구현 | 가능 |
 | Analysis | legacy stub | 프론트 작업 제외 |
-| Mission | 부분 | `GET /today`, `POST /{id}/complete` 가능, 인증·캘린더·통계는 후속 |
+| Mission | 부분 | `GET /today`, `POST /{id}/complete` 가능, 인증·캘린더·통계·complete→EXP는 후속 |
 | Character | 구현 | 가능 |
 | Home | 구현 | 가능 |
 | My | 부분 | 연동 앱·알림 설정 가능, 프로필·앱잠금·문의·계정삭제는 stub |
 | Search | 구현 | 가능 |
 | PKG | 서버/내부 | 신규 프론트 화면 직접 호출 제외 |
-| Notification | stub | 501 응답 |
+| Notification | 구현 | 알림함 목록·읽음 처리 가능 |
 
 ## 구현된 API
 
@@ -108,7 +108,7 @@ OCR 업로드 플로우 상세는 [api-record-ocr.md](./api-record-ocr.md) 참�
 | GET | `/` | 홈 화면 사용자·캐릭터·오늘 미션·알림 카운트 집계 |
 | GET | `/summary` | 홈 상단/위젯용 축약 집계 |
 
-`unread_notification_count`는 Notification Phase 전까지 항상 `0`입니다.
+`unread_notification_count`는 Notification inbox의 미읽음 알림 수를 반환합니다.
 
 ### Mission `/api/v1/missions`
 
@@ -118,6 +118,8 @@ OCR 업로드 플로우 상세는 [api-record-ocr.md](./api-record-ocr.md) 참�
 |--------|------|------|
 | GET | `/today` | 사용자 timezone 기준 오늘 미션 목록과 완료 집계 |
 | POST | `/{mission_id}/complete` | 본인 미션 self-report 완료(멱등) |
+
+`POST /{mission_id}/complete`는 self-report 완료(멱등, 상태 전이만)입니다. **캐릭터 EXP 지급·LEVEL_UP 알림은 연결되지 않았으며** Phase 5 확장 대상입니다.
 
 `POST /{mission_id}/verify`, `GET /calendar`, `GET /statistics/weekly`, `POST /notifications/send`는 후속 Phase placeholder입니다.
 
@@ -156,21 +158,22 @@ PKG는 미션 생성 엔진이 소비하는 서버/내부 계약입니다. 로�
 
 ### Notification `/api/v1/notifications`
 
+상세 계약은 [api-notification.md](./api-notification.md) 참조.
+
 | Method | Path | 설명 |
 |--------|------|------|
-| GET | `/` | 알림 목록 placeholder |
-| POST | `/test` | 테스트 알림 발송 placeholder |
-| GET | `/settings` | 알림 설정 placeholder |
-| PATCH | `/settings` | 알림 설정 수정 placeholder |
+| GET | `/` | 알림 목록 조회, 페이지네이션, 미읽음 필터 |
+| PATCH | `/{notification_id}/read` | 알림 읽음 처리(멱등) |
 
-Notification 라우터는 후속 Phase용 stub입니다. 현재 알림 설정 화면은 My API의 `GET/PATCH /my/notification-settings`를 사용합니다.
+**알림 설정 정본 (D-BE-004, 옵션 A)**: `GET/PATCH /my/notification-settings` — [api-my-page.md](./api-my-page.md)
+
+`GET/PATCH /notifications/settings`, `POST /notifications/test`는 제공하지 않습니다. HealthMetric 분석 저장은 `ANALYSIS_COMPLETED`, `gain_exp` 레벨업은 `LEVEL_UP` 알림을 생성합니다. 미션 complete→EXP→LEVEL_UP 알림은 Phase 5 확장입니다.
 
 ## Stub API
 
 | Prefix | 상태 |
 |--------|------|
 | `/api/v1/missions/*` | `/today`, `/{id}/complete` 외 미션 인증·캘린더·통계·알림 발송 미완성 |
-| `/api/v1/notifications` | 알림 도메인 미완성 |
 | `/api/v1/my/profile`, `/api/v1/my/app-lock`, `/api/v1/my/support`, `/api/v1/my/account` | 마이페이지 후속 기능 미완성 |
 
 ## 마이그레이션
@@ -186,13 +189,13 @@ Notification 라우터는 후속 Phase용 stub입니다. 현재 알림 설정 �
 | `014_add_notification_preferences_columns` | My 알림 설정 저장 테이블 |
 | `015_add_mission_generation_runs` | 미션 생성 멱등 로그(유저·날짜당 1회 생성 보장) |
 | `016_extend_user_missions_for_generated` | user_missions에 엔진 생성분 저장 컬럼 추가(`template_code`, `payload`, `completed_at`), `template_id` nullable화 |
+| `017_add_notifications_inbox` | 알림함 `notifications` 테이블, 사용자·이벤트 source 멱등 unique |
 
 ## 다음 구현 우선순위
 
-1. Phase 5 Mission 확장: 미션 인증·캘린더·통계, 완료→EXP 지급 루프 연결(현재 완료는 상태 전이만 함)
-2. Notification 알림함·읽음 처리·worker
-3. My 후속 기능: 프로필, 앱잠금, 문의, 계정삭제
-4. Alembic metadata drift 정리
+1. Phase 5 Mission 확장: complete→`gain_exp`·LEVEL_UP 루프, 인증·캘린더·통계
+2. My 후속: 프로필, 앱잠금, 문의, 계정삭제
+3. Notification 7b: push, 리마인드 scheduler workers
 5. Legacy Analysis 도메인 제거 또는 migration 정리 정책 확정
 
 ## 검증 기준

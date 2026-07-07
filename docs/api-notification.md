@@ -1,0 +1,102 @@
+# Notification Inbox API
+
+> 기준일: 2026-07-06
+> Base URL: `/api/v1/notifications`
+> 인증: 모든 엔드포인트에 `Authorization: Bearer <access_token>` 헤더 필요
+
+## 목적
+
+알림함은 시스템 이벤트를 사용자별 inbox row로 저장하고, 프론트가 목록과 읽음 상태를 관리할 수 있게 한다.
+
+알림 **설정** 정본은 My API의 `GET/PATCH /api/v1/my/notification-settings`입니다. `/api/v1/notifications/settings`는 제공하지 않습니다.
+
+## 구현 현황
+
+| 기능 | 상태 | API |
+|------|------|-----|
+| 알림 목록 | 구현 완료 | `GET /notifications` |
+| 알림 읽음 처리 | 구현 완료 | `PATCH /notifications/{notification_id}/read` |
+| 알림 설정 | My에서 구현 | `GET/PATCH /my/notification-settings` |
+| 테스트 알림 발송 | 미제공 | 후속 Phase |
+| push / 리마인드 worker | 미제공 | 후속 Phase |
+
+## GET /notifications
+
+인증된 사용자의 알림함을 최신순으로 조회한다.
+
+### Query
+
+| 필드 | 타입 | 기본값 | 설명 |
+|------|------|--------|------|
+| `limit` | `int` | `20` | 1~100 |
+| `offset` | `int` | `0` | 0 이상 |
+| `unread_only` | `bool` | `false` | `true`면 미읽음 알림만 반환 |
+
+### Response data
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `items` | `Notification[]` | 알림 목록 |
+| `total` | `int` | 현재 필터 조건의 전체 개수 |
+| `unread_count` | `int` | 사용자의 전체 미읽음 개수 |
+| `limit` | `int` | 요청 limit |
+| `offset` | `int` | 요청 offset |
+
+`Notification`
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `id` | `int` | 알림 ID |
+| `type` | `string` | `ANALYSIS_COMPLETED`, `LEVEL_UP` 등 |
+| `title` | `string` | 알림 제목 |
+| `body` | `string` | 알림 본문 |
+| `deep_link` | `string\|null` | 앱 이동 링크 |
+| `read_at` | `string\|null` | 읽음 시각. `null`이면 미읽음 |
+| `created_at` | `string` | 생성 시각 |
+
+예시:
+
+```json
+{
+  "success": true,
+  "message": "요청이 성공했습니다.",
+  "data": {
+    "items": [
+      {
+        "id": 1,
+        "type": "ANALYSIS_COMPLETED",
+        "title": "건강 분석이 완료됐어요",
+        "body": "건강 지표 분석 결과를 확인해 보세요.",
+        "deep_link": "deundeun://health-metrics/analyses/12",
+        "read_at": null,
+        "created_at": "2026-07-06T12:00:00Z"
+      }
+    ],
+    "total": 1,
+    "unread_count": 1,
+    "limit": 20,
+    "offset": 0
+  },
+  "error_code": null
+}
+```
+
+## PATCH /notifications/{notification_id}/read
+
+본인 알림을 읽음 처리한다.
+
+- 이미 읽은 알림은 멱등하게 동일한 `read_at`을 반환한다.
+- 본인 알림이 아니거나 존재하지 않으면 `404 NOTIFICATION_NOT_FOUND`.
+
+### Response data
+
+`GET /notifications`의 item과 동일한 shape을 반환한다.
+
+## 생성되는 MVP 이벤트
+
+| type | 생성 조건 | deep_link | preference |
+|------|-----------|-----------|------------|
+| `ANALYSIS_COMPLETED` | `POST /health-metrics/analyses` 저장 성공 | `deundeun://health-metrics/analyses/{analysis_id}` | always-on |
+| `LEVEL_UP` | `CharacterService.gain_exp` 결과 `leveled_up=true` | `deundeun://characters/me` | always-on |
+
+Mission complete는 Phase 7에서 EXP/LEVEL_UP과 연결하지 않는다. `POST /missions/{id}/complete`는 상태 전이만 수행한다.
