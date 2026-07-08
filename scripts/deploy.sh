@@ -38,6 +38,30 @@ read_env_value() {
   fi
 }
 
+write_env_value() {
+  local key="$1"
+  local value="$2"
+  local tmp
+
+  tmp="$(mktemp)"
+  awk -v key="$key" -v value="$value" '
+    BEGIN { updated = 0 }
+    $0 ~ "^" key "=" {
+      print key "=" value
+      updated = 1
+      next
+    }
+    { print }
+    END {
+      if (!updated) {
+        print key "=" value
+      }
+    }
+  ' "$APP_ENV_FILE" > "$tmp"
+  cat "$tmp" > "$APP_ENV_FILE"
+  rm -f "$tmp"
+}
+
 API_SERVICE="${API_SERVICE:-$(read_env_value API_SERVICE api)}"
 API_CONTAINER_NAME="${API_CONTAINER_NAME:-$(read_env_value API_CONTAINER_NAME deundeun-api)}"
 POSTGRES_SERVICE="${POSTGRES_SERVICE:-$(read_env_value POSTGRES_SERVICE postgres)}"
@@ -124,7 +148,9 @@ if ! wait_for_container "$API_CONTAINER_NAME"; then
     echo "[deploy] Rolling back to previous image: $previous_image" >&2
     export IMAGE_TAG="$previous_image"
     "${compose_cmd[@]}" up -d --no-deps "$API_SERVICE"
-    wait_for_container "$API_CONTAINER_NAME" || true
+    if wait_for_container "$API_CONTAINER_NAME"; then
+      write_env_value IMAGE_TAG "$previous_image"
+    fi
   fi
 
   exit 1
@@ -139,4 +165,5 @@ if [[ "$START_NGINX" == "true" ]]; then
   }
 fi
 
+write_env_value IMAGE_TAG "$IMAGE_TAG"
 echo "[deploy] Done - $API_CONTAINER_NAME is running: $IMAGE_TAG"
