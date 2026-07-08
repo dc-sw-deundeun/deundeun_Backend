@@ -19,6 +19,9 @@ def test_seed_has_conditions_with_valid_structure() -> None:
         for bucket, vals in entry.items():
             assert isinstance(vals, list) and vals, f"{cond}.{bucket}: 빈/비리스트"
             assert all(isinstance(v, str) and v.strip() for v in vals)
+            # 대소문자 무시 중복 제거(추출 파이프라인 계약)가 시드에도 지켜졌는지.
+            lowered = [v.lower() for v in vals]
+            assert len(lowered) == len(set(lowered)), f"{cond}.{bucket}: 중복값 존재"
 
 
 def test_key_conditions_present_and_nonempty() -> None:
