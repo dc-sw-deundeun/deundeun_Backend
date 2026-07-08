@@ -488,19 +488,41 @@ curl -s -H 'Host: api.deundeun.xyz' http://127.0.0.1/health
 
 ---
 
-## 11. 관련 파일
+## 11. 프론트 데모 데이터
+
+프론트 주요 흐름 확인용 데모 데이터는 배포마다 자동 실행하지 않고 필요할 때 수동 실행합니다.
+스크립트는 `demo-*@demo.deundeun.xyz` 계정 3개와 그 계정에 연결된 데이터만 재생성하며, 일반 사용자 데이터는 건드리지 않습니다.
+
+```bash
+docker compose \
+  --env-file /opt/deundeun/.env \
+  -f /opt/deundeun/docker-compose.yml \
+  --profile deploy \
+  run --rm api python scripts/seed_demo_data.py
+```
+
+데모 계정 비밀번호는 모두 `Demo1234!`입니다.
+
+| 계정 | 용도 |
+|------|------|
+| `demo-new@demo.deundeun.xyz` | 가입 직후/온보딩 초기 상태 |
+| `demo-user@demo.deundeun.xyz` | 온보딩 완료, 검진/분석/미션/알림이 있는 일반 사용자 |
+| `demo-growth@demo.deundeun.xyz` | 캐릭터 레벨·동물 해금 상태 확인용 고레벨 사용자 |
+
+## 12. 관련 파일
 
 | 파일 | 역할 |
 |------|------|
 | [`.github/workflows/deploy-develop.yml`](../.github/workflows/deploy-develop.yml) | develop → push + SSH 배포 |
 | [`scripts/deploy.sh`](../scripts/deploy.sh) | 서버 배포 스크립트 |
+| [`scripts/seed_demo_data.py`](../scripts/seed_demo_data.py) | 프론트 데모 데이터 수동 seed |
 | [`docker/docker-compose.yml`](../docker/docker-compose.yml) | Compose (`--profile deploy`) |
 | [`docker/nginx/templates/api.conf.template`](../docker/nginx/templates/api.conf.template) | nginx envsubst template |
 | [`.env.server.example`](../.env.server.example) | `/opt/deundeun/.env` 서버 템플릿 |
 
 ---
 
-## 12. 트러블슈팅
+## 13. 트러블슈팅
 
 | 증상 | 원인 | 조치 |
 |------|------|------|
