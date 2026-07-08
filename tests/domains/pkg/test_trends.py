@@ -92,6 +92,12 @@ def test_group_reduces_sex_specific_to_base() -> None:
     assert grouped.get("HGB") == [12.5]
 
 
+def test_group_parses_comma_separated_values() -> None:
+    # 천 단위 콤마가 있어도 파싱(중증 고중성지방혈증 등 4자리 값 대비).
+    grouped = group_trend_values([("triglyceride", "1,200")])
+    assert grouped["TG"] == [1200.0]
+
+
 def test_group_skips_unparseable_and_untracked() -> None:
     grouped = group_trend_values(
         [
