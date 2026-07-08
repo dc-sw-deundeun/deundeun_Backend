@@ -40,7 +40,7 @@ def _iter_kg_rows(kg_path: Path) -> Iterator[KgRow]:
         reader = csv.reader(f)
         next(reader, None)  # 헤더 스킵
         for row in reader:
-            if len(row) <= _Y_NAME:
+            if len(row) < _MIN_COLS:
                 continue
             yield (
                 row[0],
