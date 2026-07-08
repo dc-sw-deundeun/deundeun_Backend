@@ -85,12 +85,18 @@ class PkgService:
         """최신 검진의 지표들을 유저의 검증검진 시계열에서 추적해 궤적(추세)을 만든다.
 
         관측이 1회뿐이면 방향을 못 정해 빈 리스트가 된다(신규 유저는 자연히 추세 없음).
+        추세는 부가 신호(빈 리스트도 유효)이므로, 계산 실패가 PKG 빌드 전체를 막지 않도록
+        폴백한다(_persist_snapshot과 동일 철학).
         """
-        codes = sorted({m.metric_code for m in self._record_repo.list_metrics(record_id)})
-        series = self._record_repo.list_trend_series(
-            user_id, codes, verification_status=VerificationStatus.VERIFIED.value
-        )
-        return compute_trends(group_trend_values((m.metric_code, m.value) for _, m in series))
+        try:
+            codes = sorted({m.metric_code for m in self._record_repo.list_metrics(record_id)})
+            series = self._record_repo.list_trend_series(
+                user_id, codes, verification_status=VerificationStatus.VERIFIED.value
+            )
+            return compute_trends(group_trend_values((m.metric_code, m.value) for _, m in series))
+        except Exception:
+            logger.warning("trend computation failed; returning empty trends", exc_info=True)
+            return []
 
     def _persist_snapshot(self, user_id: int, pkg: PKG, record_id: int) -> None:
         """스냅샷 영속(유저당 1행 교체). 실패해도 PKG 응답은 유지한다."""
