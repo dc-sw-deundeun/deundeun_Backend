@@ -6,7 +6,7 @@
 
 from typing import Protocol, runtime_checkable
 
-from app.domains.mission.schemas import PKG, History, Relation, Wearable
+from app.domains.mission.schemas import PKG, History, MetricTrend, Relation, Wearable
 
 _MAX_HOPS = 2
 
@@ -39,6 +39,7 @@ class PKGClient(Protocol):
     def flags(self) -> dict[str, bool]: ...
     def wearable(self) -> Wearable: ...
     def history(self) -> History: ...
+    def trends(self) -> list[MetricTrend]: ...
     def relations(self, max_hops: int = _MAX_HOPS) -> list[Relation]: ...
     def edge_exists(self, grounding: str) -> bool: ...
 
@@ -69,6 +70,9 @@ class InMemoryPKG:
 
     def history(self) -> History:
         return self.pkg.history
+
+    def trends(self) -> list[MetricTrend]:
+        return list(self.pkg.trends)
 
     def condition_ids(self) -> list[str]:
         return list(self.pkg.conditions)
