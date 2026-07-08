@@ -12,7 +12,7 @@ from collections.abc import Iterable
 from typing import Literal
 
 from app.domains.mission.schemas import MetricTrend
-from app.domains.pkg.adapter import _base_canonical
+from app.domains.pkg.adapter import base_canonical
 
 # 추적 대상 canonical 지표 → 한국어 표시명(LLM 컨텍스트·설명용).
 TREND_METRIC_LABELS: dict[str, str] = {
@@ -56,7 +56,7 @@ def group_trend_values(rows: Iterable[tuple[str, str | None]]) -> dict[str, list
     """
     out: dict[str, list[float]] = {}
     for code, value in rows:
-        canonical = _base_canonical(code)
+        canonical = base_canonical(code)
         if canonical is None or canonical not in TREND_METRIC_LABELS:
             continue
         num = _parse_float(value)

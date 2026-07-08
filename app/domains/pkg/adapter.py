@@ -73,8 +73,11 @@ class MetricReading:
     value: str | None
 
 
-def _base_canonical(metric_code: str) -> str | None:
-    """OCR 코드공간(fasting_glucose 등) → canonical(FPG). 성별전용은 기본코드로 축약."""
+def base_canonical(metric_code: str) -> str | None:
+    """OCR 코드공간(fasting_glucose 등) → canonical(FPG). 성별전용은 기본코드로 축약.
+
+    공개 API — 추세 계산(pkg.trends) 등 다른 모듈이 원시 코드→canonical 변환에 쓴다.
+    """
     normalized = metric_code.strip().lower().replace("-", "_")
     canonical = OCR_CODE_TO_CANONICAL.get(normalized)
     if canonical is None:
@@ -144,7 +147,7 @@ def derive_conditions_and_flags(
 ) -> tuple[list[str], dict[str, bool]]:
     """record.CheckupMetricResult 원시 수치 → 조건/플래그 (폴백 경로, 동일 룰엔진으로 재평가)."""
     pairs = [
-        (_base_canonical(m.metric_code), evaluate_metric_status(m.metric_code, m.value, sex=sex))
+        (base_canonical(m.metric_code), evaluate_metric_status(m.metric_code, m.value, sex=sex))
         for m in metrics
     ]
     found = _conditions_from_pairs(pairs)
