@@ -1,0 +1,288 @@
+{
+  "_doc": "조건 id → 외부 의학 KG(PrimeKG) 이웃 사실. complications=disease_disease, phenotypes=disease_phenotype_positive, exposures=exposure_disease. scripts/extract_condition_neighborhood.py가 kg/data/kg.csv에서 오프라인 생성(재현 가능). 이름은 PrimeKG 원문(영어) 그대로 — 생활미션으로의 번역은 생성 LLM 몫. exposures는 환경 독성물질도 섞여 있어 소비 단계(P2/P3)에서 가중치·필터 필요.",
+  "conditions": {
+    "hypertension": {
+      "complications": [
+        "apparent mineralocorticoid excess",
+        "autosomal dominant progressive nephropathy with hypertension",
+        "autosomal recessive inherited pseudoxanthoma elasticum",
+        "benign hypertension",
+        "brachydactyly-arterial hypertension syndrome",
+        "Braddock syndrome",
+        "essential hypertension, genetic",
+        "familial gestational hyperthyroidism",
+        "familial hyperthyroidism due to mutations in TSH receptor",
+        "glucocorticoid-remediable aldosteronism",
+        "hepatic vascular disease",
+        "heritable pulmonary arterial hypertension",
+        "hypertensive disorder",
+        "hyperuricemia-pulmonary hypertension-renal failure-alkalosis syndrome",
+        "kidney disease",
+        "Liddle syndrome",
+        "malignant hypertension",
+        "Mendelian disease",
+        "neurofibromatosis",
+        "preeclampsia",
+        "pseudohyperaldosteronism type 2",
+        "pseudohypoaldosteronism",
+        "pulmonary venoocclusive disease",
+        "renal hypertension",
+        "Williams syndrome"
+      ]
+    },
+    "type2_diabetes": {
+      "complications": [
+        "diabetes mellitus (disease)",
+        "diabetes mellitus, noninsulin-dependent",
+        "diabetic ketoacidosis",
+        "lipoatrophic diabetes"
+      ],
+      "phenotypes": [
+        "Autosomal dominant inheritance",
+        "Increased waist to hip ratio",
+        "Insulin resistance",
+        "Late onset",
+        "Type II diabetes mellitus"
+      ],
+      "exposures": [
+        "2,4-Dichlorophenoxyacetic Acid",
+        "Agent Orange",
+        "Air Pollutants",
+        "alpha-hexachlorocyclohexane",
+        "alpha-Linolenic Acid",
+        "Arsenic",
+        "beta-hexachlorocyclohexane",
+        "bis(4-hydroxyphenyl)sulfone",
+        "bisphenol A",
+        "Boron",
+        "Bromine",
+        "Cadmium",
+        "Calcium",
+        "Cesium",
+        "Chromium",
+        "Copper",
+        "delta-hexachlorocyclohexane",
+        "Dichlorodiphenyl Dichloroethylene",
+        "Docosahexaenoic Acids",
+        "docosapentaenoic acid",
+        "Fatty Acids, Omega-3",
+        "Gallium",
+        "Gold",
+        "Indium",
+        "Iron"
+      ]
+    },
+    "prediabetes": {
+      "complications": [
+        "diabetes mellitus (disease)"
+      ],
+      "exposures": [
+        "Cadmium",
+        "DDT",
+        "Mercury",
+        "o,p'-DDT"
+      ]
+    },
+    "dyslipidemia": {
+      "complications": [
+        "familial hyperlipidemia",
+        "hyperalphalipoproteinemia",
+        "hypertriglyceridemia (disease)",
+        "laminopathy type Decaudain-Vigouroux",
+        "major hypertriglyceridemia",
+        "metabolic disease"
+      ],
+      "phenotypes": [
+        "Abnormal circulating lipid concentration",
+        "Transient hyperlipidemia"
+      ]
+    },
+    "obesity": {
+      "complications": [
+        "monogenic obesity",
+        "morbid obesity",
+        "overnutrition"
+      ],
+      "phenotypes": [
+        "Abdominal obesity",
+        "Class I obesity",
+        "Class II obesity",
+        "Class III obesity",
+        "Increased body weight",
+        "Truncal obesity"
+      ],
+      "exposures": [
+        "2,2',3',4,4',5-hexachlorobiphenyl",
+        "2,4-dichlorophenol",
+        "2,5-dichlorophenol",
+        "2-ethyl-5-carboxypentyl phthalate",
+        "Barium",
+        "beta-hexachlorocyclohexane",
+        "bis(4-hydroxyphenyl)sulfone",
+        "bisphenol A",
+        "Cadmium",
+        "Calcifediol",
+        "Cesium",
+        "Chromium",
+        "Cobalt",
+        "DDT",
+        "di-n-butylphosphoric acid",
+        "Dichlorodiphenyl Dichloroethylene",
+        "diethyl phthalate",
+        "Diethylhexyl Phthalate",
+        "Halogenated Diphenyl Ethers",
+        "Hexachlorobenzene",
+        "hexadecafluoro-nonanoic acid",
+        "Lead",
+        "Manganese",
+        "Mercury",
+        "mono(2-ethyl-5-hydroxyhexyl) phthalate"
+      ]
+    },
+    "fatty_liver": {
+      "complications": [
+        "alcohol-related disorders",
+        "alcoholic hepatitis",
+        "alcoholic liver cirrhosis",
+        "fatty liver disease, nonalcoholic, susceptibility to, 2",
+        "liver disease",
+        "NAFLD1",
+        "non-alcoholic steatohepatitis",
+        "visceral steatosis, congenital"
+      ],
+      "exposures": [
+        "2,2',3,3',4,4',5-heptachlorobiphenyl",
+        "2,2',3,5,5',6-hexachlorobiphenyl",
+        "2,3',4,4',5-pentachlorobiphenyl",
+        "2,3,3',4,4',5-hexachlorobiphenyl",
+        "2,3,3',4,4'-pentachlorobiphenyl",
+        "2,4,4',5-tetrachlorobiphenyl",
+        "2,4,5,2',4',5'-hexachlorobiphenyl",
+        "3,4,5,3',4',5'-hexachlorobiphenyl",
+        "3,4,5,3',4'-pentachlorobiphenyl",
+        "Arsenic",
+        "Cadmium",
+        "cyanobacterial toxin",
+        "DDT",
+        "Lead",
+        "Mercury",
+        "o,p'-DDT",
+        "Polychlorinated Biphenyls"
+      ]
+    },
+    "ckd": {
+      "complications": [
+        "chronic renal failure syndrome",
+        "diabetic nephropathy",
+        "end stage renal failure",
+        "kidney disease",
+        "pyelonephritis",
+        "rapidly progressive glomerulonephritis"
+      ],
+      "exposures": [
+        "alachlor",
+        "Aldicarb",
+        "Atrazine",
+        "Cadmium",
+        "Chlordan",
+        "Coumaphos",
+        "imazethapyr",
+        "Lead",
+        "Mercury",
+        "metalaxyl",
+        "metolachlor",
+        "Paraquat",
+        "Parathion",
+        "pendimethalin",
+        "perfluorooctanoic acid",
+        "Permethrin",
+        "Petroleum",
+        "Phorate"
+      ]
+    },
+    "anemia": {
+      "complications": [
+        "alpha-thalassemia and related diseases",
+        "anemia due to chronic disorder",
+        "anemia due to enzyme disorder",
+        "aplastic anemia",
+        "beta-thalassemia and related diseases",
+        "congenital anemia",
+        "constitutional dyserythropoietic anemia",
+        "deficiency anemia",
+        "hematologic disease",
+        "hemoglobin C disease",
+        "hemoglobin D disease",
+        "hemoglobin E disease",
+        "hemoglobinopathy Toms River",
+        "hereditary methemoglobinemia",
+        "hypochromic anemia",
+        "macrocytic anemia (disease)",
+        "microcytic anemia",
+        "neonatal anemia",
+        "normocytic anemia",
+        "pancytopenia",
+        "pure red-cell aplasia",
+        "sickle cell disease and related diseases",
+        "sideroblastic anemia"
+      ],
+      "phenotypes": [
+        "Abnormal erythrocyte morphology",
+        "Anemia due to reduced life span of red cells",
+        "Anemia of inadequate production",
+        "Hypochromia",
+        "Refractory anemia",
+        "Steroid-responsive anemia",
+        "Transient erythroblastopenia"
+      ],
+      "exposures": [
+        "Air Pollutants",
+        "Lead",
+        "Petroleum",
+        "Water Pollutants, Chemical"
+      ]
+    },
+    "cardiovascular_disease": {
+      "complications": [
+        "autoimmune disease of cardiovascular system",
+        "cardiovascular neoplasm",
+        "congenital anomaly of cardiovascular system",
+        "disease by anatomical system",
+        "heart disease",
+        "vascular disease"
+      ],
+      "exposures": [
+        "2,2',3,3',4,4',5-heptachlorobiphenyl",
+        "2,3,3',4,4',5-hexachlorobiphenyl",
+        "2,3,4,5,3',4',5'-heptachlorobiphenyl",
+        "2,4,5-Trichlorophenoxyacetic Acid",
+        "Acrolein",
+        "Air Pollutants",
+        "Arsenic",
+        "bisphenol A",
+        "Cadmium",
+        "Calcium",
+        "Carbon",
+        "Carbon Dioxide",
+        "Carbon Monoxide",
+        "Coal",
+        "Copper",
+        "Cyanamide",
+        "Cyclohexane",
+        "Fish Oils",
+        "Iron",
+        "Lead",
+        "Magnesium",
+        "Mercury",
+        "monomethylarsonic acid",
+        "Nitrates",
+        "Nitric Oxide"
+      ]
+    },
+    "gout": {
+      "complications": [
+        "metabolic disease"
+      ]
+    }
+  }
+}
