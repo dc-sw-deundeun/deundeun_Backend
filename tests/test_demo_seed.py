@@ -2,7 +2,11 @@ from fastapi.testclient import TestClient
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.domains.character.models import CharacterOwnedAnimal
+from app.domains.character.models import (
+    CharacterGrowthLog,
+    CharacterOwnedAnimal,
+    CharacterProfile,
+)
 from app.domains.mission.models import UserMission
 from app.domains.notification.models import Notification
 from app.domains.record.models import CheckupRecord
@@ -24,6 +28,19 @@ def _user_id(db: Session, email: str) -> int:
     user_id = db.scalar(select(User.id).where(User.email == email))
     assert user_id is not None
     return user_id
+
+
+def _assert_growth_log_matches_profile(db: Session, user_id: int) -> None:
+    profile = db.scalar(select(CharacterProfile).where(CharacterProfile.user_id == user_id))
+    assert profile is not None
+
+    latest_total_exp = db.scalar(
+        select(func.max(CharacterGrowthLog.after_total_exp)).where(
+            CharacterGrowthLog.user_id == user_id
+        )
+    )
+    assert latest_total_exp is not None
+    assert latest_total_exp == profile.total_exp
 
 
 def test_seed_demo_data_is_idempotent_and_covers_frontend_flows(
@@ -72,6 +89,8 @@ def test_seed_demo_data_is_idempotent_and_covers_frontend_flows(
     )
     assert owned_animal_count is not None
     assert owned_animal_count >= 4
+    _assert_growth_log_matches_profile(db_session, demo_user_id)
+    _assert_growth_log_matches_profile(db_session, demo_growth_id)
 
     headers = _login_demo(client, "demo-user@demo.deundeun.xyz")
     for path in (

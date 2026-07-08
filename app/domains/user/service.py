@@ -22,13 +22,14 @@ class UserService:
         if user is None or user.status != UserStatus.ACTIVE:
             raise InvalidTokenException()
 
-        if request.nickname is None:
+        nickname = request.nickname.strip() if request.nickname else None
+        if not nickname:
             raise BadRequestException(
                 message="변경할 프로필 값을 입력해 주세요.",
                 error_code="PROFILE_UPDATE_EMPTY",
             )
 
-        user.nickname = request.nickname
+        user.nickname = nickname
         self.repo.commit()
         return MeResponse.model_validate(user)
 

@@ -52,7 +52,7 @@ def test_update_my_profile_nickname_reflects_auth_me_and_home(
 ) -> None:
     headers = _auth(client, email_client, email="my-patch@example.com", nickname="변경전")
 
-    res = client.patch(f"{BASE}/profile", json={"nickname": "변경후"}, headers=headers)
+    res = client.patch(f"{BASE}/profile", json={"nickname": "  변경후  "}, headers=headers)
 
     assert res.status_code == 200
     assert res.json()["data"]["nickname"] == "변경후"
@@ -83,9 +83,12 @@ def test_update_my_profile_validates_nickname(
     headers = _auth(client, email_client, email="my-invalid@example.com")
 
     empty = client.patch(f"{BASE}/profile", json={"nickname": ""}, headers=headers)
+    blank = client.patch(f"{BASE}/profile", json={"nickname": "   "}, headers=headers)
     too_long = client.patch(f"{BASE}/profile", json={"nickname": "가" * 51}, headers=headers)
 
     assert empty.status_code == 422
+    assert blank.status_code == 400
+    assert blank.json()["error_code"] == "PROFILE_UPDATE_EMPTY"
     assert too_long.status_code == 422
 
 

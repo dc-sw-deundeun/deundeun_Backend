@@ -455,6 +455,7 @@ def _seed_character(db: Session, user_id: int, *, total_exp: int) -> None:
 
     before_total = 0
     for index, gained in enumerate((40, 80, 120, max(total_exp - 240, 0)), start=1):
+        gained = min(gained, total_exp - before_total)
         if gained <= 0:
             continue
         after_total = before_total + gained
