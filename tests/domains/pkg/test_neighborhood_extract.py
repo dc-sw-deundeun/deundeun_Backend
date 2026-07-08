@@ -101,19 +101,20 @@ def test_ignores_unrelated_relations_and_unmapped_ids() -> None:
     assert extract_neighborhood(rows, _MONDO) == {}
 
 
-def test_type_guard_blocks_id_collision_across_node_types() -> None:
-    # 노출 노드가 우연히 질환 mondo id와 같은 문자열을 가져도, 타입이 disease가 아니면 무시.
+def test_type_guard_is_per_endpoint() -> None:
+    # 한 행에서 x_id는 매핑되지만 x_type이 disease가 아니고, y는 정상 disease.
+    # 타입 가드가 endpoint별로 동작하는지: x측은 차단(타입≠disease), y측은 정상 수집.
     rows = [
         _row(
-            "exposure_disease",
-            "5148",
-            "not a disease",
-            "X",
-            "irrelevant",
-            xt="exposure",
+            "disease_disease",
+            "5148",  # type2_diabetes id지만
+            "fake disease",
+            "5300",  # ckd
+            "chronic kidney disease",
+            xt="exposure",  # x_type이 disease가 아님 → x측 매핑 차단
             yt="disease",
         ),
     ]
     out = extract_neighborhood(rows, _MONDO)
-    # y가 매핑 안 된 'X'라 아무것도 안 담긴다(x의 5148은 exposure 타입이라 조건으로 안 봄).
-    assert out == {}
+    assert "type2_diabetes" not in out  # x_id 매핑됐어도 x_type≠disease라 차단
+    assert out["ckd"]["complications"] == ["fake disease"]  # y측은 정상 수집
