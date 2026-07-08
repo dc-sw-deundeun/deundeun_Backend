@@ -86,7 +86,7 @@
           "rationale": "",
           "mission_type": "",
           "difficulty": 1,
-          "execution": { "when": "", "duration_min": null },
+          "execution": { "when": "", "duration_min": null, "time": "" },
           "grounded_on": [],
           "source": "generated",
           "description": "오늘 하루 건강 상태를 스스로 확인해 보세요.",
