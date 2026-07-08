@@ -39,3 +39,14 @@ def test_common_conditions_have_enough_matched_templates() -> None:
     for cond in ("hypertension", "type2_diabetes", "obesity", "insomnia", "depression_screen"):
         count = _matched_count(cond)
         assert count >= 5, f"{cond}: 조건 매칭 템플릿 {count}개(<5) — 개인화 다양성 부족"
+
+
+def test_every_registered_condition_has_at_least_one_matched_template() -> None:
+    """등록된 모든 condition은 최소 1개 이상의 조건 매칭 템플릿을 가져야 한다.
+
+    조건은 있는데 관련 미션이 0인 유저(발목부종·무릎관절염 등)를 방지하는 불변식.
+    새 condition을 대응 템플릿 없이 추가/머지하는 걸 잡는다(CodeRabbit).
+    """
+    condition_ids = pool.load_pool().get("conditions", {})
+    uncovered = [c for c in condition_ids if _matched_count(c) == 0]
+    assert uncovered == [], f"조건 매칭 템플릿이 0개인 condition: {uncovered}"
