@@ -1,6 +1,6 @@
 # 마이페이지 API
 
-> 기준일: 2026-07-04
+> 기준일: 2026-07-08
 > Base URL: `/api/v1/my`
 > 인증: 모든 엔드포인트에 `Authorization: Bearer <access_token>` 헤더 필요
 
@@ -17,11 +17,12 @@
 | 알림 설정 조회 | ✅ 구현 완료 | `GET /my/notification-settings` |
 | 알림 설정 업데이트 | ✅ 구현 완료 | `PATCH /my/notification-settings` |
 | 비밀번호 재설정 | ✅ 기존 Auth API 사용 | `POST /auth/password/reset/request` + `confirm` |
-| 프로필 조회 | 🚧 stub (501) | `GET /my/profile` |
+| 프로필 조회 | ✅ 구현 완료 | `GET /my/profile` |
+| 닉네임 수정 | ✅ 구현 완료 | `PATCH /my/profile` |
+| 회원탈퇴 | ✅ 구현 완료 | `DELETE /my/account` |
 | 비밀번호 변경 | 🚧 stub (501) | `PATCH /my/password` |
 | 앱 잠금 설정 | 🚧 stub (501) | `GET/PATCH /my/app-lock` |
 | 문의 접수 | 🚧 stub (501) | `POST /my/support` |
-| 계정 삭제 | 🚧 stub (501) | `DELETE /my/account` |
 
 ---
 
@@ -40,6 +41,59 @@
 ---
 
 ## API 목록
+
+### GET /my/profile
+
+현재 사용자의 마이페이지 프로필을 반환합니다.
+
+**Response**
+
+```json
+{
+  "id": 1,
+  "email": "demo-user@demo.deundeun.xyz",
+  "nickname": "든든데모",
+  "onboarding_step": "COMPLETED",
+  "timezone": "Asia/Seoul",
+  "status": "ACTIVE",
+  "created_at": "2026-07-01T13:00:00Z"
+}
+```
+
+### PATCH /my/profile
+
+현재 사용자의 닉네임을 수정하고 수정된 프로필 전체를 반환합니다.
+
+**Request**
+
+```json
+{ "nickname": "수정된닉네임" }
+```
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `nickname` | `string` | 1~50자. 빈 body 또는 `null`은 `400 PROFILE_UPDATE_EMPTY` |
+
+**Response**: `GET /my/profile`과 동일한 전체 프로필 반환
+
+### DELETE /my/account
+
+현재 계정을 소프트 탈퇴 처리합니다.
+
+- `users.status`를 `DELETED`로 변경합니다.
+- 모든 refresh token을 폐기합니다.
+- `token_version`을 증가시켜 기존 access token도 이후 요청에서 무효화합니다.
+
+**Response**
+
+```json
+{
+  "success": true,
+  "message": "회원탈퇴가 완료되었습니다.",
+  "data": null,
+  "error_code": null
+}
+```
 
 ### GET /my/connected-apps
 
@@ -159,6 +213,16 @@ curl -s -X PATCH -H "Authorization: Bearer $TOKEN" "$BASE/my/connected-apps/SAMS
 
 # 알림 설정 조회
 curl -s -H "Authorization: Bearer $TOKEN" "$BASE/my/notification-settings" | jq
+
+# 프로필 조회
+curl -s -H "Authorization: Bearer $TOKEN" "$BASE/my/profile" | jq
+
+# 닉네임 수정
+curl -s -X PATCH \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"nickname": "수정된닉네임"}' \
+  "$BASE/my/profile" | jq
 
 # 미션 리마인드 끄기
 curl -s -X PATCH \

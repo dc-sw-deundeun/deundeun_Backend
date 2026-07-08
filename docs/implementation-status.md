@@ -135,8 +135,11 @@ OCR 업로드 플로우 상세는 [api-record-ocr.md](./api-record-ocr.md) 참�
 | PATCH | `/connected-apps/{provider}` | 연동 앱 상태 토글 |
 | GET | `/notification-settings` | 알림 설정 조회, 없으면 기본값 자동 생성 |
 | PATCH | `/notification-settings` | 알림 설정 부분 업데이트 |
+| GET | `/profile` | 마이페이지 프로필 조회 |
+| PATCH | `/profile` | 닉네임 수정 |
+| DELETE | `/account` | 회원탈퇴(소프트 탈퇴, 세션 무효화) |
 
-`GET /profile`, `PATCH /password`, `GET/PATCH /app-lock`, `POST /support`, `DELETE /account`는 후속 Phase placeholder입니다. 비밀번호 재설정은 Auth API를 사용합니다.
+`PATCH /password`, `GET/PATCH /app-lock`, `POST /support`는 후속 Phase placeholder입니다. 비밀번호 재설정은 Auth API를 사용합니다.
 
 ### Search `/api/v1/search`
 
@@ -174,7 +177,7 @@ PKG는 미션 생성 엔진이 소비하는 서버/내부 계약입니다. 로�
 | Prefix | 상태 |
 |--------|------|
 | `/api/v1/missions/*` | `/today`, `/{id}/complete` 외 미션 인증·캘린더·통계·알림 발송 미완성 |
-| `/api/v1/my/profile`, `/api/v1/my/app-lock`, `/api/v1/my/support`, `/api/v1/my/account` | 마이페이지 후속 기능 미완성 |
+| `/api/v1/my/app-lock`, `/api/v1/my/support` | 마이페이지 후속 기능 미완성 |
 
 ## 마이그레이션
 
@@ -194,7 +197,7 @@ PKG는 미션 생성 엔진이 소비하는 서버/내부 계약입니다. 로�
 ## 다음 구현 우선순위
 
 1. Phase 5 Mission 확장: complete→`gain_exp`·LEVEL_UP 루프, 인증·캘린더·통계
-2. My 후속: 프로필, 앱잠금, 문의, 계정삭제
+2. My 후속: 앱잠금, 문의, 비밀번호 변경
 3. Notification 7b: push, 리마인드 scheduler workers
 5. Legacy Analysis 도메인 제거 또는 migration 정리 정책 확정
 
