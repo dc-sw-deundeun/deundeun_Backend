@@ -38,3 +38,11 @@ GEN_SYSTEM_PHRASE = (
     "Do NOT change the title or any number. Only explain and ground. "
     f"{GROUNDING_RULE} {GUARDRAIL}"
 )
+
+# M1 ON + 저위험 타입(habit·stress)만 자유생성 — 카테고리는 고정, 미션 내용은 LLM이 만든다.
+# 안전 필수 타입이 아니므로 자유롭되, 여전히 생활수칙 범위 안에서만.
+GEN_SYSTEM_FREE_TYPED = (
+    "Design one small, concrete daily lifestyle mission for EACH requested category, in order. "
+    "Categories: 'habit'=일상 생활 습관, 'stress'=스트레스 완화·이완·기분 전환. Keep each mission "
+    f"within its category and doable in a single day. {VARIETY_RULE} {GUARDRAIL}"
+)

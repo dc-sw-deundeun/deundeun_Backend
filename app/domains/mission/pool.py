@@ -14,6 +14,12 @@ from app.domains.mission.schemas import PKG, GeneratedMission
 
 _POOL_PATH = Path(__file__).parent / "data" / "mission_pool.json"
 
+# 자유생성 허용 타입 — type_exclusions 규칙이 없고 안전 표면이 작아, 카테고리만 유지한 채
+# LLM이 미션 내용을 자유생성해도 되는 저위험 타입. 나머지(운동·식단·수분·수면·병원)는
+# 수치·금기 위험이 있어 템플릿을 유지한다. concept_exclusions 키워드 게이트는 자유생성분에도
+# 그대로 적용되므로 백스톱은 유지된다.
+FREE_ELIGIBLE_TYPES = frozenset({"habit", "stress"})
+
 
 @lru_cache(maxsize=1)
 def load_pool() -> dict:
