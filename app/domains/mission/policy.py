@@ -1,4 +1,5 @@
 import logging
+import re
 from datetime import date, datetime, timezone
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -31,8 +32,51 @@ _DEFAULT_EXP = 10
 
 
 def calculate_exp_reward(mission_type: str) -> int:
-    """미션 타입에 따른 경험치 보상량을 계산합니다."""
+    """미션 타입에 따른 경험치 보상량을 계산합니다(레거시 mock seam용)."""
     return _EXP_BY_TYPE.get(mission_type, _DEFAULT_EXP)
+
+
+# --- 생성 미션 보상/수행시각 (난이도 기반 EXP + 규칙 기반 수행 시각) -----------------
+
+
+def xp_for_difficulty(difficulty: int) -> int:
+    """난이도 기반 EXP 보상 — difficulty 1→10, 2→20, 3→30 (최소 1로 취급)."""
+    return max(1, int(difficulty)) * 10
+
+
+# when(의미적 시점) 우선 매핑 → HH:MM.
+_TIME_BY_WHEN = {
+    "기상 후": "07:00",
+    "식후": "13:00",
+    "취침 전": "22:00",
+    "낮 시간": "15:00",
+}
+# when이 없을 때 mission_type 기반 기본 시각.
+_TIME_BY_TYPE = {
+    "hydration": "09:00",
+    "exercise": "18:00",
+    "diet": "12:00",
+    "sleep": "22:00",
+    "stress": "20:00",
+    "habit": "10:00",
+    "checkup_followup": "10:00",
+}
+_DEFAULT_TIME = "12:00"
+_TIME_RE = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
+
+
+def suggested_time(mission_type: str, when: str) -> str:
+    """규칙 기반 예상 수행 시각(HH:MM). when(식후 등)을 우선하고, 없으면 타입 기본값."""
+    if when in _TIME_BY_WHEN:
+        return _TIME_BY_WHEN[when]
+    return _TIME_BY_TYPE.get(mission_type, _DEFAULT_TIME)
+
+
+def normalize_time(candidate: str | None, mission_type: str, when: str) -> str:
+    """LLM이 준 수행 시각을 검증 — HH:MM(24h) 형식이면 채택, 아니면 규칙값으로 폴백."""
+    if candidate and _TIME_RE.match(candidate.strip()):
+        return candidate.strip()
+    return suggested_time(mission_type, when)
 
 
 def calculate_weekly_statistics(user_missions: list) -> dict:
