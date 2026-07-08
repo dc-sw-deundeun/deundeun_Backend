@@ -16,6 +16,9 @@ def compute_params(template: dict, pkg_client: PKGClient, pkg: PKG) -> dict:
     wear = pkg_client.wearable()
     sr = pkg_client.history().success_rate
     flags = pkg_client.flags()
+    # 검진 지표가 악화 추세면 저위험 슬롯만 소폭 강화한다. 운동 duration은 악화 시
+    # 자동으로 올리지 않는다(안전 — 악화 중인 사람에게 강도를 높이지 않음).
+    has_adverse_trend = any(t.adverse for t in pkg_client.trends())
     params: dict = {}
     for name, spec in slots.items():
         base = spec.get("base")
@@ -37,6 +40,8 @@ def compute_params(template: dict, pkg_client: PKGClient, pkg: PKG) -> dict:
             v = base
             if sr is not None and sr < 0.3 and isinstance(v, int) and v > 1:
                 v = max(int(v * 0.7), 1)
+            elif has_adverse_trend and isinstance(v, int):
+                v = v + 1  # 악화 추세 → 저위험 슬롯 소폭 강화(상황 반영)
             params[name] = v
         elif name == "topic":
             topics = pool.referral_topics(pkg)
