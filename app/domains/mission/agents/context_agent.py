@@ -16,6 +16,7 @@ class ContextAgent:
             conditions=pkg_client.conditions(),
             medications=pkg_client.medications(),
             wearable=pkg_client.wearable(),
+            trends=pkg_client.trends(),
             success_rate=history.success_rate,
             recent_mission_titles=history.recent_mission_titles,
         )

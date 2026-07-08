@@ -12,7 +12,8 @@ import logging
 from app.core.exceptions import NotFoundException
 from app.domains.analysis.repository import AnalysisRepository
 from app.domains.health_metric.repository import HealthMetricAnalysisRepository
-from app.domains.mission.schemas import PKG, Demographics
+from app.domains.mission.schemas import PKG, Demographics, MetricTrend
+from app.domains.ocr.status import VerificationStatus
 from app.domains.pkg import graph
 from app.domains.pkg.adapter import (
     MetricReading,
@@ -20,6 +21,7 @@ from app.domains.pkg.adapter import (
     derive_from_evaluated,
 )
 from app.domains.pkg.repository import PkgRepository
+from app.domains.pkg.trends import compute_trends, group_trend_values
 from app.domains.record.repository import RecordRepository
 
 logger = logging.getLogger(__name__)
@@ -71,12 +73,30 @@ class PkgService:
             demographics=Demographics(),
             conditions=conditions,
             medications=[],  # v1: 앱에 약 소스 없음 (약 기반 회피는 mission_pool이 담당)
+            trends=self._compute_trends(user_id, record.id),
             nodes=nodes,
             edges=edges,
             flags=flags,
         )
         self._persist_snapshot(user_id, pkg, record.id)
         return pkg
+
+    def _compute_trends(self, user_id: int, record_id: int) -> list[MetricTrend]:
+        """최신 검진의 지표들을 유저의 검증검진 시계열에서 추적해 궤적(추세)을 만든다.
+
+        관측이 1회뿐이면 방향을 못 정해 빈 리스트가 된다(신규 유저는 자연히 추세 없음).
+        추세는 부가 신호(빈 리스트도 유효)이므로, 계산 실패가 PKG 빌드 전체를 막지 않도록
+        폴백한다(_persist_snapshot과 동일 철학).
+        """
+        try:
+            codes = sorted({m.metric_code for m in self._record_repo.list_metrics(record_id)})
+            series = self._record_repo.list_trend_series(
+                user_id, codes, verification_status=VerificationStatus.VERIFIED.value
+            )
+            return compute_trends(group_trend_values((m.metric_code, m.value) for _, m in series))
+        except Exception:
+            logger.warning("trend computation failed; returning empty trends", exc_info=True)
+            return []
 
     def _persist_snapshot(self, user_id: int, pkg: PKG, record_id: int) -> None:
         """스냅샷 영속(유저당 1행 교체). 실패해도 PKG 응답은 유지한다."""

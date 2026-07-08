@@ -20,6 +20,15 @@ GROUNDING_RULE = (
     "translate, or invent relations. If none fits a mission, leave its grounded_on empty."
 )
 
+# context.trends: 이 사람의 최근 검진 지표 궤적. 설명에서 상황을 언급해 개인화하되 진단 금지.
+TREND_RULE = (
+    "The context may include 'trends' — the user's recent checkup metric trajectory "
+    "(direction up/down/flat, and whether that direction is adverse for health). When a trend is "
+    "adverse, you MAY briefly reference it in the Korean rationale to motivate the mission "
+    "(e.g. mention the metric is trending in a concerning direction). Never diagnose, never claim "
+    "the mission treats or causes a change in the metric, and never invent numbers."
+)
+
 # M1 OFF — LLM이 미션 전체(제목·수치 포함)를 생성
 VARIETY_RULE = (
     "Avoid repeating the user's recent_missions; prefer fresh actions the user has not done "
@@ -27,8 +36,9 @@ VARIETY_RULE = (
 )
 GEN_SYSTEM_FULL = (
     "You design personalized daily health missions from a user's context (conditions, "
-    "medications, wearable stats, optional relation chains). Produce small, concrete missions "
-    f"that address the user's conditions. {VARIETY_RULE} {GROUNDING_RULE} {GUARDRAIL}"
+    "medications, wearable stats, metric trends, optional relation chains). Produce small, concrete "
+    f"missions that address the user's conditions. {VARIETY_RULE} {GROUNDING_RULE} {TREND_RULE} "
+    f"{GUARDRAIL}"
 )
 
 # M1 ON — 제목/수치는 고정된 미션을 받아 rationale·grounded_on만 채움(숫자 변경 금지)
@@ -36,7 +46,7 @@ GEN_SYSTEM_PHRASE = (
     "You are given fixed daily health missions whose titles and numbers are already decided by "
     "deterministic rules. For each mission, write a short Korean rationale and select grounding. "
     "Do NOT change the title or any number. Only explain and ground. "
-    f"{GROUNDING_RULE} {GUARDRAIL}"
+    f"{GROUNDING_RULE} {TREND_RULE} {GUARDRAIL}"
 )
 
 # M1 ON + 저위험 타입(habit·stress)만 자유생성 — 카테고리는 고정, 미션 내용은 LLM이 만든다.

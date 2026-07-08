@@ -67,6 +67,23 @@ class History(BaseModel):
     recent_mission_titles: list[str] = Field(default_factory=list)
 
 
+class MetricTrend(BaseModel):
+    """검진 지표의 시점 간 변화(궤적) — 같은 조건이라도 사람마다 달라지는 개인화 축.
+
+    direction은 원시 수치의 방향(up/down/flat), adverse는 그 방향이 건강에 불리한지
+    (지표 극성 적용: 혈압·혈당·BMI·LDL 등은 상승이, HDL·eGFR·혈색소는 하락이 불리).
+    """
+
+    code: str  # canonical 지표코드 (BP_SYS, FPG, BMI ...)
+    label: str = ""  # 한국어 표시명 (수축기 혈압 ...)
+    direction: Literal["up", "down", "flat"] = "flat"
+    latest: float | None = None
+    previous: float | None = None
+    delta: float | None = None  # latest - previous
+    points: int = 0  # 관측 횟수
+    adverse: bool = False  # 이 방향이 건강에 불리한가
+
+
 class GroundTruth(BaseModel):
     """평가용 정답 — 페르소나별로 사전 정의."""
 
@@ -88,6 +105,7 @@ class PKG(BaseModel):
     medications: list[str] = Field(default_factory=list)  # canonical drug id
     wearable: Wearable = Field(default_factory=Wearable)
     history: History = Field(default_factory=History)
+    trends: list[MetricTrend] = Field(default_factory=list)  # 검진 지표 궤적(개인화)
     nodes: list[PkgNode] = Field(default_factory=list)
     edges: list[PkgEdge] = Field(default_factory=list)
     flags: dict[str, bool] = Field(default_factory=dict)  # cardiovascular_risk 등
@@ -131,6 +149,7 @@ class StructuredContext(BaseModel):
     medications: list[str] = Field(default_factory=list)
     relations: list[Relation] = Field(default_factory=list)  # M3 ON일 때만 채워짐
     wearable: Wearable = Field(default_factory=Wearable)
+    trends: list[MetricTrend] = Field(default_factory=list)  # 검진 지표 궤적(개인화)
     success_rate: float | None = None
     recent_mission_titles: list[str] = Field(default_factory=list)  # 최근 배정분(반복 회피용)
 

@@ -159,6 +159,10 @@ class Generator:
             "relations": [r.text for r in ctx.relations],  # 추론용(M3 OFF면 빈 리스트)
             "allowed_groundings": list(dict.fromkeys(r.cite for r in ctx.relations if r.cite)),
             "steps_avg": ctx.wearable.steps_avg,
+            "trends": [  # 검진 지표 궤적 — 설명에서 이 사람의 상황을 언급하도록
+                {"metric": t.label or t.code, "direction": t.direction, "adverse": t.adverse}
+                for t in ctx.trends
+            ],
             "success_rate": ctx.success_rate,
             "recent_missions": ctx.recent_mission_titles,  # 최근 배정분 — 반복 피하도록
         }
