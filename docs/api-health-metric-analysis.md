@@ -50,7 +50,7 @@ Content-Type: application/json
 
 | 필드 | 필수 | 설명 |
 |------|------|------|
-| `record_id` | 아니오 | 저장된 검진 기록과 분석을 연결할 때 사용합니다. 제공하면 현재 사용자 소유 기록인지 확인하고, OCR 기록은 검수 완료 상태여야 합니다. |
+| `record_id` | 아니오 | 저장된 검진 기록과 분석을 연결할 때 사용합니다. 제공하면 현재 사용자 소유 기록인지 확인합니다. |
 | `sex` | 예 | 성별 기준이 필요한 지표 판정에 사용합니다. 예: `male`, `female`, `M`, `F` |
 | `measured_at` | 아니오 | 검진일 또는 측정일입니다. ISO date/datetime 문자열을 받습니다. |
 | `metrics` | 예 | 확정된 건강검진 지표 배열입니다. 최소 1개, 최대 100개입니다. |
@@ -212,7 +212,6 @@ Authorization: Bearer <access_token>
 | 요청 body validation 실패 | `422` |
 | 분석 가능한 metric이 없음 | `422 NO_ANALYZABLE_HEALTH_METRICS` |
 | `record_id`가 존재하지 않거나 다른 사용자의 기록 | `404` |
-| OCR 검진 기록이 검수 완료 전임 | `409 NOT_VERIFIED` |
 | 생성 rate limit 초과 | `429 RATE_LIMIT_EXCEEDED` |
 | 다른 사용자의 분석 조회 또는 없는 분석 ID | `404 HEALTH_METRIC_ANALYSIS_NOT_FOUND` |
 

@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import ConflictException, NotFoundException, UnprocessableEntityException
+from app.core.exceptions import NotFoundException, UnprocessableEntityException
 from app.domains.health_metric.explanation_service import HealthMetricExplanationService
 from app.domains.health_metric.models import (
     HealthMetricAnalysis,
@@ -761,7 +761,7 @@ class HealthMetricAnalysisService:
         user_id: int,
         measured_at: datetime | None,
     ) -> HealthMetricAnalysisResponse:
-        record = self._validated_record(user_id=user_id, record_id=request.record_id)
+        record = self._linked_record(user_id=user_id, record_id=request.record_id)
         effective_measured_at = measured_at or (record.measured_at if record is not None else None)
         sources = self._to_evaluation_sources(request)
         if not sources:
@@ -884,20 +884,12 @@ class HealthMetricAnalysisService:
             )
         return self._to_response(analysis)
 
-    def _validated_record(self, *, user_id: int, record_id: int | None) -> CheckupRecord | None:
+    def _linked_record(self, *, user_id: int, record_id: int | None) -> CheckupRecord | None:
         if record_id is None:
             return None
         record = self._record_repo.get_record_for_user(user_id, record_id)
         if record is None:
             raise NotFoundException(message="검진 기록을 찾을 수 없습니다.")
-        if (
-            record.source_type != "MANUAL"
-            and record.verification_status != VerificationStatus.VERIFIED.value
-        ):
-            raise ConflictException(
-                message="검수가 완료되지 않은 기록은 분석할 수 없습니다.",
-                error_code="NOT_VERIFIED",
-            )
         return record
 
     def _to_evaluation_sources(

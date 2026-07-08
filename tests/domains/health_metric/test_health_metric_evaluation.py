@@ -490,7 +490,7 @@ def test_create_analysis_links_record_and_record_analysis_endpoint(
             fastapi_app.dependency_overrides[get_current_user] = previous_user_override
 
 
-def test_create_analysis_rejects_unverified_ocr_record(client, db_session, monkeypatch) -> None:
+def test_create_analysis_allows_unverified_ocr_record(client, db_session, monkeypatch) -> None:
     monkeypatch.setattr(settings, "openai_api_key", None)
     user_id = 1
     _create_user(db_session, user_id=user_id)
@@ -505,7 +505,7 @@ def test_create_analysis_rejects_unverified_ocr_record(client, db_session, monke
     previous_user_override = fastapi_app.dependency_overrides.get(get_current_user)
     fastapi_app.dependency_overrides[get_current_user] = lambda: CurrentUser(id=user_id)
     try:
-        response = client.post(
+        create_response = client.post(
             "/api/v1/health-metrics/analyses",
             json={
                 "record_id": record.id,
@@ -521,8 +521,11 @@ def test_create_analysis_rejects_unverified_ocr_record(client, db_session, monke
             },
         )
 
-        assert response.status_code == 409
-        assert response.json()["error_code"] == "NOT_VERIFIED"
+        assert create_response.status_code == 200
+        analysis = db_session.query(HealthMetricAnalysis).one()
+        db_session.refresh(record)
+        assert analysis.record_id == record.id
+        assert record.analysis_status == "COMPLETED"
     finally:
         if previous_user_override is None:
             fastapi_app.dependency_overrides.pop(get_current_user, None)
