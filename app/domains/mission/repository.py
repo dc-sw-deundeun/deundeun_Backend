@@ -4,6 +4,7 @@ from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
+from app.domains.mission import policy
 from app.domains.mission.models import MissionGenerationRun, MissionTemplate, UserMission
 from app.domains.mission.schemas import GeneratedMission, History
 
@@ -78,7 +79,7 @@ class MissionRepository:
             template_id=None,
             assigned_date=assigned_date,
             status="ASSIGNED",
-            xp_reward=0,
+            xp_reward=policy.xp_for_difficulty(mission.difficulty),
             template_code=mission.template_id,
             payload=mission.model_dump(mode="json"),
         )

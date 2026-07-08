@@ -86,7 +86,7 @@
           "rationale": "",
           "mission_type": "",
           "difficulty": 1,
-          "execution": { "when": "", "duration_min": null },
+          "execution": { "when": "", "duration_min": null, "time": "" },
           "grounded_on": [],
           "source": "generated",
           "description": "오늘 하루 건강 상태를 스스로 확인해 보세요.",
@@ -99,13 +99,13 @@
           "title": "식후 15분 걷기",
           "status": "ASSIGNED",
           "assigned_date": "2026-07-02",
-          "xp_reward": 0,
+          "xp_reward": 20,
           "completed_at": null,
           "source_record_id": null,
           "rationale": "고혈압 관리를 위해 식후 가벼운 운동이 도움이 됩니다.",
           "mission_type": "exercise",
           "difficulty": 2,
-          "execution": { "when": "식후", "duration_min": 15 },
+          "execution": { "when": "식후", "duration_min": 15, "time": "13:00" },
           "grounded_on": ["고혈압->심혈관질환"],
           "source": "generated",
           "description": null,
@@ -160,7 +160,7 @@
 | `items[].title` | `string` | 미션 제목 |
 | `items[].status` | `"ASSIGNED"\|"COMPLETED"` | 현재 상태 |
 | `items[].assigned_date` | `date` | 배정일 |
-| `items[].xp_reward` | `int` | 미션 보상 EXP 값(엔진 생성분은 현재 `0` — EXP 지급 루프 미연결) |
+| `items[].xp_reward` | `int` | 미션 보상 EXP. 엔진 생성분은 **난이도 기반**(difficulty×10 = 10/20/30). 레거시는 템플릿 `default_xp`. (완료→캐릭터 EXP 지급 루프는 Phase 5 미연결) |
 | `items[].completed_at` | `string\|null` | 완료 처리 시각(ISO datetime), 미완료면 `null` |
 | `items[].source_record_id` | `int\|null` | 미션 생성 원천 검진 기록. 엔진 생성분은 현재 `null`(미설정) |
 | `items[].rationale` | `string` | **엔진 생성분만**: 이 미션을 추천한 이유. 레거시는 `""` |
@@ -168,6 +168,7 @@
 | `items[].difficulty` | `int` | **엔진 생성분만**: 난이도(1부터). 레거시는 `1` |
 | `items[].execution.when` | `string` | **엔진 생성분만**: 수행 시점(예: "식후"). 레거시는 `""` |
 | `items[].execution.duration_min` | `int\|null` | **엔진 생성분만**: 소요 시간(분) |
+| `items[].execution.time` | `string` | **엔진 생성분만**: 예상 수행 시각 `"HH:MM"`(프론트 알람용). 규칙 기본값을 LLM이 미션 맥락에 맞게 조정, 형식 오류 시 규칙값 폴백. 레거시는 `""` |
 | `items[].grounded_on` | `string[]` | **엔진 생성분만**: 근거로 인용한 PKG 관계. 레거시는 `[]` |
 | `items[].source` | `string` | **엔진 생성분만**: `generated`\|`fallback`(LLM 실패 시 결정적 템플릿 사용) |
 | `items[].description` | `string\|null` | **레거시만**: `mission_templates.description`. 엔진 생성분은 `null` |

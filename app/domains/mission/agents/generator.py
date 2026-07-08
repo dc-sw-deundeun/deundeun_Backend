@@ -11,7 +11,7 @@ LLM이 없으면(키 없음/실패) 결정적 fallback 미션을 만든다.
 import re
 from typing import Any
 
-from app.domains.mission import pool, prompts
+from app.domains.mission import policy, pool, prompts
 from app.domains.mission.agents.base import LLMClient, Usage
 from app.domains.mission.agents.params import build_seeds
 from app.domains.mission.pkg import PKGClient
@@ -141,7 +141,15 @@ class Generator:
     ) -> tuple[list[MissionCandidate], Usage]:
         user = {
             "context": self._ctx_payload(ctx),
-            "missions": [{"index": i, "title": s.title} for i, s in enumerate(seeds)],
+            "missions": [
+                {
+                    "index": i,
+                    "title": s.title,
+                    "mission_type": s.mission_type,
+                    "when": s.execution.when,
+                }
+                for i, s in enumerate(seeds)
+            ],
         }
         if config.M5_structured:
             data, usage = await self.llm.structured(
@@ -180,7 +188,9 @@ class Generator:
                     rationale=(m.get("rationale") or "").strip(),
                     grounded_on=[g for g in (m.get("grounded_on") or []) if g],
                     execution=Execution(
-                        when=(ex.get("when") or ""), duration_min=ex.get("duration_min")
+                        when=(ex.get("when") or ""),
+                        duration_min=ex.get("duration_min"),
+                        time=policy.normalize_time(ex.get("time"), mt, ex.get("when") or ""),
                     ),
                     difficulty=max(1, int(m.get("difficulty") or 1)),
                     mission_type=mt,
@@ -195,11 +205,13 @@ class Generator:
         out = []
         for i, seed in enumerate(seeds):
             it = by_index.get(i, {})
+            time = policy.normalize_time(it.get("time"), seed.mission_type, seed.execution.when)
             out.append(
                 seed.model_copy(
                     update={
                         "rationale": (it.get("rationale") or "").strip(),
                         "grounded_on": [g for g in (it.get("grounded_on") or []) if g],
+                        "execution": seed.execution.model_copy(update={"time": time}),
                     }
                 )
             )
@@ -286,8 +298,9 @@ _EXECUTION_SCHEMA = {
     "properties": {
         "when": {"type": "string"},
         "duration_min": {"type": ["integer", "null"]},
+        "time": {"type": "string"},
     },
-    "required": ["when", "duration_min"],
+    "required": ["when", "duration_min", "time"],
     "additionalProperties": False,
 }
 
@@ -333,8 +346,9 @@ _PHRASE_SCHEMA = {
                     "index": {"type": "integer"},
                     "rationale": {"type": "string"},
                     "grounded_on": {"type": "array", "items": {"type": "string"}},
+                    "time": {"type": "string"},
                 },
-                "required": ["index", "rationale", "grounded_on"],
+                "required": ["index", "rationale", "grounded_on", "time"],
                 "additionalProperties": False,
             },
         }

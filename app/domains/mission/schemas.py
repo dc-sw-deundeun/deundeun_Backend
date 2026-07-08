@@ -157,6 +157,7 @@ class StructuredContext(BaseModel):
 class Execution(BaseModel):
     when: str = ""  # "식후" 등
     duration_min: int | None = Field(default=None, ge=0)
+    time: str = ""  # 예상 수행 시각 "HH:MM"(알람용) — 규칙 기본값 후 LLM이 덮음
 
 
 class MissionCandidate(BaseModel):
