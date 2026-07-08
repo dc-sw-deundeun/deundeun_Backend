@@ -108,6 +108,28 @@ def test_build_pkg_uses_latest_verified_record(db_session) -> None:
     assert pkg.conditions == ["type2_diabetes"]
 
 
+def test_build_pkg_populates_metric_trends(db_session) -> None:
+    # 같은 지표를 시점별로 두 번 검진 → 추세(상승)가 PKG에 채워진다.
+    _create_user(db_session, 11)
+    _seed_record(db_session, 11, [("systolic_bp", "130")])  # 이전
+    _seed_record(db_session, 11, [("systolic_bp", "150")])  # 최근 → 상승
+    pkg = _service(db_session).build_pkg(11)
+
+    bp = next((t for t in pkg.trends if t.code == "BP_SYS"), None)
+    assert bp is not None
+    assert bp.direction == "up"
+    assert bp.adverse is True  # 혈압 상승 = 불리
+    assert bp.points == 2
+
+
+def test_build_pkg_single_record_has_no_trends(db_session) -> None:
+    # 관측이 1회뿐이면 추세를 만들지 않는다(방향 판단 불가).
+    _create_user(db_session, 12)
+    _seed_record(db_session, 12, [("systolic_bp", "150")])
+    pkg = _service(db_session).build_pkg(12)
+    assert pkg.trends == []
+
+
 def test_build_pkg_prefers_healthmetric_evaluated_result(db_session) -> None:
     # record 원시 수치는 정상(systolic 120)이지만, health_metric 결과물엔 위험 판정이 있다.
     _create_user(db_session, 5)  # HealthMetricAnalysis.user_id는 users FK
