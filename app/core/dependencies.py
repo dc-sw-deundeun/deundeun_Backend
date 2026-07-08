@@ -19,6 +19,7 @@ from app.domains.onboarding.service import OnboardingService
 from app.domains.user.models import User, UserStatus
 from app.domains.user.repository import UserRepository
 from app.domains.user.schemas import CurrentUser
+from app.domains.user.service import UserService
 from app.infrastructure.email.email_client import EmailClient
 from app.infrastructure.email.factory import get_email_client
 from app.infrastructure.wearable.factory import get_wearable_client
@@ -44,6 +45,10 @@ def get_auth_service(
 
 def get_user_repository(db: Session = Depends(get_db)) -> UserRepository:
     return UserRepository(db)
+
+
+def get_user_service(db: Session = Depends(get_db)) -> UserService:
+    return UserService(UserRepository(db))
 
 
 def get_wearable_client_dep() -> WearableClient:

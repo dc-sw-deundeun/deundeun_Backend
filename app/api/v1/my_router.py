@@ -3,8 +3,8 @@ from sqlalchemy import func
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
-from app.core.dependencies import get_current_user
-from app.core.response import not_implemented_response
+from app.core.dependencies import get_current_user, get_user_service
+from app.core.response import not_implemented_response, success_response
 from app.database.session import get_db
 from app.domains.my.schemas import (
     ConnectedAppsResponse,
@@ -16,7 +16,8 @@ from app.domains.my.schemas import (
 from app.domains.notification.models import NotificationPreference
 from app.domains.onboarding.models import WearableProvider, WearableStatus
 from app.domains.onboarding.repository import OnboardingRepository
-from app.domains.user.schemas import CurrentUser
+from app.domains.user.schemas import CurrentUser, UpdateProfileRequest
+from app.domains.user.service import UserService
 
 router = APIRouter()
 
@@ -30,11 +31,77 @@ _NOTIFICATION_DEFAULTS = {
 
 @router.get(
     "/profile",
-    summary="[프론트 작업 제외] 마이페이지 프로필 placeholder",
-    description="마이페이지 도메인은 아직 구현되지 않았습니다. 현재 프로필 조회는 `GET /auth/me`를 사용하세요.",
+    summary="[프론트 사용] 마이페이지 프로필 조회",
+    description="인증된 사용자의 마이페이지 프로필을 반환합니다. Authorization 헤더 필요.",
+    openapi_extra={
+        "responses": {
+            "200": {
+                "content": {
+                    "application/json": {
+                        "example": {
+                            "success": True,
+                            "message": "요청이 성공했습니다.",
+                            "data": {
+                                "id": 1,
+                                "email": "demo-user@demo.deundeun.xyz",
+                                "nickname": "든든데모",
+                                "onboarding_step": "COMPLETED",
+                                "timezone": "Asia/Seoul",
+                                "status": "ACTIVE",
+                                "created_at": "2026-07-01T13:00:00Z",
+                            },
+                            "error_code": None,
+                        }
+                    }
+                }
+            }
+        }
+    },
 )
-async def get_profile(current_user: CurrentUser = Depends(get_current_user)):
-    return not_implemented_response()
+def get_profile(
+    current_user: CurrentUser = Depends(get_current_user),
+    service: UserService = Depends(get_user_service),
+):
+    profile = service.get_profile(current_user.id)
+    return success_response(data=profile.model_dump(mode="json"))
+
+
+@router.patch(
+    "/profile",
+    summary="[프론트 사용] 마이페이지 프로필 수정",
+    description="현재 사용자의 닉네임을 수정합니다. 변경 후 수정된 프로필 전체를 반환합니다.",
+    openapi_extra={
+        "responses": {
+            "200": {
+                "content": {
+                    "application/json": {
+                        "example": {
+                            "success": True,
+                            "message": "프로필을 수정했습니다.",
+                            "data": {
+                                "id": 1,
+                                "email": "demo-user@demo.deundeun.xyz",
+                                "nickname": "수정된닉네임",
+                                "onboarding_step": "COMPLETED",
+                                "timezone": "Asia/Seoul",
+                                "status": "ACTIVE",
+                                "created_at": "2026-07-01T13:00:00Z",
+                            },
+                            "error_code": None,
+                        }
+                    }
+                }
+            }
+        }
+    },
+)
+def update_profile(
+    body: UpdateProfileRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+    service: UserService = Depends(get_user_service),
+):
+    profile = service.update_profile(current_user.id, body)
+    return success_response(message="프로필을 수정했습니다.", data=profile.model_dump(mode="json"))
 
 
 @router.patch(
@@ -75,11 +142,18 @@ async def submit_support(current_user: CurrentUser = Depends(get_current_user)):
 
 @router.delete(
     "/account",
-    summary="[프론트 작업 제외] 계정 삭제 placeholder",
-    description="계정 삭제 API는 아직 구현되지 않았습니다. 호출 시 NOT_IMPLEMENTED(501)를 반환합니다.",
+    summary="[프론트 사용] 회원탈퇴",
+    description=(
+        "현재 계정을 소프트 탈퇴 처리합니다. 모든 refresh token을 폐기하고 token_version을 증가시켜 "
+        "기존 access token도 이후 요청에서 무효화합니다."
+    ),
 )
-async def delete_account(current_user: CurrentUser = Depends(get_current_user)):
-    return not_implemented_response()
+def delete_account(
+    current_user: CurrentUser = Depends(get_current_user),
+    service: UserService = Depends(get_user_service),
+):
+    service.delete_account(current_user.id)
+    return success_response(message="회원탈퇴가 완료되었습니다.")
 
 
 @router.get(
