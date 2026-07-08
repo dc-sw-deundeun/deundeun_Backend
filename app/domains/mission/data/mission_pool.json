@@ -156,6 +156,166 @@
       "slots": {"topic": {"base": "검진 결과"}},
       "targets": ["anemia", "ckd", "depression_screen"],
       "grounding": []
+    },
+    {
+      "id": "stair_use",
+      "type": "exercise",
+      "template": "엘리베이터 대신 계단 이용하기",
+      "slots": {},
+      "targets": ["obesity", "type2_diabetes", "dyslipidemia", "fatty_liver", "hypertension"],
+      "grounding": []
+    },
+    {
+      "id": "sit_to_stand",
+      "type": "exercise",
+      "template": "앉았다 일어서기 {count}회 하기",
+      "slots": {"count": {"base": 10, "unit": "회"}},
+      "targets": ["obesity", "type2_diabetes", "dyslipidemia"],
+      "grounding": []
+    },
+    {
+      "id": "whole_grain",
+      "type": "diet",
+      "template": "흰쌀밥 대신 잡곡밥 먹기",
+      "slots": {},
+      "targets": ["type2_diabetes", "prediabetes", "dyslipidemia", "obesity", "fatty_liver"],
+      "grounding": []
+    },
+    {
+      "id": "veggie_first",
+      "type": "diet",
+      "template": "식사 때 채소부터 먹기",
+      "slots": {},
+      "targets": ["type2_diabetes", "prediabetes", "obesity", "dyslipidemia"],
+      "grounding": []
+    },
+    {
+      "id": "leave_broth",
+      "type": "diet",
+      "template": "국·찌개 국물 남기기",
+      "slots": {},
+      "targets": ["hypertension", "ckd", "cardiovascular_disease"],
+      "grounding": []
+    },
+    {
+      "id": "slow_eating",
+      "type": "diet",
+      "template": "천천히 꼭꼭 씹어 먹기",
+      "slots": {},
+      "targets": ["gerd", "obesity", "fatty_liver"],
+      "grounding": []
+    },
+    {
+      "id": "avoid_late_snack",
+      "type": "diet",
+      "template": "취침 전 야식 피하기",
+      "slots": {},
+      "targets": ["obesity", "fatty_liver", "gerd", "type2_diabetes"],
+      "grounding": []
+    },
+    {
+      "id": "less_processed",
+      "type": "diet",
+      "template": "가공식품 대신 자연식품 고르기",
+      "slots": {},
+      "targets": ["hypertension", "dyslipidemia", "obesity"],
+      "grounding": []
+    },
+    {
+      "id": "morning_water",
+      "type": "hydration",
+      "template": "기상 후 물 한 잔 마시기",
+      "slots": {},
+      "targets": ["gout"],
+      "grounding": []
+    },
+    {
+      "id": "no_screen_before_bed",
+      "type": "sleep",
+      "template": "잠들기 30분 전 스마트폰 멀리하기",
+      "slots": {},
+      "targets": ["insomnia", "depression_screen"],
+      "grounding": []
+    },
+    {
+      "id": "fixed_wake_time",
+      "type": "sleep",
+      "template": "매일 같은 시간에 일어나기",
+      "slots": {},
+      "targets": ["insomnia", "depression_screen"],
+      "grounding": []
+    },
+    {
+      "id": "limit_caffeine_pm",
+      "type": "sleep",
+      "template": "오후엔 커피·카페인 줄이기",
+      "slots": {},
+      "targets": ["insomnia", "hypertension"],
+      "grounding": []
+    },
+    {
+      "id": "gratitude_note",
+      "type": "stress",
+      "template": "오늘 감사한 일 한 가지 적어보기",
+      "slots": {},
+      "targets": ["depression_screen"],
+      "grounding": []
+    },
+    {
+      "id": "short_break",
+      "type": "stress",
+      "template": "일하는 중 5분 눈 감고 쉬기",
+      "slots": {},
+      "targets": ["depression_screen", "hypertension", "insomnia"],
+      "grounding": []
+    },
+    {
+      "id": "nature_moment",
+      "type": "stress",
+      "template": "창밖을 보며 잠시 숨 고르기",
+      "slots": {},
+      "targets": ["depression_screen", "hypertension"],
+      "grounding": []
+    },
+    {
+      "id": "posture_check",
+      "type": "habit",
+      "template": "바른 자세로 앉기 신경 쓰기",
+      "slots": {},
+      "targets": [],
+      "grounding": []
+    },
+    {
+      "id": "stretch_break",
+      "type": "habit",
+      "template": "한 시간마다 몸 가볍게 펴기",
+      "slots": {},
+      "targets": [],
+      "grounding": []
+    },
+    {
+      "id": "mindful_meal",
+      "type": "habit",
+      "template": "핸드폰 없이 식사에 집중하기",
+      "slots": {},
+      "targets": ["obesity", "gerd"],
+      "grounding": []
+    },
+    {
+      "id": "leg_elevation",
+      "type": "habit",
+      "template": "다리를 심장보다 높게 올려 잠시 쉬기",
+      "slots": {},
+      "targets": ["ankle_edema"],
+      "grounding": []
+    },
+    {
+      "id": "gentle_stretch",
+      "type": "exercise",
+      "template": "관절에 무리 없이 가볍게 스트레칭하기",
+      "slots": {},
+      "targets": ["osteoarthritis"],
+      "grounding": []
     }
   ]
 }
