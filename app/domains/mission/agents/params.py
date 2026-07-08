@@ -4,7 +4,7 @@
 표현(rationale)만 담당한다 — "숫자·의학 사실은 M1, LLM은 표현만"이라는 핵심 원칙.
 """
 
-from app.domains.mission import pool
+from app.domains.mission import policy, pool
 from app.domains.mission.pkg import PKGClient
 from app.domains.mission.schemas import PKG, Execution, MissionCandidate
 
@@ -81,12 +81,17 @@ def build_seeds(
         title = t["template"].format(**params) if params else t["template"]
         duration = params.get("duration") or params.get("minutes")
         count = params.get("count") or params.get("cups")
+        when = _WHEN.get(t["id"], "")
         seeds.append(
             MissionCandidate(
                 title=title,
                 mission_type=t["type"],
                 template_id=t["id"],
-                execution=Execution(when=_WHEN.get(t["id"], ""), duration_min=duration),
+                execution=Execution(
+                    when=when,
+                    duration_min=duration,
+                    time=policy.suggested_time(t["type"], when),
+                ),
                 difficulty=_difficulty(duration, count),
             )
         )
