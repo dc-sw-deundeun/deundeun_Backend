@@ -26,6 +26,7 @@ Content-Type: application/json
 
 ```json
 {
+  "record_id": 22,
   "sex": "male",
   "measured_at": "2026-06-20",
   "metrics": [
@@ -49,7 +50,8 @@ Content-Type: application/json
 
 | 필드 | 필수 | 설명 |
 |------|------|------|
-| `sex` | 아니오 | 성별 기준이 필요한 지표 판정에 사용합니다. 예: `male`, `female` |
+| `record_id` | 아니오 | 저장된 검진 기록과 분석을 연결할 때 사용합니다. 제공하면 현재 사용자 소유 기록인지 확인하고, OCR 기록은 검수 완료 상태여야 합니다. |
+| `sex` | 예 | 성별 기준이 필요한 지표 판정에 사용합니다. 예: `male`, `female`, `M`, `F` |
 | `measured_at` | 아니오 | 검진일 또는 측정일입니다. ISO date/datetime 문자열을 받습니다. |
 | `metrics` | 예 | 확정된 건강검진 지표 배열입니다. 최소 1개, 최대 100개입니다. |
 | `metrics[].metric_code` | 예 | OCR/프론트가 가진 지표 코드입니다. 백엔드에서 canonical code로 매핑합니다. |
@@ -209,6 +211,8 @@ Authorization: Bearer <access_token>
 | 인증 토큰 없음 또는 잘못됨 | `401` |
 | 요청 body validation 실패 | `422` |
 | 분석 가능한 metric이 없음 | `422 NO_ANALYZABLE_HEALTH_METRICS` |
+| `record_id`가 존재하지 않거나 다른 사용자의 기록 | `404` |
+| OCR 검진 기록이 검수 완료 전임 | `409 NOT_VERIFIED` |
 | 생성 rate limit 초과 | `429 RATE_LIMIT_EXCEEDED` |
 | 다른 사용자의 분석 조회 또는 없는 분석 ID | `404 HEALTH_METRIC_ANALYSIS_NOT_FOUND` |
 
@@ -216,6 +220,7 @@ Authorization: Bearer <access_token>
 
 - 저장 버튼은 `POST /health-metrics/analyses`만 호출합니다.
 - 생성 직후 결과 화면이 필요하면 생성 응답이 아니라 별도 조회 API를 호출해야 합니다.
+- OCR/검진 기록에서 분석을 생성하는 경우 `record_id`를 함께 보내야 `GET /records/checkups/{record_id}/analysis`로 최신 분석을 조회할 수 있습니다.
 - 프론트가 OCR confidence, page index, failed page 정보를 분석 API로 넘길 필요는 없습니다.
 - 화면의 range bar는 `range_bar.segments`와 `range_bar.active_segment`를 기준으로 그립니다.
-- 과거 추이는 저장된 HealthMetric 분석 이력을 기준으로 `ui.details[].trend.points`에 포함됩니다.
+- 과거 추이는 `record_id`가 있으면 검진 기록 이력, 없으면 저장된 HealthMetric 분석 이력을 기준으로 `ui.details[].trend.points`에 포함됩니다.

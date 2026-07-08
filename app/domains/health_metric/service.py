@@ -761,6 +761,8 @@ class HealthMetricAnalysisService:
         user_id: int,
         measured_at: datetime | None,
     ) -> HealthMetricAnalysisResponse:
+        record = self._validated_record(user_id=user_id, record_id=request.record_id)
+        effective_measured_at = measured_at or (record.measured_at if record is not None else None)
         sources = self._to_evaluation_sources(request)
         if not sources:
             raise UnprocessableEntityException(
@@ -780,15 +782,15 @@ class HealthMetricAnalysisService:
         trend_points_by_code = self._analysis_trend_points_by_code(
             user_id=user_id,
             results=results,
-            measured_at=measured_at,
+            measured_at=effective_measured_at,
         )
         summary = build_summary_view(results=results, explanation=explanation)
 
         analysis = HealthMetricAnalysis(
             user_id=user_id,
-            record_id=None,
+            record_id=record.id if record is not None else None,
             sex=request.sex,
-            measured_at=measured_at,
+            measured_at=effective_measured_at,
             overall_title=summary.overall.title,
             overall_summary=summary.overall.summary,
             normal_count=summary.overall.counts.get("normal", 0),
@@ -817,6 +819,8 @@ class HealthMetricAnalysisService:
             explanation=explanation,
             details=details,
         )
+        if record is not None:
+            self._record_repo.set_analysis_status(record, "COMPLETED")
         self._db.commit()
         self._db.refresh(analysis)
 
@@ -1097,7 +1101,6 @@ class HealthMetricAnalysisService:
         if not analysis.items and analysis.results_payload is not None:
             return self._legacy_payload_response(analysis)
 
-        trend_points_by_code = self._stored_analysis_trend_points_by_code(analysis)
         results = [
             HealthMetricEvaluationItem(
                 input_label=item.input_metric_name,
@@ -1112,6 +1115,14 @@ class HealthMetricAnalysisService:
             )
             for item in analysis.items
         ]
+        if analysis.record_id is not None and analysis.user_id is not None:
+            trend_points_by_code = self._trend_points_by_code(
+                user_id=analysis.user_id,
+                record_id=analysis.record_id,
+                results=results,
+            )
+        else:
+            trend_points_by_code = self._stored_analysis_trend_points_by_code(analysis)
         item_explanations = [
             HealthMetricItemExplanation(
                 canonical_test_code=item.canonical_test_code,
