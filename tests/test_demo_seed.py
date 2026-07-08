@@ -65,14 +65,13 @@ def test_seed_demo_data_is_idempotent_and_covers_frontend_flows(
         )
         == 2
     )
-    assert (
-        db_session.scalar(
-            select(func.count())
-            .select_from(CharacterOwnedAnimal)
-            .where(CharacterOwnedAnimal.user_id == demo_growth_id)
-        )
-        >= 4
+    owned_animal_count = db_session.scalar(
+        select(func.count())
+        .select_from(CharacterOwnedAnimal)
+        .where(CharacterOwnedAnimal.user_id == demo_growth_id)
     )
+    assert owned_animal_count is not None
+    assert owned_animal_count >= 4
 
     headers = _login_demo(client, "demo-user@demo.deundeun.xyz")
     for path in (
