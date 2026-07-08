@@ -119,7 +119,9 @@ OCR 업로드 플로우 상세는 [api-record-ocr.md](./api-record-ocr.md) 참�
 | GET | `/today` | 사용자 timezone 기준 오늘 미션 목록과 완료 집계 |
 | POST | `/{mission_id}/complete` | 본인 미션 self-report 완료(멱등) |
 
-`POST /{mission_id}/complete`는 self-report 완료(멱등, 상태 전이만)입니다. **캐릭터 EXP 지급·LEVEL_UP 알림은 연결되지 않았으며** Phase 5 확장 대상입니다.
+`POST /{mission_id}/complete`는 self-report 완료(멱등, 상태 전이만)입니다. **캐릭터 EXP 지급·LEVEL_UP 알림은 연결되지 않았으며**(생성 미션이 지닌 `xp_reward` 값을 지급하도록 연결) Phase 5 확장 대상입니다.
+
+생성된 미션은 **난이도 기반 EXP 보상**(`xp_reward` = difficulty×10)과 **예상 수행 시각**(`execution.time`, `HH:MM`, 프론트 알람용)을 함께 담아 `GET /today`로 노출합니다. 수행 시각은 규칙 기반 기본값을 LLM이 미션 맥락에 맞게 덮되, 형식이 어긋나면 규칙값으로 폴백합니다.
 
 `POST /{mission_id}/verify`, `GET /calendar`, `GET /statistics/weekly`, `POST /notifications/send`는 후속 Phase placeholder입니다.
 
