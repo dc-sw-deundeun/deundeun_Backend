@@ -70,12 +70,57 @@ class Generator:
 
         try:
             if config.M1_template:
-                cands, usage = await self._generate_phrase(ctx, seeds or [], config)
+                cands, usage = await self._generate_seeded(ctx, seeds or [], config)
             else:
                 cands, usage = await self._generate_full(ctx, config, n)
             return cands, usage, False
         except Exception:
             return self._fallback(seeds, pkg, n, exclude), Usage(), True
+
+    # ----- M1 ON: 안전 타입은 템플릿(phrase), 저위험 타입은 자유생성 -----
+    async def _generate_seeded(
+        self, ctx: StructuredContext, seeds: list[MissionCandidate], config: PipelineConfig
+    ) -> tuple[list[MissionCandidate], Usage]:
+        safe = [s for s in seeds if s.mission_type not in pool.FREE_ELIGIBLE_TYPES]
+        free = [s for s in seeds if s.mission_type in pool.FREE_ELIGIBLE_TYPES]
+        usage = Usage()
+        out: list[MissionCandidate] = []
+        if safe:
+            cands, u = await self._generate_phrase(ctx, safe, config)
+            out += cands
+            usage = usage.add(u)
+        if free:
+            cands, u = await self._generate_free_typed(ctx, free, config)
+            out += cands
+            usage = usage.add(u)
+        return out, usage
+
+    async def _generate_free_typed(
+        self, ctx: StructuredContext, free_seeds: list[MissionCandidate], config: PipelineConfig
+    ) -> tuple[list[MissionCandidate], Usage]:
+        """저위험 카테고리별로 미션 내용을 자유생성한다. mission_type은 요청 카테고리로 강제하고
+        (LLM 오라벨→게이트 회피 방지), 부족분은 원래 템플릿 seed로 보충한다."""
+        types = [s.mission_type for s in free_seeds]
+        user = {"context": self._ctx_payload(ctx), "categories": types}
+        if config.M5_structured:
+            data, usage = await self.llm.structured(
+                prompts.GEN_SYSTEM_FREE_TYPED, user, _FULL_SCHEMA, "missions"
+            )
+            generated = self._parse_full_structured(data)
+        else:
+            text, usage = await self.llm.text(
+                prompts.GEN_SYSTEM_FREE_TYPED + _FREE_FORMAT_FULL, user
+            )
+            generated = self._parse_full_free(text, len(types))
+
+        out: list[MissionCandidate] = []
+        for i, seed in enumerate(free_seeds):
+            if i < len(generated) and generated[i].title:
+                # 카테고리 강제(요청 타입) — LLM이 다른 타입으로 라벨해도 무시
+                out.append(generated[i].model_copy(update={"mission_type": types[i]}))
+            else:
+                out.append(seed)  # 자유생성 부족분 → 템플릿으로 보충
+        return out, usage
 
     # ----- M1 OFF: 전체 생성 -----
     async def _generate_full(
