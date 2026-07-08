@@ -1,13 +1,12 @@
-"""LLM 호출 클라이언트 (provider 추상화).
+"""LLM 호출 클라이언트 (GPT/OpenAI chat/completions).
 
-OpenAI와 CLOVA Studio(HyperCLOVA X) 모두 **OpenAI 호환 chat/completions** 포맷으로
-호출한다. CLOVA Studio OpenAI 호환 엔드포인트:
-  base_url = https://clovastudio.stream.ntruss.com/v1/openai , POST /chat/completions
+LLM 텍스트 경로는 GPT(OpenAI)로 통일한다.
+  base_url = https://api.openai.com/v1 , POST /chat/completions
   Authorization: Bearer {API Key}
 - 모델·temperature 고정으로 ablation 변수 통제
 - token usage 수집(비용 지표)
-- structured(json) / free-text 모드 지원(M5 토글). strict json_schema는 모델별 지원이
-  달라(예: CLOVA는 HCX-007 전용) **프롬프트-지시 JSON + 견고 파싱**으로 통일한다.
+- structured(json) / free-text 모드 지원(M5 토글). strict json_schema 의존 없이
+  **프롬프트-지시 JSON + 견고 파싱**으로 통일한다.
 SDK 의존성 없이 httpx 직접 호출. 모든 에이전트가 하나의 LLMClient를 공유해 동일 모델·온도 보장.
 """
 
@@ -62,17 +61,8 @@ class LLMClient:
         self.provider = provider
 
     @classmethod
-    def for_provider(cls, provider: str | None = None, temperature: float = 0.3) -> "LLMClient":
-        provider = provider or settings.llm_provider
-        if provider == "clova":
-            return cls(
-                api_key=settings.clova_studio_api_key,
-                base_url=settings.clova_studio_base_url,
-                model=settings.clova_studio_model,
-                temperature=temperature,
-                timeout_seconds=settings.clova_studio_timeout_seconds,
-                provider="clova",
-            )
+    def for_provider(cls, temperature: float = 0.3) -> "LLMClient":
+        """LLM 텍스트 경로는 GPT(OpenAI)로 통일한다. (모델은 settings.openai_model)"""
         return cls(
             api_key=settings.openai_api_key,
             base_url=_OPENAI_BASE,

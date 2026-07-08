@@ -32,7 +32,6 @@ _TODAY = date(2026, 7, 3)
 @pytest.fixture(autouse=True)
 def _no_llm(monkeypatch):
     monkeypatch.setattr(settings, "openai_api_key", None)
-    monkeypatch.setattr(settings, "clova_studio_api_key", None)
 
 
 def _svc(db) -> MissionService:
