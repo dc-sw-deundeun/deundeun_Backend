@@ -104,7 +104,15 @@ def test_ignores_unrelated_relations_and_unmapped_ids() -> None:
 def test_type_guard_blocks_id_collision_across_node_types() -> None:
     # 노출 노드가 우연히 질환 mondo id와 같은 문자열을 가져도, 타입이 disease가 아니면 무시.
     rows = [
-        _row("exposure_disease", "5148", "not a disease", "X", "irrelevant", xt="exposure", yt="disease"),
+        _row(
+            "exposure_disease",
+            "5148",
+            "not a disease",
+            "X",
+            "irrelevant",
+            xt="exposure",
+            yt="disease",
+        ),
     ]
     out = extract_neighborhood(rows, _MONDO)
     # y가 매핑 안 된 'X'라 아무것도 안 담긴다(x의 5148은 exposure 타입이라 조건으로 안 봄).
