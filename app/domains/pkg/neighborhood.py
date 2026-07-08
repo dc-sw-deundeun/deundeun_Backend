@@ -88,6 +88,13 @@ def load_neighborhood() -> dict:
 
 
 def condition_facts(conditions: list[str]) -> dict[str, dict[str, list[str]]]:
-    """유저 조건에 해당하는 KG 이웃 사실만 추린다(시드에 없는 조건은 생략)."""
+    """유저 조건에 해당하는 KG 이웃 사실만 추린다(시드에 없는 조건은 생략).
+
+    lru_cache된 원본을 호출자가 수정해도 캐시가 오염되지 않도록 버킷·리스트까지 복사한다.
+    """
     data = load_neighborhood().get("conditions", {})
-    return {c: data[c] for c in conditions if c in data}
+    return {
+        c: {bucket: list(facts) for bucket, facts in data[c].items()}
+        for c in conditions
+        if c in data
+    }
