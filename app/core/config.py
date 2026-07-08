@@ -36,12 +36,7 @@ class Settings(BaseSettings):
     neo4j_user: str | None = None
     neo4j_password: str | None = None
 
-    # 미션 생성/실험용 LLM provider 선택: "openai" | "clova"
-    llm_provider: str = "openai"
-    clova_studio_api_key: str | None = None
-    clova_studio_base_url: str = "https://clovastudio.stream.ntruss.com/v1/openai"
-    clova_studio_model: str = "HCX-005"
-    clova_studio_timeout_seconds: float = 30.0
+    # 미션 생성 등 LLM 텍스트 경로는 GPT(OpenAI)로 통일. (CLOVA OCR은 별도 서비스로 유지)
 
     health_metric_analysis_rate_limit_per_minute: int = 10
 
@@ -91,13 +86,6 @@ class Settings(BaseSettings):
     ocr_acquire_timeout_seconds: float = 1.0
     ocr_retry_after_seconds: int = 10
 
-    @field_validator("llm_provider")
-    @classmethod
-    def validate_llm_provider(cls, value: str) -> str:
-        if value not in ("openai", "clova"):
-            raise ValueError("LLM_PROVIDER must be 'openai' or 'clova'")
-        return value
-
     @field_validator("analysis_client")
     @classmethod
     def validate_analysis_client(cls, value: str) -> str:
@@ -118,14 +106,8 @@ class Settings(BaseSettings):
                 raise ValueError(
                     "CLOVA_OCR_INVOKE_URL and CLOVA_OCR_SECRET_KEY must be configured in production/staging"
                 )
-            if self.llm_provider == "clova" and not self.clova_studio_api_key:
-                raise ValueError(
-                    "CLOVA_STUDIO_API_KEY must be configured when LLM_PROVIDER=clova in production/staging"
-                )
-            if self.llm_provider == "openai" and not self.openai_api_key:
-                raise ValueError(
-                    "OPENAI_API_KEY must be configured when LLM_PROVIDER=openai in production/staging"
-                )
+            if not self.openai_api_key:
+                raise ValueError("OPENAI_API_KEY must be configured in production/staging")
             if not self.analysis_callback_secret:
                 raise ValueError(
                     "ANALYSIS_CALLBACK_SECRET must be configured in production/staging"
