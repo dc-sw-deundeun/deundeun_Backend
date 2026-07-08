@@ -26,7 +26,7 @@ from app.domains.mission.schemas import (
 
 _ARROW = re.compile(r"(\S+\s*(?:->|→)\s*\S+)")
 
-# LLM(특히 HCX)이 enum 대신 한국어/변형 타입을 줄 때 매핑
+# LLM이 enum 대신 한국어/변형 타입을 줄 때 매핑
 _TYPE_KEYWORDS = {
     "exercise": ("운동", "걷기", "유산소", "근력", "스쿼트", "산책", "스트레칭"),
     "diet": ("식습관", "식단", "식이", "저염", "채소", "영양", "음식", "당"),
