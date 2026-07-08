@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -25,6 +27,8 @@ from app.domains.health_metric.service import (
     build_detail_views,
     build_summary_view,
 )
+from app.domains.ocr.status import VerificationStatus
+from app.domains.record.models import CheckupMetricResult, CheckupRecord
 from app.domains.user.models import OnboardingStep, User
 from app.domains.user.schemas import CurrentUser
 from app.main import app as fastapi_app
@@ -68,6 +72,47 @@ def _create_user(db_session, *, user_id: int = 1) -> None:
         )
     )
     db_session.commit()
+
+
+def _create_checkup_record(
+    db_session,
+    *,
+    user_id: int,
+    measured_at: datetime,
+    verification_status: str = VerificationStatus.VERIFIED.value,
+) -> CheckupRecord:
+    record = CheckupRecord(
+        user_id=user_id,
+        source_type="OCR",
+        measured_at=measured_at,
+        ocr_status="COMPLETED",
+        verification_status=verification_status,
+        analysis_status="PENDING",
+    )
+    db_session.add(record)
+    db_session.flush()
+    return record
+
+
+def _add_record_metric(
+    db_session,
+    *,
+    record_id: int,
+    metric_code: str,
+    metric_name: str,
+    value: str,
+    unit: str,
+) -> None:
+    db_session.add(
+        CheckupMetricResult(
+            record_id=record_id,
+            metric_code=metric_code,
+            metric_name=metric_name,
+            value=value,
+            unit=unit,
+            source="OCR",
+        )
+    )
 
 
 def test_evaluate_metrics_classifies_normal_caution_and_risk() -> None:
@@ -361,6 +406,123 @@ def test_create_analysis_from_metric_array_returns_void_and_get_returns_result(
         assert data["ui"]["details"][0]["trend"]["points"] == [
             {"label": "2026-06-20", "value": 126.0}
         ]
+    finally:
+        if previous_user_override is None:
+            fastapi_app.dependency_overrides.pop(get_current_user, None)
+        else:
+            fastapi_app.dependency_overrides[get_current_user] = previous_user_override
+
+
+def test_create_analysis_links_record_and_record_analysis_endpoint(
+    client, db_session, monkeypatch
+) -> None:
+    monkeypatch.setattr(settings, "openai_api_key", None)
+    user_id = 1
+    _create_user(db_session, user_id=user_id)
+    previous = _create_checkup_record(
+        db_session,
+        user_id=user_id,
+        measured_at=datetime(2026, 3, 22, 9, 0, 0),
+    )
+    _add_record_metric(
+        db_session,
+        record_id=previous.id,
+        metric_code="fasting_glucose",
+        metric_name="공복혈당",
+        value="104",
+        unit="mg/dL",
+    )
+    target = _create_checkup_record(
+        db_session,
+        user_id=user_id,
+        measured_at=datetime(2026, 6, 20, 9, 0, 0),
+    )
+    _add_record_metric(
+        db_session,
+        record_id=target.id,
+        metric_code="fasting_glucose",
+        metric_name="공복혈당",
+        value="126",
+        unit="mg/dL",
+    )
+    db_session.commit()
+
+    previous_user_override = fastapi_app.dependency_overrides.get(get_current_user)
+    fastapi_app.dependency_overrides[get_current_user] = lambda: CurrentUser(id=user_id)
+    try:
+        create_response = client.post(
+            "/api/v1/health-metrics/analyses",
+            json={
+                "record_id": target.id,
+                "sex": "male",
+                "metrics": [
+                    {
+                        "metric_code": "fasting_glucose",
+                        "metric_name": "공복혈당",
+                        "value": "126",
+                        "unit": "mg/dL",
+                        "raw_text": "126",
+                    }
+                ],
+            },
+        )
+
+        assert create_response.status_code == 200
+        analysis = db_session.query(HealthMetricAnalysis).one()
+        db_session.refresh(target)
+        assert analysis.record_id == target.id
+        assert analysis.measured_at.date().isoformat() == "2026-06-20"
+        assert target.analysis_status == "COMPLETED"
+
+        get_response = client.get(f"/api/v1/records/checkups/{target.id}/analysis")
+
+        assert get_response.status_code == 200
+        data = get_response.json()["data"]
+        assert data["record_id"] == target.id
+        assert data["ui"]["details"][0]["trend"]["points"] == [
+            {"label": "2026-03-22", "value": 104.0},
+            {"label": "2026-06-20", "value": 126.0},
+        ]
+    finally:
+        if previous_user_override is None:
+            fastapi_app.dependency_overrides.pop(get_current_user, None)
+        else:
+            fastapi_app.dependency_overrides[get_current_user] = previous_user_override
+
+
+def test_create_analysis_rejects_unverified_ocr_record(client, db_session, monkeypatch) -> None:
+    monkeypatch.setattr(settings, "openai_api_key", None)
+    user_id = 1
+    _create_user(db_session, user_id=user_id)
+    record = _create_checkup_record(
+        db_session,
+        user_id=user_id,
+        measured_at=datetime(2026, 6, 20, 9, 0, 0),
+        verification_status=VerificationStatus.UNVERIFIED.value,
+    )
+    db_session.commit()
+
+    previous_user_override = fastapi_app.dependency_overrides.get(get_current_user)
+    fastapi_app.dependency_overrides[get_current_user] = lambda: CurrentUser(id=user_id)
+    try:
+        response = client.post(
+            "/api/v1/health-metrics/analyses",
+            json={
+                "record_id": record.id,
+                "sex": "male",
+                "metrics": [
+                    {
+                        "metric_code": "fasting_glucose",
+                        "metric_name": "공복혈당",
+                        "value": "126",
+                        "unit": "mg/dL",
+                    }
+                ],
+            },
+        )
+
+        assert response.status_code == 409
+        assert response.json()["error_code"] == "NOT_VERIFIED"
     finally:
         if previous_user_override is None:
             fastapi_app.dependency_overrides.pop(get_current_user, None)
