@@ -43,6 +43,7 @@ def test_get_my_profile_returns_current_user(
     data = res.json()["data"]
     assert data["email"] == "my-profile@example.com"
     assert data["nickname"] == "프로필사용자"
+    assert data["sex"] == "MALE"
     assert data["onboarding_step"] == "CONSENT"
     assert data["status"] == "ACTIVE"
 

@@ -17,6 +17,11 @@ class UserStatus(str, enum.Enum):
     DELETED = "DELETED"
 
 
+class UserSex(str, enum.Enum):
+    MALE = "MALE"
+    FEMALE = "FEMALE"
+
+
 class OnboardingStep(str, enum.Enum):
     CONSENT = "CONSENT"
     WEARABLE = "WEARABLE"
@@ -32,6 +37,12 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     nickname: Mapped[str] = mapped_column(String(50), nullable=False)
+    sex: Mapped[str] = mapped_column(
+        Enum(UserSex, name="user_sex_enum"),
+        default=UserSex.MALE,
+        server_default=UserSex.MALE.value,
+        nullable=False,
+    )
     onboarding_step: Mapped[str] = mapped_column(
         Enum(OnboardingStep, name="onboarding_step_enum"),
         default=OnboardingStep.CONSENT,

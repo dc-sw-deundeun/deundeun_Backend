@@ -2,6 +2,7 @@ from pydantic import BaseModel, EmailStr, Field, field_validator, model_validato
 
 from app.domains.auth.models import ConsentType, VerificationPurpose
 from app.domains.auth.validators import validate_password_policy
+from app.domains.user.models import UserSex
 from app.domains.user.schemas import UserSummaryResponse
 
 
@@ -24,6 +25,7 @@ class SignupRequest(BaseModel):
     email: EmailStr
     password: str
     nickname: str = Field(min_length=1, max_length=50)
+    sex: UserSex
     verification_token: str
 
     @field_validator("password")

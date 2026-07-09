@@ -31,6 +31,7 @@ def signup_user(
     email: str = "user@example.com",
     password: str = DEFAULT_PASSWORD,
     nickname: str = "든든이",
+    sex: str = "MALE",
 ):
     _request_code(client, email)
     code = email_client.codes[email]
@@ -41,6 +42,7 @@ def signup_user(
             "email": email,
             "password": password,
             "nickname": nickname,
+            "sex": sex,
             "verification_token": token,
         },
     )
@@ -56,15 +58,37 @@ def test_signup_login_me_e2e(client: TestClient, email_client: CapturingEmailCli
     signup_res = signup_user(client, email_client, email="e2e@example.com")
     assert signup_res.status_code == 200
     assert signup_res.json()["data"]["user"]["email"] == "e2e@example.com"
+    assert signup_res.json()["data"]["user"]["sex"] == "MALE"
 
     login_res = login_user(client, email="e2e@example.com")
     assert login_res.status_code == 200
+    assert login_res.json()["data"]["user"]["sex"] == "MALE"
     access = login_res.json()["data"]["access_token"]
 
     me_res = client.get(f"{BASE}/me", headers={"Authorization": f"Bearer {access}"})
     assert me_res.status_code == 200
     assert me_res.json()["data"]["email"] == "e2e@example.com"
+    assert me_res.json()["data"]["sex"] == "MALE"
     assert me_res.json()["data"]["onboarding_step"] == "CONSENT"
+
+
+def test_signup_requires_sex(client: TestClient, email_client: CapturingEmailClient) -> None:
+    email = "no-sex@example.com"
+    _request_code(client, email)
+    code = email_client.codes[email]
+    token = _confirm_code(client, email, code).json()["data"]["verification_token"]
+
+    res = client.post(
+        f"{BASE}/signup",
+        json={
+            "email": email,
+            "password": DEFAULT_PASSWORD,
+            "nickname": "성별없음",
+            "verification_token": token,
+        },
+    )
+
+    assert res.status_code == 422
 
 
 def test_signup_with_weak_password_returns_400(

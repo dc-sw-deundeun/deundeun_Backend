@@ -116,6 +116,7 @@ class AuthService:
             email=request.email,
             password_hash=hash_password(request.password),
             nickname=request.nickname,
+            sex=request.sex,
         )
         self.repo.save_user(user)
         self.repo.db.commit()
