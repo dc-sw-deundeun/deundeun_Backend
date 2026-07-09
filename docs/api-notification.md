@@ -10,6 +10,8 @@
 
 알림 **설정** 정본은 My API의 `GET/PATCH /api/v1/my/notification-settings`입니다. `/api/v1/notifications/settings`는 제공하지 않습니다.
 
+`GET /notifications`는 목록 조회만 수행하며 자동으로 읽음 처리하지 않습니다. 알림 탭/상세 진입 등 프론트에서 읽음으로 간주하는 순간에는 반드시 `PATCH /notifications/{notification_id}/read`를 호출한 뒤 목록 상태와 홈 배지를 갱신해야 합니다.
+
 ## 구현 현황
 
 | 기능 | 상태 | API |
@@ -87,6 +89,7 @@
 
 - 이미 읽은 알림은 멱등하게 동일한 `read_at`을 반환한다.
 - 본인 알림이 아니거나 존재하지 않으면 `404 NOTIFICATION_NOT_FOUND`.
+- 목록 조회만으로는 `read_at`이 갱신되지 않는다.
 
 ### Response data
 

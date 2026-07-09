@@ -53,6 +53,7 @@
   "id": 1,
   "email": "demo-user@demo.deundeun.xyz",
   "nickname": "든든데모",
+  "sex": "MALE",
   "onboarding_step": "COMPLETED",
   "timezone": "Asia/Seoul",
   "status": "ACTIVE",
@@ -81,8 +82,11 @@
 현재 계정을 소프트 탈퇴 처리합니다.
 
 - `users.status`를 `DELETED`로 변경합니다.
+- `users.deleted_at`에 탈퇴 시각을 기록합니다.
 - 모든 refresh token을 폐기합니다.
 - `token_version`을 증가시켜 기존 access token도 이후 요청에서 무효화합니다.
+- 탈퇴 직후에는 로그인과 동일 이메일 재가입이 불가합니다.
+- `ACCOUNT_DELETION_GRACE_PERIOD_SECONDS`(기본 60초) 경과 후 동일 이메일로 가입을 시작하면 기존 `DELETED` 계정과 연관 데이터가 물리 정리되고 새 계정으로 가입할 수 있습니다.
 
 **Response**
 

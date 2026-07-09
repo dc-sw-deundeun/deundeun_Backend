@@ -129,7 +129,7 @@ async def request_password_reset(
     summary="[프론트 사용] 비밀번호 재설정 완료",
     description=(
         "인증 코드 확인 후 새 비밀번호로 변경합니다. 기존 비밀번호와 같은 값은 거부되며, "
-        "재설정 후 모든 refresh·access token이 무효화됩니다."
+        "재설정 후 모든 refresh·access token이 무효화됩니다. 탈퇴/비활성 계정은 ACCOUNT_INACTIVE로 거부됩니다."
     ),
 )
 def confirm_password_reset(
@@ -144,8 +144,8 @@ def confirm_password_reset(
     "/policies/agree",
     summary="[프론트 사용] 온보딩 약관 동의",
     description=(
-        "필수 약관(이용약관·개인정보·민감 건강정보)에 모두 동의하면 온보딩 단계가 "
-        "CONSENT → WEARABLE로 전이됩니다. Authorization 헤더 필요."
+        "필수 약관(이용약관·개인정보)에 동의하면 온보딩 단계가 CONSENT → WEARABLE로 전이됩니다. "
+        "민감 건강정보·위치 약관은 선택이며, 포함된 경우 동의/거부 이력을 저장합니다. Authorization 헤더 필요."
     ),
     dependencies=[Security(bearer_scheme)],
 )
