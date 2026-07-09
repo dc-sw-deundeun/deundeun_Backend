@@ -233,7 +233,10 @@ class AuthService:
 
         consent_types = [item.consent_type for item in request.consents]
         required_types = set(policy.REQUIRED_CONSENT_TYPES)
-        if len(consent_types) != len(set(consent_types)) or set(consent_types) != required_types:
+        allowed_types = set(policy.ALLOWED_CONSENT_TYPES)
+        if len(consent_types) != len(set(consent_types)) or not set(consent_types).issubset(
+            allowed_types
+        ):
             raise ConsentRequiredException()
 
         provided = {item.consent_type: item for item in request.consents}
@@ -245,6 +248,10 @@ class AuthService:
                 raise PolicyVersionMismatchException()
 
         for item in request.consents:
+            if item.version != policy.CURRENT_POLICY_VERSIONS[item.consent_type]:
+                raise PolicyVersionMismatchException()
+            if item.consent_type in required_types and not item.agreed:
+                raise ConsentRequiredException()
             self.repo.add_consent_history(
                 user_id=user.id,
                 consent_type=item.consent_type.value,

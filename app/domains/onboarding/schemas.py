@@ -22,9 +22,17 @@ class WearableConnectionItem(BaseModel):
     last_synced_at: datetime | None = None
 
 
+class ConsentPolicyItem(BaseModel):
+    consent_type: str
+    version: str
+    required: bool
+
+
 class OnboardingStatusResponse(BaseModel):
     onboarding_step: str
     is_completed: bool
+    required_consents: list[ConsentPolicyItem]
+    optional_consents: list[ConsentPolicyItem]
     wearable_connections: list[WearableConnectionItem]
 
 

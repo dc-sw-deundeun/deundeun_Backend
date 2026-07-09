@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.domains.auth.models import ConsentHistory
 from app.domains.onboarding import policy as onboarding_policy
 from app.domains.onboarding.models import WearableConnection
 from app.domains.user.models import OnboardingStep, User
@@ -50,10 +51,11 @@ def test_agree_policies_advances_to_wearable(
     assert me["onboarding_step"] == "WEARABLE"
 
 
-def test_agree_policies_missing_required_consent_returns_400(
-    client: TestClient, email_client: CapturingEmailClient
+def test_agree_policies_required_only_advances_to_wearable(
+    client: TestClient, email_client: CapturingEmailClient, db_session: Session
 ) -> None:
-    headers = _auth_headers(client, email_client, "missing@example.com")
+    email = "required-only@example.com"
+    headers = _auth_headers(client, email_client, email)
 
     res = client.post(
         f"{AUTH}/policies/agree",
@@ -65,16 +67,72 @@ def test_agree_policies_missing_required_consent_returns_400(
         },
         headers=headers,
     )
+    assert res.status_code == 200
+
+    user = db_session.scalar(select(User).where(User.email == email))
+    assert user is not None
+    histories = list(
+        db_session.scalars(
+            select(ConsentHistory).where(ConsentHistory.user_id == user.id).order_by(
+                ConsentHistory.consent_type
+            )
+        )
+    )
+    assert {history.consent_type.value for history in histories} == {
+        "PRIVACY",
+        "TERMS_OF_SERVICE",
+    }
+
+
+def test_agree_policies_missing_required_consent_returns_400(
+    client: TestClient, email_client: CapturingEmailClient
+) -> None:
+    headers = _auth_headers(client, email_client, "missing@example.com")
+
+    res = client.post(
+        f"{AUTH}/policies/agree",
+        json={
+            "consents": [
+                {"consent_type": "TERMS_OF_SERVICE", "version": "1.0", "agreed": True},
+                {"consent_type": "HEALTH_DATA", "version": "1.0", "agreed": True},
+            ]
+        },
+        headers=headers,
+    )
     assert res.status_code == 400
     assert res.json()["error_code"] == "CONSENT_REQUIRED"
 
 
-def test_agree_policies_not_agreed_returns_400(
+def test_agree_policies_optional_false_is_recorded(
+    client: TestClient, email_client: CapturingEmailClient, db_session: Session
+) -> None:
+    email = "optional-false@example.com"
+    headers = _auth_headers(client, email_client, email)
+    consents = [dict(c) for c in _FULL_CONSENTS]
+    consents[2]["agreed"] = False
+    consents.append({"consent_type": "LOCATION", "version": "1.0", "agreed": False})
+
+    res = client.post(f"{AUTH}/policies/agree", json={"consents": consents}, headers=headers)
+    assert res.status_code == 200
+
+    user = db_session.scalar(select(User).where(User.email == email))
+    assert user is not None
+    histories = {
+        history.consent_type: history.agreed
+        for history in db_session.scalars(
+            select(ConsentHistory).where(ConsentHistory.user_id == user.id)
+        )
+    }
+    assert histories["HEALTH_DATA"] is False
+    assert histories["LOCATION"] is False
+
+
+def test_agree_policies_required_not_agreed_returns_400(
     client: TestClient, email_client: CapturingEmailClient
 ) -> None:
     headers = _auth_headers(client, email_client, "notagreed@example.com")
     consents = [dict(c) for c in _FULL_CONSENTS]
-    consents[2]["agreed"] = False
+    consents[0]["agreed"] = False
 
     res = client.post(f"{AUTH}/policies/agree", json={"consents": consents}, headers=headers)
     assert res.status_code == 400
@@ -153,6 +211,14 @@ def test_wearable_connect_apple_health_advances_step(
 
     status = client.get(f"{ONB}/status", headers=headers).json()["data"]
     assert status["onboarding_step"] == "INITIAL_CHECKUP"
+    assert status["required_consents"] == [
+        {"consent_type": "TERMS_OF_SERVICE", "version": "1.0", "required": True},
+        {"consent_type": "PRIVACY", "version": "1.0", "required": True},
+    ]
+    assert status["optional_consents"] == [
+        {"consent_type": "HEALTH_DATA", "version": "1.0", "required": False},
+        {"consent_type": "LOCATION", "version": "1.0", "required": False},
+    ]
     assert len(status["wearable_connections"]) == 1
     assert status["wearable_connections"][0]["provider"] == "APPLE_HEALTH"
 

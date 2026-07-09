@@ -20,6 +20,7 @@ class ConsentType(str, enum.Enum):
     TERMS_OF_SERVICE = "TERMS_OF_SERVICE"
     PRIVACY = "PRIVACY"
     HEALTH_DATA = "HEALTH_DATA"
+    LOCATION = "LOCATION"
 
 
 class EmailVerification(Base):
