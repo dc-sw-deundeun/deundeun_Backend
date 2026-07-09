@@ -73,9 +73,9 @@ def test_agree_policies_required_only_advances_to_wearable(
     assert user is not None
     histories = list(
         db_session.scalars(
-            select(ConsentHistory).where(ConsentHistory.user_id == user.id).order_by(
-                ConsentHistory.consent_type
-            )
+            select(ConsentHistory)
+            .where(ConsentHistory.user_id == user.id)
+            .order_by(ConsentHistory.consent_type)
         )
     )
     assert {history.consent_type.value for history in histories} == {

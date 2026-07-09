@@ -10,9 +10,9 @@ from app.domains.onboarding.hooks import on_onboarding_complete
 from app.domains.onboarding.models import WearableProvider, WearableStatus
 from app.domains.onboarding.repository import OnboardingRepository
 from app.domains.onboarding.schemas import (
+    ConsentPolicyItem,
     OnboardingCompleteResponse,
     OnboardingStatusResponse,
-    ConsentPolicyItem,
     WearableAction,
     WearableConnectionItem,
     WearableConnectRequest,

@@ -279,9 +279,7 @@ class AuthService:
         if remaining > 0:
             raise ResendTooSoonException(retry_after_seconds=int(remaining) + 1)
 
-    def _purge_expired_deleted_user(
-        self, email: str, *, delete_email_verifications: bool
-    ) -> None:
+    def _purge_expired_deleted_user(self, email: str, *, delete_email_verifications: bool) -> None:
         cutoff = datetime.now(UTC) - timedelta(
             seconds=settings.account_deletion_grace_period_seconds
         )
