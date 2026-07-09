@@ -2,7 +2,6 @@ import secrets
 from datetime import UTC, datetime, timedelta
 
 from app.core.config import settings
-from app.core.exceptions import ForbiddenException
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -14,6 +13,7 @@ from app.core.security import (
 )
 from app.domains.auth import policy
 from app.domains.auth.exceptions import (
+    AccountInactiveException,
     AccountLockedException,
     ConsentRequiredException,
     EmailAlreadyExistsException,
@@ -148,9 +148,7 @@ class AuthService:
             raise InvalidCredentialsException()
 
         if user.status != UserStatus.ACTIVE:
-            raise ForbiddenException(
-                message="사용할 수 없는 계정입니다.", error_code="ACCOUNT_INACTIVE"
-            )
+            raise AccountInactiveException()
 
         self.repo.reset_failed_login(user)
         tokens = self._issue_tokens(user)
@@ -209,14 +207,15 @@ class AuthService:
         await self.request_email_verification(email, VerificationPurpose.PASSWORD_RESET)
 
     def confirm_password_reset(self, email: str, code: str, new_password: str) -> None:
-        self._verify_code(email, VerificationPurpose.PASSWORD_RESET, code)
-
         user = self.repo.find_user_by_email(email)
         if user is None:
             raise InvalidCredentialsException()
+        if user.status != UserStatus.ACTIVE:
+            raise AccountInactiveException()
         if verify_password(new_password, user.password_hash):
             raise SamePasswordException()
 
+        self._verify_code(email, VerificationPurpose.PASSWORD_RESET, code)
         user.password_hash = hash_password(new_password)
         now = datetime.now(UTC)
         self.repo.revoke_all_user_refresh_tokens(user.id, now)

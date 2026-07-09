@@ -69,6 +69,15 @@ class SamePasswordException(AppException):
         )
 
 
+class AccountInactiveException(AppException):
+    def __init__(self) -> None:
+        super().__init__(
+            status_code=403,
+            message="사용할 수 없는 계정입니다.",
+            error_code="ACCOUNT_INACTIVE",
+        )
+
+
 class InvalidVerificationCodeException(AppException):
     def __init__(self) -> None:
         super().__init__(
