@@ -142,7 +142,8 @@ flowchart LR
 | 6 | 홈 | 화면용 Aggregation API | Phase 5 |
 | 7 | 알림 | 알림함·설정·백그라운드 worker | Phase 6 |
 | 8 | 마이·검색 | 프로필·설정·용어 검색·문의 | Phase 7 |
-| 9 | 미디어 | 앱 정적 이미지 URL 제공, 캐릭터 이미지 연동 | Phase 1 |
+| 9 | 미디어 | 앱 정적 이미지 URL 제공 | Phase 1 |
+| 9 | 미디어 | 캐릭터 이미지 연동 | Phase 5 |
 
 ---
 
@@ -539,8 +540,8 @@ CONSENT → WEARABLE → INITIAL_CHECKUP → CHECKUP_VERIFIED → COMPLETED
 
 ### 6.7 HealthMetric (같은 Phase 또는 3.5)
 
-| 우선순위 | 내용 |
-|----------|------|
+| 우선순위 | 내용 | 구현 |
+|----------|------|------|
 | MUST | `health_metric_references` seed (18종 기준·설명) | ✅ migration `008` |
 | MUST | 상세·추이 응답 시 기준 범위·상태 코드 조합 | ✅ 조회 시 enrich, verify 시 DB freeze |
 
@@ -752,8 +753,8 @@ ANALYSIS_CALLBACK_SECRET
 |----------|--------|------|------|----------|
 | MUST | GET | `/api/v1/notifications` | 알림 목록 (페이지네이션) | FR-ETC-002 |
 | MUST | PATCH | `/api/v1/notifications/{id}/read` | 읽음 처리 | FR-ETC-002 |
-| — | GET/PATCH | `/api/v1/notifications/settings` | **구현 안 함** — stub 제거. 설정은 `/my/notification-settings` |
-| — | POST | `/api/v1/notifications/test` | **구현 안 함** — 제거 |
+| — | GET/PATCH | `/api/v1/notifications/settings` | **구현 안 함** — stub 제거. 설정은 `/my/notification-settings` | — |
+| — | POST | `/api/v1/notifications/test` | **구현 안 함** — 제거 | — |
 
 **이미 구현 (Phase 7 범위 밖, PR #35)**
 

@@ -521,6 +521,13 @@ docker compose \
 /opt/deundeun/media-seed/seed_app_images.py
 ```
 
+로컬 준비:
+
+```bash
+# 이 스크립트는 Git/Docker에 포함하지 않고 운영자가 로컬에서 보관·검토한 뒤 업로드합니다.
+test -f /tmp/seed_app_images.py
+```
+
 업로드:
 
 ```bash

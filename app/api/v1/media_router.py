@@ -15,7 +15,6 @@ def _binary_response(asset: ImageAsset) -> Response:
         headers={
             "Cache-Control": "public, max-age=86400",
             "ETag": f'"{asset.sha256}"',
-            "Content-Length": str(asset.byte_size),
         },
     )
 

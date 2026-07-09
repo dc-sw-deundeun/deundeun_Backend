@@ -1,6 +1,6 @@
 from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, defer
 
 from app.domains.media.models import ImageAsset
 
@@ -13,7 +13,9 @@ class MediaRepository:
         stmt = select(ImageAsset)
         if purpose is not None:
             stmt = stmt.where(ImageAsset.purpose == purpose)
-        stmt = stmt.order_by(ImageAsset.purpose, ImageAsset.asset_key, ImageAsset.id)
+        stmt = stmt.options(defer(ImageAsset.data)).order_by(
+            ImageAsset.purpose, ImageAsset.asset_key, ImageAsset.id
+        )
         return list(self.db.scalars(stmt))
 
     def count_assets(self, *, purpose: str | None = None) -> int:
