@@ -17,6 +17,7 @@ from app.domains.auth.exceptions import (
     AccountLockedException,
     ConsentRequiredException,
     EmailAlreadyExistsException,
+    InvalidConsentTypeException,
     InvalidCredentialsException,
     InvalidTokenException,
     InvalidVerificationCodeException,
@@ -239,7 +240,7 @@ class AuthService:
         if len(consent_types) != len(set(consent_types)) or not set(consent_types).issubset(
             allowed_types
         ):
-            raise ConsentRequiredException()
+            raise InvalidConsentTypeException()
 
         provided = {item.consent_type: item for item in request.consents}
         for required in policy.REQUIRED_CONSENT_TYPES:

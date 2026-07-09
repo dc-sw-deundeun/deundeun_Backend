@@ -42,6 +42,15 @@ class ConsentRequiredException(AppException):
         )
 
 
+class InvalidConsentTypeException(AppException):
+    def __init__(self) -> None:
+        super().__init__(
+            status_code=400,
+            message="동의 타입이 중복되거나 허용되지 않은 값이 포함되어 있습니다.",
+            error_code="INVALID_CONSENT_TYPE",
+        )
+
+
 class PolicyVersionMismatchException(AppException):
     def __init__(self) -> None:
         super().__init__(

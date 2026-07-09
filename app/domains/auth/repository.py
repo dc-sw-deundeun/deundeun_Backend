@@ -71,6 +71,18 @@ class AuthRepository:
             return 0
 
         params = {"email": email, "cutoff": cutoff}
+        statements = self._build_expired_deleted_user_purge_statements(
+            delete_email_verifications=delete_email_verifications
+        )
+
+        for statement in statements:
+            self.db.execute(text(statement), params)
+        return 1
+
+    @staticmethod
+    def _build_expired_deleted_user_purge_statements(
+        *, delete_email_verifications: bool
+    ) -> list[str]:
         target_user_sql = """
             select id
             from users
@@ -140,10 +152,7 @@ class AuthRepository:
         if delete_email_verifications:
             statements.append("delete from email_verifications where email = :email")
         statements.append(f"delete from users where id in ({target_user_sql})")
-
-        for statement in statements:
-            self.db.execute(text(statement), params)
-        return 1
+        return statements
 
     # --- ConsentHistory ---
     def add_consent_history(
