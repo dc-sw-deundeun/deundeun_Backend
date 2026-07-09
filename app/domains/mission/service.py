@@ -10,6 +10,7 @@ from app.domains.mission.repository import MissionRepository
 from app.domains.mission.schemas import (
     DayMissionStat,
     Execution,
+    MissionNotificationResponse,
     MissionStatisticsSummary,
     MonthlyCalendarResponse,
     TodayMissionItem,
@@ -93,6 +94,43 @@ class MissionService:
 
     def verify_mission(self, user_id: int, mission_id: int) -> None:
         raise NotImplementedError
+
+    def send_mission_notification(
+        self, user_id: int, mission_id: int
+    ) -> MissionNotificationResponse:
+        """본인 미션의 리마인드 알림을 발송한다.
+
+        mission_alarm_enabled=false면 스킵(에러 아님, sent=False). source_id=미션id인 유니크
+        제약 덕에 같은 미션 재요청은 멱등 — 새 알림이 아니라 기존 알림의 id를 그대로 반환한다.
+        """
+        from app.domains.notification.repository import NotificationRepository
+        from app.domains.notification.service import NotificationService
+
+        found = self.repo.get_for_user_with_template(mission_id, user_id)
+        if found is None:
+            raise NotFoundException(message="미션을 찾을 수 없습니다.")
+        mission, template = found
+        item = self._to_item(mission, template)
+
+        notif_repo = NotificationRepository(self.repo._db)
+        pref = notif_repo.find_preference_by_user_id(user_id)
+        if pref is not None and not pref.mission_alarm_enabled:
+            return MissionNotificationResponse(
+                sent=False, reason="미션 알림이 꺼져 있습니다(mission_alarm_enabled=false)."
+            )
+
+        body = (
+            f"{item.execution.time} 예정 — 지금 확인해보세요."
+            if item.execution.time
+            else "지금 확인해보세요."
+        )
+        notification = NotificationService(notif_repo).notify_mission_reminder(
+            user_id=user_id,
+            mission_id=mission_id,
+            title=item.title or "오늘의 미션",
+            body=body,
+        )
+        return MissionNotificationResponse(sent=True, notification_id=notification.id)
 
     def get_weekly_statistics(
         self, user_id: int, ref_date: date | None = None
