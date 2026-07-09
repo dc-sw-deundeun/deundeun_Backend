@@ -101,7 +101,7 @@ class MissionService:
         user = self._require_active_user(user_id)
         ref = ref_date or local_date_for_timezone(user.timezone)
         start, end = week_range_for_date(ref)
-        agg = self._aggregate_by_date(self.repo.list_for_range(user_id, start, end))
+        agg = self.repo.daily_counts_for_range(user_id, start, end)
         days = []
         d = start
         while d <= end:
@@ -121,7 +121,7 @@ class MissionService:
         self._require_active_user(user_id)
         start = date(year, month, 1)
         end = date(year, month, monthrange(year, month)[1])
-        agg = self._aggregate_by_date(self.repo.list_for_range(user_id, start, end))
+        agg = self.repo.daily_counts_for_range(user_id, start, end)
         days = [
             DayMissionStat(date=d, total=total, completed=completed)
             for d, (total, completed) in sorted(agg.items())
@@ -136,15 +136,6 @@ class MissionService:
         return MissionStatisticsSummary(
             total_assigned=total, total_completed=completed, completion_rate=rate
         )
-
-    @staticmethod
-    def _aggregate_by_date(missions: list[UserMission]) -> dict[date, tuple[int, int]]:
-        """미션 목록 → {날짜: (total, completed)}."""
-        agg: dict[date, tuple[int, int]] = {}
-        for m in missions:
-            total, completed = agg.get(m.assigned_date, (0, 0))
-            agg[m.assigned_date] = (total + 1, completed + (m.status == "COMPLETED"))
-        return agg
 
     def check_record_related_mission(self, user_id: int) -> None:
         """검진 등록 관련 미션을 확인하고 자동 완료합니다."""
