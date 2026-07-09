@@ -16,8 +16,9 @@
 | Analysis | legacy stub | 프론트 작업 제외 |
 | Mission | 부분 | `GET /today`·조회(날짜별/주간/월간/총계)·complete 가능, 인증·complete→EXP는 후속 |
 | Character | 구현 | 가능 |
+| Media | 구현 | 공개 이미지 URL 가능 |
 | Home | 구현 | 가능 |
-| My | 부분 | 연동 앱·알림 설정 가능, 프로필·앱잠금·문의·계정삭제는 stub |
+| My | 부분 | 프로필·연동 앱·알림 설정·회원탈퇴 가능, 앱잠금·문의는 stub |
 | Search | 구현 | 가능 |
 | PKG | 서버/내부 | 신규 프론트 화면 직접 호출 제외 |
 | Notification | 구현 | 알림함 목록·읽음 처리 가능 |
@@ -98,6 +99,20 @@ OCR 업로드 플로우 상세는 [api-record-ocr.md](./api-record-ocr.md) 참�
 | GET | `/animals` | 전체 동물 카탈로그와 내 locked/unlocked 상태 조회 |
 
 `POST /me/experience`, `PATCH /me/stage`는 서버/내부 placeholder이며 프론트 공개 API가 아닙니다.
+
+### Media `/api/v1/media`
+
+상세 계약은 [api-media.md](./api-media.md) 참조.
+
+| Method | Path | 설명 |
+|--------|------|------|
+| GET | `/images` | 시스템 이미지 메타 목록 |
+| GET | `/images/{image_id}` | 시스템 이미지 바이너리 |
+| GET | `/images/{image_id}/meta` | 시스템 이미지 메타 |
+| GET | `/images/by-key/{purpose}/{asset_key}` | key 기반 시스템 이미지 바이너리 |
+| GET | `/images/by-key/{purpose}/{asset_key}/meta` | key 기반 시스템 이미지 메타 |
+
+이미지 원본과 DB import 스크립트는 Git/Docker image에 포함하지 않고 운영자가 SSH로 등록합니다.
 
 ### Home `/api/v1/home`
 
@@ -200,6 +215,7 @@ PKG는 미션 생성 엔진이 소비하는 서버/내부 계약입니다. 로�
 | `015_add_mission_generation_runs` | 미션 생성 멱등 로그(유저·날짜당 1회 생성 보장) |
 | `016_extend_user_missions_for_generated` | user_missions에 엔진 생성분 저장 컬럼 추가(`template_code`, `payload`, `completed_at`), `template_id` nullable화 |
 | `017_add_notifications_inbox` | 알림함 `notifications` 테이블, 사용자·이벤트 source 멱등 unique |
+| `018_add_image_assets` | 앱 정적 이미지 `image_assets` 테이블 |
 
 ## 다음 구현 우선순위
 

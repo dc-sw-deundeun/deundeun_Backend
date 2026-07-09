@@ -10,6 +10,8 @@ from app.domains.auth.service import AuthService
 from app.domains.character.repository import CharacterRepository
 from app.domains.character.service import CharacterService
 from app.domains.home.service import HomeService
+from app.domains.media.repository import MediaRepository
+from app.domains.media.service import MediaService
 from app.domains.mission.repository import MissionRepository
 from app.domains.mission.service import MissionService
 from app.domains.notification.repository import NotificationRepository
@@ -57,6 +59,10 @@ def get_wearable_client_dep() -> WearableClient:
 
 def get_character_service(db: Session = Depends(get_db)) -> CharacterService:
     return CharacterService(CharacterRepository(db))
+
+
+def get_media_service(db: Session = Depends(get_db)) -> MediaService:
+    return MediaService(MediaRepository(db))
 
 
 def build_mission_service(db: Session) -> MissionService:

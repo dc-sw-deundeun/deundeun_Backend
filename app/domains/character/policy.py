@@ -99,3 +99,10 @@ def animal_order_index() -> dict[str, int]:
 
 def animal_name_by_code() -> dict[str, str]:
     return {animal.code: animal.name for animal in ANIMAL_UNLOCKS}
+
+
+def animal_image_urls(animal_code: str) -> list[str]:
+    return [
+        f"/api/v1/media/images/by-key/animal/{animal_code}_1",
+        f"/api/v1/media/images/by-key/animal/{animal_code}_2",
+    ]

@@ -86,6 +86,8 @@ class Settings(BaseSettings):
     ocr_acquire_timeout_seconds: float = 1.0
     ocr_retry_after_seconds: int = 10
 
+    media_max_image_size_bytes: int = 5 * 1024 * 1024
+
     @field_validator("analysis_client")
     @classmethod
     def validate_analysis_client(cls, value: str) -> str:

@@ -509,20 +509,67 @@ docker compose \
 | `demo-user@demo.deundeun.xyz` | 온보딩 완료, 검진/분석/미션/알림이 있는 일반 사용자 |
 | `demo-growth@demo.deundeun.xyz` | 캐릭터 레벨·동물 해금 상태 확인용 고레벨 사용자 |
 
-## 12. 관련 파일
+## 12. 앱 정적 이미지 수동 등록
+
+동물 도감·UI 이미지 원본과 DB import 스크립트는 Git/Docker image에 포함하지 않습니다.
+운영자가 SSH로 서버에 직접 올리고, API 컨테이너를 일회성으로 실행해 DB에 등록합니다.
+
+서버 보관 위치:
+
+```text
+/opt/deundeun/media-seed/images
+/opt/deundeun/media-seed/seed_app_images.py
+```
+
+로컬 준비:
+
+```bash
+# 이 스크립트는 Git/Docker에 포함하지 않고 운영자가 로컬에서 보관·검토한 뒤 업로드합니다.
+test -f /tmp/seed_app_images.py
+```
+
+업로드:
+
+```bash
+ssh homeserver-deploy 'mkdir -p /opt/deundeun/media-seed'
+scp -r images homeserver-deploy:/opt/deundeun/media-seed/
+scp /tmp/seed_app_images.py homeserver-deploy:/opt/deundeun/media-seed/seed_app_images.py
+```
+
+DB import:
+
+```bash
+ssh homeserver-deploy '
+docker compose \
+  --env-file /opt/deundeun/.env \
+  -f /opt/deundeun/docker-compose.yml \
+  --profile deploy \
+  run --rm \
+  -v /opt/deundeun/media-seed:/media-seed:ro \
+  api env PYTHONPATH=/app python /media-seed/seed_app_images.py /media-seed/images
+'
+```
+
+이미지와 seed 스크립트는 재실행을 위해 서버에 남깁니다. DB를 초기화하거나 이미지를 교체할 때
+같은 명령을 다시 실행합니다. seed는 `(purpose, asset_key)` 기준으로 upsert되어야 합니다.
+
+상세 API 계약은 [api-media.md](./api-media.md)를 봅니다.
+
+## 13. 관련 파일
 
 | 파일 | 역할 |
 |------|------|
 | [`.github/workflows/deploy-develop.yml`](../.github/workflows/deploy-develop.yml) | develop → push + SSH 배포 |
 | [`scripts/deploy.sh`](../scripts/deploy.sh) | 서버 배포 스크립트 |
 | [`scripts/seed_demo_data.py`](../scripts/seed_demo_data.py) | 프론트 데모 데이터 수동 seed |
+| [`docs/api-media.md`](./api-media.md) | 앱 정적 이미지 API와 운영 seed 규칙 |
 | [`docker/docker-compose.yml`](../docker/docker-compose.yml) | Compose (`--profile deploy`) |
 | [`docker/nginx/templates/api.conf.template`](../docker/nginx/templates/api.conf.template) | nginx envsubst template |
 | [`.env.server.example`](../.env.server.example) | `/opt/deundeun/.env` 서버 템플릿 |
 
 ---
 
-## 13. 트러블슈팅
+## 14. 트러블슈팅
 
 | 증상 | 원인 | 조치 |
 |------|------|------|

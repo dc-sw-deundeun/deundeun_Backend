@@ -1,0 +1,36 @@
+blank_issues_enabled: false
+contact_links: []
+issue_templates:
+  - name: Feature Report (일반)
+    description: 기능 개발 이슈 (공통 템플릿)
+    filename: issue-form.yml
+  - name: "Phase 0: 기반 인프라"
+    description: PostgreSQL, Alembic, Compose, SMTP, JWT
+    filename: phase-0.yml
+  - name: "Phase 1: 인증·계정"
+    description: Auth, User, JWT, SMTP 메일
+    filename: phase-1.yml
+  - name: "Phase 2: 온보딩"
+    description: 약관, 웨어러블, onboarding_step
+    filename: phase-2.yml
+  - name: "Phase 3: 검진 기록"
+    description: Record upload/manual/verify (OCR 제외)
+    filename: phase-3.yml
+  - name: "Phase 4: 외부 AI 분석"
+    description: Analysis job, callback
+    filename: phase-4.yml
+  - name: "Phase 5: 미션·성장"
+    description: Mission, XP, Character
+    filename: phase-5.yml
+  - name: "Phase 6: 홈"
+    description: Home Aggregation API
+    filename: phase-6.yml
+  - name: "Phase 7: 알림함"
+    description: Notification Inbox + Triggers (설정은 My 정본)
+    filename: phase-7.yml
+  - name: "Phase 8: 마이·검색"
+    description: My, Search, Support
+    filename: phase-8.yml
+  - name: "Phase 9: 앱 미디어/정적 이미지"
+    description: Media API, image_assets, 동물/UI 이미지 URL 제공
+    filename: phase-9.yml

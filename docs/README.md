@@ -9,6 +9,7 @@
 | [api-record-ocr.md](./api-record-ocr.md) | 검진 업로드·OCR 플로우 상세 API 가이드 |
 | [api-health-metric-analysis.md](./api-health-metric-analysis.md) | 건강 지표 분석 저장·조회 플로우 상세 API 가이드 |
 | [api-character-growth.md](./api-character-growth.md) | 캐릭터 성장·동물 해금 API 가이드 |
+| [api-media.md](./api-media.md) | 앱 정적 이미지 공개 조회 API 가이드 |
 | [api-my-page.md](./api-my-page.md) | 마이페이지 연동 앱·알림 설정 API 가이드 |
 | [api-notification.md](./api-notification.md) | 알림함 목록·읽음 처리 API 가이드 |
 | [api-search.md](./api-search.md) | 질환 검색 API 가이드 |

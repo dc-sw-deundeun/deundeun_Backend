@@ -119,6 +119,7 @@ class CharacterService:
                 name=entry.name,
                 unlock_level=entry.unlock_level,
                 required_total_exp=entry.required_total_exp,
+                image_urls=policy.animal_image_urls(entry.animal_code),
                 is_unlocked=entry.animal_code in owned_by_code,
                 unlocked_at=owned_by_code[entry.animal_code].unlocked_at
                 if entry.animal_code in owned_by_code
@@ -168,6 +169,7 @@ class CharacterService:
             animal_code=animal.animal_code,
             name=policy.animal_name_by_code().get(animal.animal_code, animal.animal_code),
             unlocked_level=animal.unlocked_level,
+            image_urls=policy.animal_image_urls(animal.animal_code),
             unlocked_at=animal.unlocked_at,
         )
 

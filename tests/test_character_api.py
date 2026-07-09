@@ -32,6 +32,10 @@ def test_get_my_character_returns_default_profile_with_owned_animals(
     assert data["progress_ratio"] == 0
     assert [a["animal_code"] for a in data["owned_animals"]] == ["frog"]
     assert data["owned_animals"][0]["unlocked_level"] == 1
+    assert data["owned_animals"][0]["image_urls"] == [
+        "/api/v1/media/images/by-key/animal/frog_1",
+        "/api/v1/media/images/by-key/animal/frog_2",
+    ]
 
 
 def test_list_animals_returns_locked_and_unlocked_catalog(
@@ -55,6 +59,10 @@ def test_list_animals_returns_locked_and_unlocked_catalog(
     ]
     assert animals[0]["is_unlocked"] is True
     assert animals[0]["required_total_exp"] == 0
+    assert animals[0]["image_urls"] == [
+        "/api/v1/media/images/by-key/animal/frog_1",
+        "/api/v1/media/images/by-key/animal/frog_2",
+    ]
     assert animals[0]["unlocked_at"] is not None
     assert animals[1]["is_unlocked"] is False
     assert animals[1]["required_total_exp"] == 235
