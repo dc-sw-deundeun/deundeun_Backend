@@ -100,7 +100,7 @@
 | `LEVEL_UP` | `CharacterService.gain_exp` 결과 `leveled_up=true` | `deundeun://characters/me` | always-on |
 | `MISSION_REMINDER` | `POST /missions/notifications/send` 호출(프론트가 직접 트리거) | `deundeun://missions/{mission_id}` | `mission_alarm_enabled` |
 
-Mission complete는 Phase 7에서 EXP/LEVEL_UP과 연결하지 않는다. `POST /missions/{id}/complete`는 상태 전이만 수행한다.
+Mission complete는 Phase 7에서 EXP/LEVEL_UP과 연결하지 않는다. `POST /api/v1/missions/{mission_id}/complete`는 상태 전이만 수행한다.
 
 ## POST /api/v1/missions/notifications/send
 
