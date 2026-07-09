@@ -19,6 +19,10 @@ def test_notify_mission_reminder_creates_notification(db_session) -> None:
     assert result.title == "식후 15분 걷기"
     assert result.body == "13:00 예정"
     assert result.deep_link == "deundeun://missions/100"
+    # source/source_id는 응답 스키마에 없는 내부 필드라 DB row로 직접 검증한다.
+    notif = db_session.get(Notification, result.id)
+    assert notif.source == "mission"
+    assert notif.source_id == "100"
 
 
 def test_notify_mission_reminder_idempotent(db_session) -> None:
@@ -30,7 +34,12 @@ def test_notify_mission_reminder_idempotent(db_session) -> None:
     assert first.id == second.id  # 같은 미션 재요청 → 동일 알림(신규 생성 없음)
     count = (
         db_session.query(Notification)
-        .filter(Notification.user_id == 52, Notification.source_id == "200")
+        .filter(
+            Notification.user_id == 52,
+            Notification.type == MISSION_REMINDER,
+            Notification.source == "mission",
+            Notification.source_id == "200",
+        )
         .count()
     )
     assert count == 1
