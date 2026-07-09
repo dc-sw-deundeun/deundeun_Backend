@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Query, Security
 
 from app.core.dependencies import bearer_scheme, get_current_user, get_mission_service
 from app.core.response import not_implemented_response, success_response
+from app.domains.mission.schemas import MissionNotificationRequest
 from app.domains.mission.service import MissionService
 from app.domains.user.schemas import CurrentUser
 
@@ -225,8 +226,33 @@ def get_statistics_summary(
 
 @router.post(
     "/notifications/send",
-    summary="[프론트 작업 제외] 미션 알림 발송 placeholder",
-    description="미션 알림 발송 API는 아직 구현되지 않았습니다. 호출 시 NOT_IMPLEMENTED(501)를 반환합니다.",
+    summary="[프론트 사용] 미션 알림(리마인드) 발송",
+    description=(
+        "본인 미션의 리마인드 알림을 생성합니다. 알림설정(`mission_alarm_enabled`)이 꺼져 있으면 "
+        "생성 없이 sent=false를 반환합니다(에러 아님). 같은 미션에 재요청해도 중복 알림 없이 멱등합니다."
+    ),
+    dependencies=[Security(bearer_scheme)],
+    openapi_extra={
+        "responses": {
+            "200": {
+                "content": {
+                    "application/json": {
+                        "example": {
+                            "success": True,
+                            "message": "요청이 성공했습니다.",
+                            "data": {"sent": True, "notification_id": 42, "reason": None},
+                            "error_code": None,
+                        }
+                    }
+                }
+            }
+        }
+    },
 )
-async def send_mission_notification(current_user: CurrentUser = Depends(get_current_user)):
-    return not_implemented_response()
+def send_mission_notification(
+    body: MissionNotificationRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+    service: MissionService = Depends(get_mission_service),
+):
+    result = service.send_mission_notification(current_user.id, body.mission_id)
+    return success_response(data=result.model_dump(mode="json"))
