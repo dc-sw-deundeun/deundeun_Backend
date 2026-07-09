@@ -145,6 +145,17 @@ class MissionRepository:
             )
         )
 
+    def get_for_user_with_template(
+        self, mission_id: int, user_id: int
+    ) -> tuple[UserMission, MissionTemplate | None] | None:
+        """단일 미션(+템플릿 조인) — 표시용 제목/실행정보가 필요한 곳(알림 등)에서 사용."""
+        row = self._db.execute(
+            select(UserMission, MissionTemplate)
+            .outerjoin(MissionTemplate, UserMission.template_id == MissionTemplate.id)
+            .where(UserMission.id == mission_id, UserMission.user_id == user_id)
+        ).first()
+        return (row[0], row[1]) if row else None
+
     # ----- history (PKG success_rate / 변화) -----
 
     def success_rate(self, user_id: int, *, today: date, window_days: int = 14) -> float | None:

@@ -188,7 +188,7 @@
 - 이미 `COMPLETED`인 미션을 다시 호출하면 **멱등**하게 처리한다(에러 없이 그대로 완료 유지, 재요청/더블탭 안전).
 - 본인 미션이 아니거나 존재하지 않으면 `404`.
 - 완료 상태는 `completed_at`에 기록되고, 최근 14일 완료율(`success_rate`)로 계산돼 다음 날 미션 생성 시 난이도 조정에 반영된다.
-- 캐릭터 EXP 지급, 알림 발송은 아직 연결되지 않았다(후속 Phase).
+- 미션 완료 시 캐릭터 EXP 지급·자동 알림은 아직 연결되지 않았다(후속 Phase). 미션 리마인드 알림은 별도로 `POST /api/v1/missions/notifications/send`로 발송한다([api-notification.md](./api-notification.md)).
 
 ### Response
 

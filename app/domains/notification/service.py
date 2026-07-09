@@ -11,6 +11,7 @@ from app.domains.notification.schemas import NotificationItemResponse, Notificat
 
 ANALYSIS_COMPLETED = "ANALYSIS_COMPLETED"
 LEVEL_UP = "LEVEL_UP"
+MISSION_REMINDER = "MISSION_REMINDER"
 
 
 def run_notification_safely(
@@ -98,6 +99,27 @@ class NotificationService:
             deep_link="deundeun://characters/me",
             source="character",
             source_id=f"growth_log:{growth_log_id}",
+            commit=commit,
+        )
+
+    def notify_mission_reminder(
+        self,
+        *,
+        user_id: int,
+        mission_id: int,
+        title: str,
+        body: str,
+        commit: bool = True,
+    ) -> NotificationItemResponse:
+        """미션 리마인드 알림. source_id=미션id라 같은 미션 재요청은 멱등(중복 생성 없음)."""
+        return self._create_and_return(
+            user_id=user_id,
+            notification_type=MISSION_REMINDER,
+            title=title,
+            body=body,
+            deep_link=f"deundeun://missions/{mission_id}",
+            source="mission",
+            source_id=str(mission_id),
             commit=commit,
         )
 
