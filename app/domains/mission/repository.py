@@ -56,37 +56,37 @@ class MissionRepository:
         ).all()
         return [(mission, template) for mission, template in rows]
 
-    def list_for_range(self, user_id: int, start: date, end: date) -> list[UserMission]:
-        """[start, end] 구간(양끝 포함) 배정 미션 — 주간/월간 집계용."""
-        return list(
-            self._db.scalars(
-                select(UserMission)
-                .where(
-                    UserMission.user_id == user_id,
-                    UserMission.assigned_date >= start,
-                    UserMission.assigned_date <= end,
-                )
-                .order_by(UserMission.assigned_date, UserMission.id)
+    def daily_counts_for_range(
+        self, user_id: int, start: date, end: date
+    ) -> dict[date, tuple[int, int]]:
+        """[start, end] 구간(양끝 포함)의 일별 (total, completed) — SQL 집계(GROUP BY).
+
+        전체 ORM 행/payload를 로드하지 않고 DB에서 날짜별로 세어 반환한다(주간/월간 조회용).
+        """
+        rows = self._db.execute(
+            select(
+                UserMission.assigned_date,
+                func.count(),
+                func.count().filter(UserMission.status == "COMPLETED"),
             )
-        )
+            .where(
+                UserMission.user_id == user_id,
+                UserMission.assigned_date >= start,
+                UserMission.assigned_date <= end,
+            )
+            .group_by(UserMission.assigned_date)
+        ).all()
+        return {d: (int(total), int(completed)) for d, total, completed in rows}
 
     def all_time_totals(self, user_id: int) -> tuple[int, int]:
-        """(전체 배정 수, 완료 수) — 총 완료 통계/완성도용."""
-        total = (
-            self._db.scalar(
-                select(func.count()).select_from(UserMission).where(UserMission.user_id == user_id)
-            )
-            or 0
-        )
-        completed = (
-            self._db.scalar(
-                select(func.count())
-                .select_from(UserMission)
-                .where(UserMission.user_id == user_id, UserMission.status == "COMPLETED")
-            )
-            or 0
-        )
-        return total, completed
+        """(전체 배정 수, 완료 수) — 단일 쿼리 조건부 집계."""
+        row = self._db.execute(
+            select(
+                func.count(),
+                func.count().filter(UserMission.status == "COMPLETED"),
+            ).where(UserMission.user_id == user_id)
+        ).one()
+        return int(row[0] or 0), int(row[1] or 0)
 
     # ----- 엔진 생성 미션 (인스턴스 저장) -----
 
