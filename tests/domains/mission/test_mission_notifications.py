@@ -4,9 +4,14 @@
 - send_mission_notification: 본인 미션 확인(404) → mission_alarm_enabled 스킵 → 알림 생성(멱등).
 """
 
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import date
 
-from app.domains.mission.models import UserMission
+import pytest
+
+from app.core.exceptions import NotFoundException
+from app.domains.mission.models import MissionTemplate, UserMission
 from app.domains.mission.repository import MissionRepository
 from app.domains.mission.service import MissionService
 from app.domains.notification.models import Notification, NotificationPreference
@@ -38,6 +43,29 @@ def _seed_engine_mission(db, user_id: int, mission_id_hint: int | None = None) -
     return row
 
 
+def _seed_legacy_mission(db, user_id: int) -> UserMission:
+    # code는 유니크 — 009 마이그레이션이 이미 DEFAULT_SELF_CHECK를 시드해두므로 별도 코드 사용.
+    template = MissionTemplate(
+        code="TEST_LEGACY_TEMPLATE",
+        title="오늘의 건강 체크",
+        category="HEALTH",
+        verification_mode="SELF_CHECK",
+        default_xp=10,
+    )
+    db.add(template)
+    db.flush()
+    row = UserMission(
+        user_id=user_id,
+        template_id=template.id,
+        assigned_date=date(2026, 7, 9),
+        status="ASSIGNED",
+        xp_reward=10,
+    )
+    db.add(row)
+    db.commit()
+    return row
+
+
 # --- repository.get_for_user_with_template ---
 
 
@@ -48,6 +76,17 @@ def test_get_for_user_with_template_engine_mission_has_no_template(db_session) -
     assert found is not None
     row, template = found
     assert row.id == mission.id and template is None
+
+
+def test_get_for_user_with_template_legacy_mission_joins_template(db_session) -> None:
+    _create_user(db_session, 40)
+    mission = _seed_legacy_mission(db_session, 40)
+    found = MissionRepository(db_session).get_for_user_with_template(mission.id, 40)
+    assert found is not None
+    row, template = found
+    assert row.id == mission.id
+    assert template is not None
+    assert template.title == "오늘의 건강 체크"
 
 
 def test_get_for_user_with_template_returns_none_for_other_user(db_session) -> None:
@@ -73,23 +112,15 @@ def test_send_mission_notification_success(db_session) -> None:
 
 
 def test_send_mission_notification_404_for_missing_mission(db_session) -> None:
-    from app.core.exceptions import NotFoundException
-
     _create_user(db_session, 44)
-    import pytest
-
     with pytest.raises(NotFoundException):
         _svc(db_session).send_mission_notification(44, 999999)
 
 
 def test_send_mission_notification_404_for_other_users_mission(db_session) -> None:
-    from app.core.exceptions import NotFoundException
-
     _create_user(db_session, 45)
     _create_user(db_session, 46)
     mission = _seed_engine_mission(db_session, 45)
-
-    import pytest
 
     with pytest.raises(NotFoundException):
         _svc(db_session).send_mission_notification(46, mission.id)
@@ -116,6 +147,9 @@ def test_send_mission_notification_sends_when_no_preference_row(db_session) -> N
     mission = _seed_engine_mission(db_session, 48)
     result = _svc(db_session).send_mission_notification(48, mission.id)
     assert result.sent is True
+    assert result.notification_id is not None
+    count = db_session.query(Notification).filter(Notification.user_id == 48).count()
+    assert count == 1
 
 
 def test_send_mission_notification_idempotent_on_repeat(db_session) -> None:
@@ -133,39 +167,31 @@ def test_send_mission_notification_idempotent_on_repeat(db_session) -> None:
 # --- 라우터 통합 ---
 
 
-def _as_user(user_id: int):
+@contextmanager
+def _as_user(user_id: int) -> Iterator[None]:
     from app.core.dependencies import get_current_user
     from app.domains.user.schemas import CurrentUser
     from app.main import app
 
     app.dependency_overrides[get_current_user] = lambda: CurrentUser(id=user_id)
-
-
-def _clear_override():
-    from app.core.dependencies import get_current_user
-    from app.main import app
-
-    app.dependency_overrides.pop(get_current_user, None)
+    try:
+        yield
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
 
 
 def test_send_notification_endpoint(client, db_session) -> None:
     _create_user(db_session, 50)
     mission = _seed_engine_mission(db_session, 50)
-    _as_user(50)
-    try:
+    with _as_user(50):
         res = client.post("/api/v1/missions/notifications/send", json={"mission_id": mission.id})
         assert res.status_code == 200
         data = res.json()["data"]
         assert data["sent"] is True and data["notification_id"] is not None
-    finally:
-        _clear_override()
 
 
 def test_send_notification_endpoint_404_for_missing_mission(client, db_session) -> None:
     _create_user(db_session, 53)
-    _as_user(53)
-    try:
+    with _as_user(53):
         res = client.post("/api/v1/missions/notifications/send", json={"mission_id": 999999})
         assert res.status_code == 404
-    finally:
-        _clear_override()
