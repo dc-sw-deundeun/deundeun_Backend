@@ -20,6 +20,7 @@ from app.domains.pkg.adapter import (
     derive_conditions_and_flags,
     derive_from_evaluated,
 )
+from app.domains.pkg.neighborhood import deterministic_curation
 from app.domains.pkg.repository import PkgRepository
 from app.domains.pkg.trends import compute_trends, group_trend_values
 from app.domains.record.repository import RecordRepository
@@ -74,6 +75,8 @@ class PkgService:
             conditions=conditions,
             medications=[],  # v1: 앱에 약 소스 없음 (약 기반 회피는 mission_pool이 담당)
             trends=self._compute_trends(user_id, record.id),
+            # 동기 경로는 결정론적 기본값 — 비동기 워커가 작은 GPT 정제본으로 업그레이드.
+            curated_facts=deterministic_curation(conditions),
             nodes=nodes,
             edges=edges,
             flags=flags,
