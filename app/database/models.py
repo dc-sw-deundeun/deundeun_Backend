@@ -26,6 +26,7 @@ from app.domains.health_metric.models import (  # noqa: F401
     HealthMetricAnalysisRangeSegment,
     HealthMetricReference,
 )
+from app.domains.media.models import ImageAsset  # noqa: F401
 from app.domains.mission.models import (  # noqa: F401
     MissionGenerationRun,
     MissionTemplate,
