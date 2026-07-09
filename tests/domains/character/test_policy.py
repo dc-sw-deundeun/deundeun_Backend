@@ -41,6 +41,13 @@ def test_unlocked_animals_for_level_is_cumulative() -> None:
     assert [a.code for a in animals] == ["frog", "chick", "penguin"]
 
 
+def test_animal_image_urls_use_media_by_key_paths() -> None:
+    assert policy.animal_image_urls("penguin") == [
+        "/api/v1/media/images/by-key/animal/penguin_1",
+        "/api/v1/media/images/by-key/animal/penguin_2",
+    ]
+
+
 def test_level_for_total_exp_handles_multiple_level_ups() -> None:
     total = policy.exp_required_for_level(1) + policy.exp_required_for_level(2)
     assert policy.level_for_total_exp(total) == 3

@@ -7,6 +7,7 @@ class CharacterOwnedAnimalResponse(BaseModel):
     animal_code: str
     name: str
     unlocked_level: int
+    image_urls: list[str]
     unlocked_at: datetime | None = None
 
 
@@ -15,6 +16,7 @@ class CharacterCatalogAnimalResponse(BaseModel):
     name: str
     unlock_level: int
     required_total_exp: int
+    image_urls: list[str]
     is_unlocked: bool
     unlocked_at: datetime | None = None
 
