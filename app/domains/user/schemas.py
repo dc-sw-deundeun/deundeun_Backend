@@ -17,6 +17,7 @@ class UserSummaryResponse(BaseModel):
     id: int
     email: EmailStr
     nickname: str
+    sex: str
     onboarding_step: str
 
 
@@ -28,6 +29,7 @@ class MeResponse(BaseModel):
     id: int
     email: EmailStr
     nickname: str
+    sex: str
     onboarding_step: str
     timezone: str
     status: str

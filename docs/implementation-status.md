@@ -38,7 +38,9 @@
 | POST | `/password/reset/request` | 비밀번호 재설정 요청 |
 | POST | `/password/reset/confirm` | 비밀번호 재설정 확인 |
 | GET | `/me` | 내 정보 |
-| POST | `/policies/agree` | 약관 동의, 온보딩 단계 전환 |
+| POST | `/policies/agree` | 필수/선택 약관 동의, 온보딩 단계 전환 |
+
+`POST /signup`은 `sex: "MALE" | "FEMALE"`을 필수로 받습니다. `GET /me`와 `GET /my/profile`도 `sex`를 반환합니다. 약관은 이용약관·개인정보가 필수이고, 민감 건강정보·위치는 선택입니다.
 
 ### Onboarding `/api/v1/onboarding`
 
@@ -159,9 +161,9 @@ OCR 업로드 플로우 상세는 [api-record-ocr.md](./api-record-ocr.md) 참�
 | PATCH | `/notification-settings` | 알림 설정 부분 업데이트 |
 | GET | `/profile` | 마이페이지 프로필 조회 |
 | PATCH | `/profile` | 닉네임 수정 |
-| DELETE | `/account` | 회원탈퇴(소프트 탈퇴, 세션 무효화) |
+| DELETE | `/account` | 회원탈퇴(소프트 탈퇴, 세션 무효화, 유예 후 재가입 가능) |
 
-`PATCH /password`, `GET/PATCH /app-lock`, `POST /support`는 후속 Phase placeholder입니다. 비밀번호 재설정은 Auth API를 사용합니다.
+`PATCH /password`, `GET/PATCH /app-lock`, `POST /support`는 후속 Phase placeholder입니다. 비밀번호 재설정은 Auth API를 사용합니다. 탈퇴 계정은 즉시 로그인 불가이며, 기본 60초 유예가 지난 뒤 동일 이메일 재가입 요청 시 기존 `DELETED` 데이터가 정리됩니다.
 
 ### Search `/api/v1/search`
 

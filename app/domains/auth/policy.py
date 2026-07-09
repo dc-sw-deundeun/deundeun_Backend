@@ -21,7 +21,16 @@ LOGIN_LOCKOUT_MINUTES = 15
 REQUIRED_CONSENT_TYPES: tuple[ConsentType, ...] = (
     ConsentType.TERMS_OF_SERVICE,
     ConsentType.PRIVACY,
+)
+
+OPTIONAL_CONSENT_TYPES: tuple[ConsentType, ...] = (
     ConsentType.HEALTH_DATA,
+    ConsentType.LOCATION,
+)
+
+ALLOWED_CONSENT_TYPES: tuple[ConsentType, ...] = (
+    *REQUIRED_CONSENT_TYPES,
+    *OPTIONAL_CONSENT_TYPES,
 )
 
 # 각 약관의 현재 유효 버전. 약관 개정 시 이 값을 올리면
@@ -30,4 +39,16 @@ CURRENT_POLICY_VERSIONS: dict[ConsentType, str] = {
     ConsentType.TERMS_OF_SERVICE: "1.0",
     ConsentType.PRIVACY: "1.0",
     ConsentType.HEALTH_DATA: "1.0",
+    ConsentType.LOCATION: "1.0",
 }
+
+
+def _validate_policy_consistency() -> None:
+    consent_types = set(ALLOWED_CONSENT_TYPES)
+    missing_versions = consent_types - set(CURRENT_POLICY_VERSIONS)
+    if missing_versions:
+        names = ", ".join(sorted(consent_type.value for consent_type in missing_versions))
+        raise RuntimeError(f"CURRENT_POLICY_VERSIONS missing consent types: {names}")
+
+
+_validate_policy_consistency()

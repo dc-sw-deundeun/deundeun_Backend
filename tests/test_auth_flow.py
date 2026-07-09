@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.domains.auth.models import EmailVerification
+from app.domains.user.models import User, UserStatus
 from tests.conftest import CapturingEmailClient
 
 DEFAULT_PASSWORD = "Passw0rd!"
@@ -30,6 +31,7 @@ def signup_user(
     email: str = "user@example.com",
     password: str = DEFAULT_PASSWORD,
     nickname: str = "든든이",
+    sex: str = "MALE",
 ):
     _request_code(client, email)
     code = email_client.codes[email]
@@ -40,6 +42,7 @@ def signup_user(
             "email": email,
             "password": password,
             "nickname": nickname,
+            "sex": sex,
             "verification_token": token,
         },
     )
@@ -55,15 +58,37 @@ def test_signup_login_me_e2e(client: TestClient, email_client: CapturingEmailCli
     signup_res = signup_user(client, email_client, email="e2e@example.com")
     assert signup_res.status_code == 200
     assert signup_res.json()["data"]["user"]["email"] == "e2e@example.com"
+    assert signup_res.json()["data"]["user"]["sex"] == "MALE"
 
     login_res = login_user(client, email="e2e@example.com")
     assert login_res.status_code == 200
+    assert login_res.json()["data"]["user"]["sex"] == "MALE"
     access = login_res.json()["data"]["access_token"]
 
     me_res = client.get(f"{BASE}/me", headers={"Authorization": f"Bearer {access}"})
     assert me_res.status_code == 200
     assert me_res.json()["data"]["email"] == "e2e@example.com"
+    assert me_res.json()["data"]["sex"] == "MALE"
     assert me_res.json()["data"]["onboarding_step"] == "CONSENT"
+
+
+def test_signup_requires_sex(client: TestClient, email_client: CapturingEmailClient) -> None:
+    email = "no-sex@example.com"
+    _request_code(client, email)
+    code = email_client.codes[email]
+    token = _confirm_code(client, email, code).json()["data"]["verification_token"]
+
+    res = client.post(
+        f"{BASE}/signup",
+        json={
+            "email": email,
+            "password": DEFAULT_PASSWORD,
+            "nickname": "성별없음",
+            "verification_token": token,
+        },
+    )
+
+    assert res.status_code == 422
 
 
 def test_signup_with_weak_password_returns_400(
@@ -211,6 +236,53 @@ def test_password_reset_confirm_rejects_same_password(
 
     assert res.status_code == 400
     assert res.json()["error_code"] == "SAME_PASSWORD"
+
+
+def test_password_reset_confirm_checks_same_password_before_code(
+    client: TestClient, email_client: CapturingEmailClient
+) -> None:
+    signup_user(client, email_client, email="same-before-code@example.com", password="OldPass1!")
+
+    res = client.post(
+        f"{BASE}/password/reset/confirm",
+        json={
+            "email": "same-before-code@example.com",
+            "code": "000000",
+            "new_password": "OldPass1!",
+        },
+    )
+
+    assert res.status_code == 400
+    assert res.json()["error_code"] == "SAME_PASSWORD"
+
+
+def test_password_reset_confirm_rejects_deleted_account(
+    client: TestClient,
+    email_client: CapturingEmailClient,
+    db_session: Session,
+) -> None:
+    email = "deleted-reset@example.com"
+    signup_user(client, email_client, email=email)
+    user = db_session.scalar(select(User).where(User.email == email))
+    assert user is not None
+    user.status = UserStatus.DELETED
+    db_session.commit()
+
+    request_res = client.post(f"{BASE}/password/reset/request", json={"email": email})
+    assert request_res.status_code == 200
+    reset_code = email_client.codes[email]
+
+    res = client.post(
+        f"{BASE}/password/reset/confirm",
+        json={
+            "email": email,
+            "code": reset_code,
+            "new_password": "NewPass1!",
+        },
+    )
+
+    assert res.status_code == 403
+    assert res.json()["error_code"] == "ACCOUNT_INACTIVE"
 
 
 def test_password_reset_request_for_unknown_email_is_enumeration_safe(

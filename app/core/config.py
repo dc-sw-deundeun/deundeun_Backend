@@ -43,6 +43,9 @@ class Settings(BaseSettings):
     # 미션 생성 스케줄러(매시 틱) 기동 여부. test 환경/원치 않는 배포에서 끌 수 있다.
     mission_scheduler_enabled: bool = True
 
+    # 탈퇴 후 동일 이메일 재가입을 막는 유예 시간. 만료된 DELETED 계정은 가입 전 물리 정리한다.
+    account_deletion_grace_period_seconds: int = 60
+
     cors_allow_origins: list[str] | str = []
     cors_allow_credentials: bool = True
     cors_allow_methods: list[str] | str = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]

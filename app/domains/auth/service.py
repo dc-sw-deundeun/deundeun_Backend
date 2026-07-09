@@ -2,7 +2,6 @@ import secrets
 from datetime import UTC, datetime, timedelta
 
 from app.core.config import settings
-from app.core.exceptions import ForbiddenException
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -14,9 +13,11 @@ from app.core.security import (
 )
 from app.domains.auth import policy
 from app.domains.auth.exceptions import (
+    AccountInactiveException,
     AccountLockedException,
     ConsentRequiredException,
     EmailAlreadyExistsException,
+    InvalidConsentTypeException,
     InvalidCredentialsException,
     InvalidTokenException,
     InvalidVerificationCodeException,
@@ -52,6 +53,7 @@ class AuthService:
     # --- 이메일 인증 ---
     async def request_email_verification(self, email: str, purpose: VerificationPurpose) -> None:
         if purpose == VerificationPurpose.SIGNUP:
+            self._purge_expired_deleted_user(email, delete_email_verifications=True)
             if self.repo.find_user_by_email(email) is not None:
                 raise EmailAlreadyExistsException()
         elif self.repo.find_user_by_email(email) is None:
@@ -109,6 +111,7 @@ class AuthService:
         if verification is None:
             raise NotVerifiedException()
 
+        self._purge_expired_deleted_user(request.email, delete_email_verifications=False)
         if self.repo.find_user_by_email(request.email) is not None:
             raise EmailAlreadyExistsException()
 
@@ -116,6 +119,7 @@ class AuthService:
             email=request.email,
             password_hash=hash_password(request.password),
             nickname=request.nickname,
+            sex=request.sex,
         )
         self.repo.save_user(user)
         self.repo.db.commit()
@@ -148,9 +152,7 @@ class AuthService:
             raise InvalidCredentialsException()
 
         if user.status != UserStatus.ACTIVE:
-            raise ForbiddenException(
-                message="사용할 수 없는 계정입니다.", error_code="ACCOUNT_INACTIVE"
-            )
+            raise AccountInactiveException()
 
         self.repo.reset_failed_login(user)
         tokens = self._issue_tokens(user)
@@ -209,14 +211,15 @@ class AuthService:
         await self.request_email_verification(email, VerificationPurpose.PASSWORD_RESET)
 
     def confirm_password_reset(self, email: str, code: str, new_password: str) -> None:
-        self._verify_code(email, VerificationPurpose.PASSWORD_RESET, code)
-
         user = self.repo.find_user_by_email(email)
         if user is None:
             raise InvalidCredentialsException()
+        if user.status != UserStatus.ACTIVE:
+            raise AccountInactiveException()
         if verify_password(new_password, user.password_hash):
             raise SamePasswordException()
 
+        self._verify_code(email, VerificationPurpose.PASSWORD_RESET, code)
         user.password_hash = hash_password(new_password)
         now = datetime.now(UTC)
         self.repo.revoke_all_user_refresh_tokens(user.id, now)
@@ -233,8 +236,11 @@ class AuthService:
 
         consent_types = [item.consent_type for item in request.consents]
         required_types = set(policy.REQUIRED_CONSENT_TYPES)
-        if len(consent_types) != len(set(consent_types)) or set(consent_types) != required_types:
-            raise ConsentRequiredException()
+        allowed_types = set(policy.ALLOWED_CONSENT_TYPES)
+        if len(consent_types) != len(set(consent_types)) or not set(consent_types).issubset(
+            allowed_types
+        ):
+            raise InvalidConsentTypeException()
 
         provided = {item.consent_type: item for item in request.consents}
         for required in policy.REQUIRED_CONSENT_TYPES:
@@ -245,6 +251,10 @@ class AuthService:
                 raise PolicyVersionMismatchException()
 
         for item in request.consents:
+            if item.version != policy.CURRENT_POLICY_VERSIONS[item.consent_type]:
+                raise PolicyVersionMismatchException()
+            if item.consent_type in required_types and not item.agreed:
+                raise ConsentRequiredException()
             self.repo.add_consent_history(
                 user_id=user.id,
                 consent_type=item.consent_type.value,
@@ -269,6 +279,16 @@ class AuthService:
         remaining = policy.VERIFICATION_RESEND_COOLDOWN_SECONDS - elapsed
         if remaining > 0:
             raise ResendTooSoonException(retry_after_seconds=int(remaining) + 1)
+
+    def _purge_expired_deleted_user(self, email: str, *, delete_email_verifications: bool) -> None:
+        cutoff = datetime.now(UTC) - timedelta(
+            seconds=settings.account_deletion_grace_period_seconds
+        )
+        self.repo.purge_expired_deleted_user(
+            email=email,
+            cutoff=cutoff,
+            delete_email_verifications=delete_email_verifications,
+        )
 
     def _verify_code(
         self, email: str, purpose: VerificationPurpose, code: str

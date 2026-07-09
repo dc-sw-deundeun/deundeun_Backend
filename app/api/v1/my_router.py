@@ -45,6 +45,7 @@ _NOTIFICATION_DEFAULTS = {
                                 "id": 1,
                                 "email": "demo-user@demo.deundeun.xyz",
                                 "nickname": "든든데모",
+                                "sex": "MALE",
                                 "onboarding_step": "COMPLETED",
                                 "timezone": "Asia/Seoul",
                                 "status": "ACTIVE",
@@ -82,6 +83,7 @@ def get_profile(
                                 "id": 1,
                                 "email": "demo-user@demo.deundeun.xyz",
                                 "nickname": "수정된닉네임",
+                                "sex": "MALE",
                                 "onboarding_step": "COMPLETED",
                                 "timezone": "Asia/Seoul",
                                 "status": "ACTIVE",
@@ -145,7 +147,8 @@ async def submit_support(current_user: CurrentUser = Depends(get_current_user)):
     summary="[프론트 사용] 회원탈퇴",
     description=(
         "현재 계정을 소프트 탈퇴 처리합니다. 모든 refresh token을 폐기하고 token_version을 증가시켜 "
-        "기존 access token도 이후 요청에서 무효화합니다."
+        "기존 access token도 이후 요청에서 무효화합니다. 유예 시간이 지난 DELETED 계정은 동일 이메일 "
+        "재가입 시 물리 정리될 수 있습니다."
     ),
 )
 def delete_account(

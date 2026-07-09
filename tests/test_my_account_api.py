@@ -1,10 +1,12 @@
+from datetime import UTC, datetime, timedelta
+
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.domains.user.models import User, UserStatus
 from tests.conftest import CapturingEmailClient
-from tests.test_auth_flow import login_user, signup_user
+from tests.test_auth_flow import _confirm_code, _request_code, login_user, signup_user
 
 BASE = "/api/v1/my"
 
@@ -43,6 +45,7 @@ def test_get_my_profile_returns_current_user(
     data = res.json()["data"]
     assert data["email"] == "my-profile@example.com"
     assert data["nickname"] == "프로필사용자"
+    assert data["sex"] == "MALE"
     assert data["onboarding_step"] == "CONSENT"
     assert data["status"] == "ACTIVE"
 
@@ -113,6 +116,7 @@ def test_delete_my_account_revokes_sessions(
     assert user is not None
     db_session.refresh(user)
     assert user.status == UserStatus.DELETED
+    assert user.deleted_at is not None
     assert user.token_version == 1
 
     assert client.get("/api/v1/auth/me", headers=headers).status_code == 401
@@ -121,3 +125,44 @@ def test_delete_my_account_revokes_sessions(
     login_res = login_user(client, email=email)
     assert login_res.status_code == 403
     assert login_res.json()["error_code"] == "ACCOUNT_INACTIVE"
+
+
+def test_deleted_account_email_reuse_after_grace_period(
+    client: TestClient,
+    email_client: CapturingEmailClient,
+    db_session: Session,
+) -> None:
+    email = "my-reuse@example.com"
+    signup_user(client, email_client, email=email)
+    access = login_user(client, email=email).json()["data"]["access_token"]
+
+    delete_res = client.delete(f"{BASE}/account", headers={"Authorization": f"Bearer {access}"})
+    assert delete_res.status_code == 200
+    immediate = _request_code(client, email)
+    assert immediate.status_code == 409
+    assert immediate.json()["error_code"] == "EMAIL_ALREADY_EXISTS"
+
+    user = db_session.scalar(select(User).where(User.email == email))
+    assert user is not None
+    user.deleted_at = datetime.now(UTC) - timedelta(seconds=61)
+    db_session.commit()
+
+    assert _request_code(client, email).status_code == 200
+    code = email_client.codes[email]
+    token = _confirm_code(client, email, code).json()["data"]["verification_token"]
+    signup_res = client.post(
+        "/api/v1/auth/signup",
+        json={
+            "email": email,
+            "password": "NewPass1!",
+            "nickname": "재가입",
+            "sex": "MALE",
+            "verification_token": token,
+        },
+    )
+
+    assert signup_res.status_code == 200
+    users = list(db_session.scalars(select(User).where(User.email == email)))
+    assert len(users) == 1
+    assert users[0].status == UserStatus.ACTIVE
+    assert users[0].nickname == "재가입"

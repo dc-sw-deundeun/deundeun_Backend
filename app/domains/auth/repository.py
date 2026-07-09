@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any, cast
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, text
 from sqlalchemy.engine import CursorResult
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -13,7 +13,7 @@ from app.domains.auth.models import (
     RefreshToken,
     VerificationPurpose,
 )
-from app.domains.user.models import User
+from app.domains.user.models import User, UserStatus
 
 
 class AuthRepository:
@@ -46,6 +46,113 @@ class AuthRepository:
 
     def increment_token_version(self, user: User) -> None:
         user.token_version += 1
+
+    def purge_expired_deleted_user(
+        self,
+        *,
+        email: str,
+        cutoff: datetime,
+        delete_email_verifications: bool,
+    ) -> int:
+        """Physically remove a DELETED user whose grace period has elapsed.
+
+        Some early tables use logical references instead of FKs, so user deletion alone
+        would leave health/checkup rows behind.
+        """
+        target = self.db.scalar(
+            select(User).where(
+                User.email == email,
+                User.status == UserStatus.DELETED,
+                User.deleted_at.is_not(None),
+                User.deleted_at <= cutoff,
+            )
+        )
+        if target is None:
+            return 0
+
+        params = {"email": email, "cutoff": cutoff}
+        statements = self._build_expired_deleted_user_purge_statements(
+            delete_email_verifications=delete_email_verifications
+        )
+
+        for statement in statements:
+            self.db.execute(text(statement), params)
+        return 1
+
+    @staticmethod
+    def _build_expired_deleted_user_purge_statements(
+        *, delete_email_verifications: bool
+    ) -> list[str]:
+        target_user_sql = """
+            select id
+            from users
+            where email = :email
+              and status = 'DELETED'
+              and deleted_at is not null
+              and deleted_at <= :cutoff
+        """
+        target_record_sql = f"""
+            select id from checkup_records where user_id in ({target_user_sql})
+        """
+        target_hm_analysis_sql = f"""
+            select id
+            from health_metric_analyses
+            where user_id in ({target_user_sql})
+               or record_id in ({target_record_sql})
+        """
+        target_hm_item_sql = f"""
+            select id
+            from health_metric_analysis_items
+            where analysis_id in ({target_hm_analysis_sql})
+        """
+        target_analysis_job_sql = f"""
+            select id
+            from analysis_jobs
+            where user_id in ({target_user_sql})
+               or record_id in ({target_record_sql})
+        """
+        target_summary_sql = f"""
+            select id
+            from checkup_analysis_summaries
+            where record_id in ({target_record_sql})
+               or job_id in ({target_analysis_job_sql})
+        """
+
+        statements = [
+            f"delete from analysis_mission_candidates where summary_id in ({target_summary_sql})",
+            f"delete from checkup_analysis_summaries where id in ({target_summary_sql})",
+            f"delete from analysis_jobs where id in ({target_analysis_job_sql})",
+            (
+                "delete from health_metric_analysis_item_recommendations "
+                f"where item_id in ({target_hm_item_sql})"
+            ),
+            f"delete from health_metric_analysis_item_ranges where item_id in ({target_hm_item_sql})",
+            f"delete from health_metric_analysis_range_segments where item_id in ({target_hm_item_sql})",
+            f"delete from health_metric_analysis_highlights where analysis_id in ({target_hm_analysis_sql})",
+            f"delete from health_metric_analysis_items where id in ({target_hm_item_sql})",
+            f"delete from health_metric_analyses where id in ({target_hm_analysis_sql})",
+            f"delete from checkup_metric_results where record_id in ({target_record_sql})",
+            (
+                "delete from ocr_jobs "
+                f"where user_id in ({target_user_sql}) or record_id in ({target_record_sql})"
+            ),
+            f"delete from checkup_records where id in ({target_record_sql})",
+            f"delete from pkg_snapshots where user_id in ({target_user_sql})",
+            f"delete from user_missions where user_id in ({target_user_sql})",
+            f"delete from mission_generation_runs where user_id in ({target_user_sql})",
+            f"delete from notifications where user_id in ({target_user_sql})",
+            f"delete from notification_preferences where user_id in ({target_user_sql})",
+            f"delete from refresh_tokens where user_id in ({target_user_sql})",
+            f"delete from consent_histories where user_id in ({target_user_sql})",
+            f"delete from character_owned_animals where user_id in ({target_user_sql})",
+            f"delete from character_growth_logs where user_id in ({target_user_sql})",
+            f"delete from character_profiles where user_id in ({target_user_sql})",
+            f"delete from wearable_connections where user_id in ({target_user_sql})",
+        ]
+        if delete_email_verifications:
+            statements.append("delete from email_verifications where email = :email")
+        statements.append(f"delete from users where id in ({target_user_sql})")
+        return statements
 
     # --- ConsentHistory ---
     def add_consent_history(

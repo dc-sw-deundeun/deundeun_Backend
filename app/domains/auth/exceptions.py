@@ -42,6 +42,15 @@ class ConsentRequiredException(AppException):
         )
 
 
+class InvalidConsentTypeException(AppException):
+    def __init__(self) -> None:
+        super().__init__(
+            status_code=400,
+            message="동의 타입이 중복되거나 허용되지 않은 값이 포함되어 있습니다.",
+            error_code="INVALID_CONSENT_TYPE",
+        )
+
+
 class PolicyVersionMismatchException(AppException):
     def __init__(self) -> None:
         super().__init__(
@@ -66,6 +75,15 @@ class SamePasswordException(AppException):
             status_code=400,
             message="새 비밀번호는 기존 비밀번호와 달라야 합니다.",
             error_code="SAME_PASSWORD",
+        )
+
+
+class AccountInactiveException(AppException):
+    def __init__(self) -> None:
+        super().__init__(
+            status_code=403,
+            message="사용할 수 없는 계정입니다.",
+            error_code="ACCOUNT_INACTIVE",
         )
 
 

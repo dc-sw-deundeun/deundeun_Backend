@@ -1,3 +1,4 @@
+from app.domains.auth import policy as auth_policy
 from app.domains.auth.exceptions import InvalidTokenException
 from app.domains.onboarding import policy
 from app.domains.onboarding.exceptions import (
@@ -9,6 +10,7 @@ from app.domains.onboarding.hooks import on_onboarding_complete
 from app.domains.onboarding.models import WearableProvider, WearableStatus
 from app.domains.onboarding.repository import OnboardingRepository
 from app.domains.onboarding.schemas import (
+    ConsentPolicyItem,
     OnboardingCompleteResponse,
     OnboardingStatusResponse,
     WearableAction,
@@ -38,6 +40,22 @@ class OnboardingService:
         return OnboardingStatusResponse(
             onboarding_step=user.onboarding_step,
             is_completed=user.onboarding_step == OnboardingStep.COMPLETED.value,
+            required_consents=[
+                ConsentPolicyItem(
+                    consent_type=consent_type.value,
+                    version=auth_policy.CURRENT_POLICY_VERSIONS[consent_type],
+                    required=True,
+                )
+                for consent_type in auth_policy.REQUIRED_CONSENT_TYPES
+            ],
+            optional_consents=[
+                ConsentPolicyItem(
+                    consent_type=consent_type.value,
+                    version=auth_policy.CURRENT_POLICY_VERSIONS[consent_type],
+                    required=False,
+                )
+                for consent_type in auth_policy.OPTIONAL_CONSENT_TYPES
+            ],
             wearable_connections=[WearableConnectionItem.model_validate(c) for c in connections],
         )
 
