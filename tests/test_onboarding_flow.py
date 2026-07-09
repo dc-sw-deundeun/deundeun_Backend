@@ -78,7 +78,7 @@ def test_agree_policies_required_only_advances_to_wearable(
             .order_by(ConsentHistory.consent_type)
         )
     )
-    assert {history.consent_type.value for history in histories} == {
+    assert {history.consent_type for history in histories} == {
         "PRIVACY",
         "TERMS_OF_SERVICE",
     }
