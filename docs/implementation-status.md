@@ -14,7 +14,7 @@
 | Record / OCR | 구현 | 가능 |
 | HealthMetric | 구현 | 가능 |
 | Analysis | legacy stub | 프론트 작업 제외 |
-| Mission | 부분 | `GET /today`, `POST /{id}/complete` 가능, 인증·캘린더·통계·complete→EXP는 후속 |
+| Mission | 부분 | `GET /today`·조회(날짜별/주간/월간/총계)·complete 가능, 인증·complete→EXP는 후속 |
 | Character | 구현 | 가능 |
 | Home | 구현 | 가능 |
 | My | 부분 | 연동 앱·알림 설정 가능, 프로필·앱잠금·문의·계정삭제는 stub |
@@ -117,13 +117,17 @@ OCR 업로드 플로우 상세는 [api-record-ocr.md](./api-record-ocr.md) 참�
 | Method | Path | 설명 |
 |--------|------|------|
 | GET | `/today` | 사용자 timezone 기준 오늘 미션 목록과 완료 집계 |
+| GET | `/date/{date}` | 특정 날짜 미션 목록·완료 집계(`/today`와 동일 shape) |
+| GET | `/calendar?year=&month=` | 월간 캘린더 — 미션 있는 날의 일별 집계 |
+| GET | `/statistics/weekly?date=` | 주간(월~일) 일별·합계 집계 |
+| GET | `/statistics/summary` | 총 배정·완료 수 + 완성도(completion_rate) |
 | POST | `/{mission_id}/complete` | 본인 미션 self-report 완료(멱등) |
 
 `POST /{mission_id}/complete`는 self-report 완료(멱등, 상태 전이만)입니다. **캐릭터 EXP 지급·LEVEL_UP 알림은 연결되지 않았으며**(생성 미션이 지닌 `xp_reward` 값을 지급하도록 연결) Phase 5 확장 대상입니다.
 
 생성된 미션은 **난이도 기반 EXP 보상**(`xp_reward` = difficulty×10)과 **예상 수행 시각**(`execution.time`, `HH:MM`, 프론트 알람용)을 함께 담아 `GET /today`로 노출합니다. 수행 시각은 규칙 기반 기본값을 LLM이 미션 맥락에 맞게 덮되, 형식이 어긋나면 규칙값으로 폴백합니다.
 
-`POST /{mission_id}/verify`, `GET /calendar`, `GET /statistics/weekly`, `POST /notifications/send`는 후속 Phase placeholder입니다.
+조회 API(`/date/{date}`·`/calendar`·`/statistics/weekly`·`/statistics/summary`)는 순수 조회이며 프론트 연동 가능합니다. `POST /{mission_id}/verify`, `POST /notifications/send`는 후속 Phase placeholder입니다.
 
 미션 생성은 REST API가 아니라 백그라운드 스케줄러(매시 틱, PKG 기반)가 담당합니다. `GET /today`는 조회만 하고, 새 검진 저장 시 당일 미완료 미션을 무효화·재생성합니다. 완료 이력(14일 완료율)은 다음 생성에 반영됩니다.
 
@@ -178,7 +182,7 @@ PKG는 미션 생성 엔진이 소비하는 서버/내부 계약입니다. 로�
 
 | Prefix | 상태 |
 |--------|------|
-| `/api/v1/missions/*` | `/today`, `/{id}/complete` 외 미션 인증·캘린더·통계·알림 발송 미완성 |
+| `/api/v1/missions/*` | 조회(today·날짜별·주간·월간·총계)·complete 외 미션 인증·알림 발송 미완성 |
 | `/api/v1/my/app-lock`, `/api/v1/my/support` | 마이페이지 후속 기능 미완성 |
 
 ## 마이그레이션
