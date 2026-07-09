@@ -98,3 +98,21 @@ def condition_facts(conditions: list[str]) -> dict[str, dict[str, list[str]]]:
         for c in conditions
         if c in data
     }
+
+
+_CURATION_PER_CONDITION = 4
+
+
+def deterministic_curation(
+    conditions: list[str], *, per_condition: int = _CURATION_PER_CONDITION
+) -> list[str]:
+    """원시 KG 이웃 → 결정론적 임상 요약(LLM 없을 때의 폴백/기본값).
+
+    phenotypes(증상·징후, 신뢰도 높음)를 우선하고 complications(합병증)로 보조한다. 노이즈가
+    많은 exposures(환경 독성물질)는 제외한다. 조건당 per_condition개까지.
+    """
+    facts: list[str] = []
+    for cond, buckets in condition_facts(conditions).items():
+        picks = (buckets.get("phenotypes", []) + buckets.get("complications", []))[:per_condition]
+        facts.extend(f"{cond}: {name}" for name in picks)
+    return facts

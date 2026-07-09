@@ -136,6 +136,7 @@ class PKG(BaseModel):
     wearable: Wearable = Field(default_factory=Wearable)
     history: History = Field(default_factory=History)
     trends: list[MetricTrend] = Field(default_factory=list)  # 검진 지표 궤적(개인화)
+    curated_facts: list[str] = Field(default_factory=list)  # 외부 KG 이웃을 정제한 임상 요약
     nodes: list[PkgNode] = Field(default_factory=list)
     edges: list[PkgEdge] = Field(default_factory=list)
     flags: dict[str, bool] = Field(default_factory=dict)  # cardiovascular_risk 등
@@ -180,6 +181,7 @@ class StructuredContext(BaseModel):
     relations: list[Relation] = Field(default_factory=list)  # M3 ON일 때만 채워짐
     wearable: Wearable = Field(default_factory=Wearable)
     trends: list[MetricTrend] = Field(default_factory=list)  # 검진 지표 궤적(개인화)
+    curated_facts: list[str] = Field(default_factory=list)  # 외부 KG 정제 임상 요약
     success_rate: float | None = None
     recent_mission_titles: list[str] = Field(default_factory=list)  # 최근 배정분(반복 회피용)
 

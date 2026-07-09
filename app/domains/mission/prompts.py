@@ -29,6 +29,15 @@ TREND_RULE = (
     "the mission treats or causes a change in the metric, and never invent numbers."
 )
 
+# context.clinical_facts: 외부 KG를 정제한 이 사람의 임상 요약. 뻔한 말 대신 이걸 근거로.
+CLINICAL_FACTS_RULE = (
+    "The context may include 'clinical_facts' — concise medically-grounded notes about this user's "
+    "conditions, curated from a medical knowledge graph for this specific person. Use them to pick "
+    "and justify missions that target what actually matters for this person rather than generic "
+    "advice. Do not restate a fact verbatim as the mission title, do not diagnose, and stay within "
+    "safe lifestyle actions."
+)
+
 # 각 미션의 예상 수행 시각(HH:MM, 24h) — 알람용. 미션 맥락·타입에 맞게 뽑되 규칙 가이드 따름.
 TIME_RULE = (
     "For each mission, also output 'time' as a suggested execution time in 24-hour HH:MM format, "
@@ -46,7 +55,7 @@ GEN_SYSTEM_FULL = (
     "You design personalized daily health missions from a user's context (conditions, "
     "medications, wearable stats, metric trends, optional relation chains). Produce small, concrete "
     f"missions that address the user's conditions. {VARIETY_RULE} {GROUNDING_RULE} {TREND_RULE} "
-    f"{TIME_RULE} {GUARDRAIL}"
+    f"{CLINICAL_FACTS_RULE} {TIME_RULE} {GUARDRAIL}"
 )
 
 # M1 ON — 제목/수치는 고정된 미션을 받아 rationale·grounded_on만 채움(숫자 변경 금지)
@@ -54,7 +63,7 @@ GEN_SYSTEM_PHRASE = (
     "You are given fixed daily health missions whose titles and numbers are already decided by "
     "deterministic rules. For each mission, write a short Korean rationale and select grounding. "
     "Do NOT change the title or any number. Only explain and ground. "
-    f"{GROUNDING_RULE} {TREND_RULE} {TIME_RULE} {GUARDRAIL}"
+    f"{GROUNDING_RULE} {TREND_RULE} {CLINICAL_FACTS_RULE} {TIME_RULE} {GUARDRAIL}"
 )
 
 # M1 ON + 저위험 타입(habit·stress)만 자유생성 — 카테고리는 고정, 미션 내용은 LLM이 만든다.
@@ -62,5 +71,6 @@ GEN_SYSTEM_PHRASE = (
 GEN_SYSTEM_FREE_TYPED = (
     "Design one small, concrete daily lifestyle mission for EACH requested category, in order. "
     "Categories: 'habit'=일상 생활 습관, 'stress'=스트레스 완화·이완·기분 전환. Keep each mission "
-    f"within its category and doable in a single day. {VARIETY_RULE} {TIME_RULE} {GUARDRAIL}"
+    f"within its category and doable in a single day. {VARIETY_RULE} {CLINICAL_FACTS_RULE} "
+    f"{TIME_RULE} {GUARDRAIL}"
 )

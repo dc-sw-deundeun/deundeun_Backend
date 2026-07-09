@@ -130,6 +130,18 @@ def test_build_pkg_single_record_has_no_trends(db_session) -> None:
     assert pkg.trends == []
 
 
+def test_build_pkg_populates_curated_facts_deterministically(db_session) -> None:
+    # 동기 build_pkg는 KG 이웃에서 결정론적 curated_facts 기본값을 채운다(LLM 없음).
+    from app.domains.pkg.neighborhood import deterministic_curation
+
+    _create_user(db_session, 13)
+    _seed_record(db_session, 13, [("fasting_glucose", "130")])  # type2_diabetes
+    pkg = _service(db_session).build_pkg(13)
+    assert "type2_diabetes" in pkg.conditions
+    assert pkg.curated_facts == deterministic_curation(["type2_diabetes"])
+    assert pkg.curated_facts  # 비어있지 않음
+
+
 def test_build_pkg_prefers_healthmetric_evaluated_result(db_session) -> None:
     # record 원시 수치는 정상(systolic 120)이지만, health_metric 결과물엔 위험 판정이 있다.
     _create_user(db_session, 5)  # HealthMetricAnalysis.user_id는 users FK

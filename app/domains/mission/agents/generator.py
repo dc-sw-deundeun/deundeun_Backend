@@ -171,6 +171,7 @@ class Generator:
                 {"metric": t.label or t.code, "direction": t.direction, "adverse": t.adverse}
                 for t in ctx.trends
             ],
+            "clinical_facts": ctx.curated_facts,  # 외부 KG 정제 임상 요약 — 미션 근거로
             "success_rate": ctx.success_rate,
             "recent_missions": ctx.recent_mission_titles,  # 최근 배정분 — 반복 피하도록
         }

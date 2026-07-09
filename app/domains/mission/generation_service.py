@@ -11,9 +11,11 @@ from datetime import date
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import NotFoundException
+from app.domains.mission.agents.base import LLMClient
 from app.domains.mission.agents.pipeline import MissionPipeline
 from app.domains.mission.repository import MissionGenerationRunRepository, MissionRepository
 from app.domains.mission.schemas import PKG, PipelineConfig
+from app.domains.pkg.curation import curate_facts
 from app.domains.pkg.dependencies import build_pkg_service
 from app.domains.pkg.repository import PkgRepository
 
@@ -82,7 +84,35 @@ class MissionGenerationService:
         self._missions.delete_incomplete_for_date(user_id, target_date)
         self._runs.delete_for_date(user_id, target_date)
         self._db.commit()
+        await self._enrich_pkg_curation(user_id)
         return await self.generate_for_user(user_id, target_date, source="event")
+
+    async def _enrich_pkg_curation(self, user_id: int) -> None:
+        """작은 GPT로 PKG.curated_facts를 이 사람 맥락에 맞게 정제해 스냅샷에 반영한다.
+
+        build_pkg가 넣은 결정론적 기본값을 LLM 정제본으로 업그레이드한다. best-effort —
+        LLM 없음/실패/변화없음이면 조용히 넘어간다(다음 생성은 기존 스냅샷 값을 그대로 씀).
+        """
+        try:
+            snapshot = self._pkg_repo.get_by_user(user_id)
+            if snapshot is None:
+                return
+            pkg = PKG.model_validate(snapshot.payload)
+            if not pkg.conditions:
+                return
+            curated = await curate_facts(pkg, LLMClient.for_provider())
+            if curated == pkg.curated_facts:
+                return  # 변화 없음(결정론 폴백 등) → 스냅샷 갱신 생략
+            pkg.curated_facts = curated
+            self._pkg_repo.upsert_snapshot(
+                user_id,
+                payload=pkg.model_dump(mode="json"),
+                source_record_id=snapshot.source_record_id,
+            )
+            self._db.commit()
+        except Exception:
+            self._db.rollback()
+            logger.warning("PKG curation enrichment failed (user_id=%s)", user_id, exc_info=True)
 
     def _load_pkg(self, user_id: int) -> PKG | None:
         """미리 빌드된 스냅샷을 우선 사용하고, 없으면 build_pkg(검증검진 없으면 None)."""
