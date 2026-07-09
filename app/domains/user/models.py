@@ -58,6 +58,7 @@ class User(Base):
         Integer, default=0, server_default="0", nullable=False
     )
     locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     token_version: Mapped[int] = mapped_column(
         Integer, default=0, server_default="0", nullable=False
     )

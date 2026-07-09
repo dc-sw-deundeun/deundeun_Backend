@@ -52,6 +52,7 @@ class AuthService:
     # --- 이메일 인증 ---
     async def request_email_verification(self, email: str, purpose: VerificationPurpose) -> None:
         if purpose == VerificationPurpose.SIGNUP:
+            self._purge_expired_deleted_user(email, delete_email_verifications=True)
             if self.repo.find_user_by_email(email) is not None:
                 raise EmailAlreadyExistsException()
         elif self.repo.find_user_by_email(email) is None:
@@ -109,6 +110,7 @@ class AuthService:
         if verification is None:
             raise NotVerifiedException()
 
+        self._purge_expired_deleted_user(request.email, delete_email_verifications=False)
         if self.repo.find_user_by_email(request.email) is not None:
             raise EmailAlreadyExistsException()
 
@@ -276,6 +278,18 @@ class AuthService:
         remaining = policy.VERIFICATION_RESEND_COOLDOWN_SECONDS - elapsed
         if remaining > 0:
             raise ResendTooSoonException(retry_after_seconds=int(remaining) + 1)
+
+    def _purge_expired_deleted_user(
+        self, email: str, *, delete_email_verifications: bool
+    ) -> None:
+        cutoff = datetime.now(UTC) - timedelta(
+            seconds=settings.account_deletion_grace_period_seconds
+        )
+        self.repo.purge_expired_deleted_user(
+            email=email,
+            cutoff=cutoff,
+            delete_email_verifications=delete_email_verifications,
+        )
 
     def _verify_code(
         self, email: str, purpose: VerificationPurpose, code: str

@@ -42,6 +42,7 @@ class UserService:
             raise InvalidTokenException()
 
         user.status = UserStatus.DELETED
+        user.deleted_at = datetime.now(UTC)
         user.token_version += 1
-        self.repo.revoke_all_refresh_tokens(user_id, datetime.now(UTC))
+        self.repo.revoke_all_refresh_tokens(user_id, user.deleted_at)
         self.repo.commit()
