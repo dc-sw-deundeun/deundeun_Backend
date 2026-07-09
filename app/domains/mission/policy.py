@@ -1,6 +1,6 @@
 import logging
 import re
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 logger = logging.getLogger(__name__)
@@ -77,6 +77,12 @@ def normalize_time(candidate: str | None, mission_type: str, when: str) -> str:
     if candidate and _TIME_RE.match(candidate.strip()):
         return candidate.strip()
     return suggested_time(mission_type, when)
+
+
+def week_range_for_date(d: date) -> tuple[date, date]:
+    """d가 속한 주의 월요일~일요일 범위(둘 다 포함)."""
+    monday = d - timedelta(days=d.weekday())
+    return monday, monday + timedelta(days=6)
 
 
 def calculate_weekly_statistics(user_missions: list) -> dict:

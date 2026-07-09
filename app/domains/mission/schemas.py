@@ -12,8 +12,38 @@ class MissionCompleteRequest(BaseModel):
     pass
 
 
+class DayMissionStat(BaseModel):
+    """하루 미션 집계(주간/월간 조회의 일 단위)."""
+
+    date: date
+    total: int
+    completed: int
+
+
 class WeeklyStatisticsResponse(BaseModel):
-    pass
+    """이번 주 미션 기록 — 월~일 범위 + 일별 집계 + 주 합계."""
+
+    week_start: date
+    week_end: date
+    total: int
+    completed: int
+    days: list[DayMissionStat]
+
+
+class MonthlyCalendarResponse(BaseModel):
+    """월간 활동 — 미션이 있는 날의 일별 집계(캘린더 점 표시용)."""
+
+    year: int
+    month: int
+    days: list[DayMissionStat]
+
+
+class MissionStatisticsSummary(BaseModel):
+    """총 완료 통계 + 완성도(전체 기간)."""
+
+    total_assigned: int
+    total_completed: int
+    completion_rate: float = Field(ge=0.0, le=1.0)
 
 
 # ---------------------------------------------------------------------------

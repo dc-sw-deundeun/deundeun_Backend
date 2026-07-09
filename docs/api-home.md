@@ -17,9 +17,11 @@
 
 아직 후속 Phase 범위:
 
-- 미션 인증/캘린더/주간 통계
+- 미션 인증(웨어러블 자동 인증)
 - push / 리마인드 알림 worker
 - 미션 완료→EXP→LEVEL_UP (Phase 5 확장, Phase 7과 별도)
+
+> 미션 조회 API(날짜별/주간/월간/총계)는 구현됨 — 아래 "미션 조회 API" 참조.
 
 ---
 
@@ -198,6 +200,60 @@
   "error_code": null
 }
 ```
+
+---
+
+## 미션 조회 API (날짜별/주간/월간/총계)
+
+순수 조회 엔드포인트. 모두 Bearer 인증, 본인 데이터만 반환한다. Body 없음(GET).
+
+### GET /api/v1/missions/date/{date}
+
+특정 날짜 배정 미션 목록·완료 집계. **응답 shape은 `/today`와 동일**(`date`, `total`, `completed`, `items[]`). 월간 캘린더에서 날짜 탭 → 상세에 사용.
+
+| 위치 | 파라미터 | 타입 | 필수 | 설명 |
+|---|---|---|---|---|
+| path | `date` | string `YYYY-MM-DD` | 필수 | 조회할 날짜 |
+
+### GET /api/v1/missions/statistics/weekly
+
+지정 날짜가 속한 주(월~일)의 일별·합계 집계. `days`는 항상 7개(미션 없는 날은 0).
+
+| 위치 | 파라미터 | 타입 | 필수 | 설명 |
+|---|---|---|---|---|
+| query | `date` | string `YYYY-MM-DD` | 선택 | 기준일. 생략 시 유저 로컬 오늘 |
+
+```json
+{ "week_start": "2026-07-06", "week_end": "2026-07-12", "total": 5, "completed": 3,
+  "days": [ { "date": "2026-07-06", "total": 2, "completed": 1 }, "…7일" ] }
+```
+
+### GET /api/v1/missions/calendar
+
+해당 월에서 **미션이 있는 날만** 일별 집계(캘린더 점 표시용).
+
+| 위치 | 파라미터 | 타입 | 필수 | 설명 |
+|---|---|---|---|---|
+| query | `year` | int (2000~2100) | 필수 | 조회 연도 |
+| query | `month` | int (1~12) | 필수 | 조회 월 |
+
+```json
+{ "year": 2026, "month": 7, "days": [ { "date": "2026-07-06", "total": 3, "completed": 2 } ] }
+```
+
+### GET /api/v1/missions/statistics/summary
+
+전체 기간 총 배정·완료 수 + 완성도. 요청 파라미터 없음.
+
+| 위치 | 파라미터 | 타입 | 필수 | 설명 |
+|---|---|---|---|---|
+| — | (없음) | — | — | 인증 사용자 전체 기간 집계 |
+
+```json
+{ "total_assigned": 120, "total_completed": 88, "completion_rate": 0.733 }
+```
+
+`completion_rate`는 0.0~1.0(미션 없으면 0.0).
 
 ---
 
