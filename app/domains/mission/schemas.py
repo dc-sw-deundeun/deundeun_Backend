@@ -46,6 +46,18 @@ class MissionStatisticsSummary(BaseModel):
     completion_rate: float = Field(ge=0.0, le=1.0)
 
 
+class MissionNotificationRequest(BaseModel):
+    mission_id: int
+
+
+class MissionNotificationResponse(BaseModel):
+    """미션 리마인드 알림 발송 결과. mission_alarm_enabled=false면 sent=False(에러 아님)."""
+
+    sent: bool
+    notification_id: int | None = None
+    reason: str | None = None  # 스킵/미발송 이유(예: 알림 꺼짐)
+
+
 # ---------------------------------------------------------------------------
 # 공통 상수
 # ---------------------------------------------------------------------------
