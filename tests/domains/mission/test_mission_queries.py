@@ -1,7 +1,7 @@
 """미션 조회 API — 주간/월간/날짜별/총계 (프론트 조회).
 
 - policy.week_range_for_date: 월~일 주 범위(순수).
-- repository.list_for_range / all_time_totals (DB).
+- repository.daily_counts_for_range / all_time_totals (SQL 집계, DB).
 - service: 주간 통계·월간 캘린더·날짜별 상세·총계 요약 (DB).
 """
 
@@ -51,15 +51,18 @@ def test_week_range_for_date_on_monday() -> None:
 # --- repository ---
 
 
-def test_list_for_range_inclusive_and_excludes_outside(db_session) -> None:
+def test_daily_counts_for_range_inclusive_and_excludes_outside(db_session) -> None:
     _create_user(db_session, 31)
-    _seed_mission(db_session, 31, date(2026, 7, 6))
+    _seed_mission(db_session, 31, date(2026, 7, 6), "COMPLETED")
+    _seed_mission(db_session, 31, date(2026, 7, 6), "ASSIGNED")
     _seed_mission(db_session, 31, date(2026, 7, 12))
     _seed_mission(db_session, 31, date(2026, 7, 13))  # 범위 밖
     db_session.commit()
-    rows = MissionRepository(db_session).list_for_range(31, date(2026, 7, 6), date(2026, 7, 12))
-    dates = sorted(r.assigned_date for r in rows)
-    assert dates == [date(2026, 7, 6), date(2026, 7, 12)]
+    agg = MissionRepository(db_session).daily_counts_for_range(
+        31, date(2026, 7, 6), date(2026, 7, 12)
+    )
+    assert set(agg) == {date(2026, 7, 6), date(2026, 7, 12)}  # 범위 밖 제외
+    assert agg[date(2026, 7, 6)] == (2, 1)  # total 2, completed 1(SQL FILTER)
 
 
 def test_all_time_totals(db_session) -> None:
