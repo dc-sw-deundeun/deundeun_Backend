@@ -83,6 +83,8 @@ instance/
 uploads/
 media/
 static/uploads/
+!app/domains/media/
+!app/domains/media/*.py
 
 # =========================
 # Database
@@ -148,8 +150,13 @@ docs/*
 !docs/api-character-growth.md
 !docs/api-my-page.md
 !docs/api-search.md
+!docs/api-media.md
+!docs/issues/
+docs/issues/*
+!docs/issues/phase-9.md
 .github/ISSUE_TEMPLATE/config.yml
 .github/ISSUE_TEMPLATE/phase-*.yml
+!.github/ISSUE_TEMPLATE/phase-9.yml
 
 # =========================
 # Tooling
