@@ -128,7 +128,7 @@ OCR 업로드 플로우 상세는 [api-record-ocr.md](./api-record-ocr.md) 참�
 
 생성된 미션은 **난이도 기반 EXP 보상**(`xp_reward` = difficulty×10)과 **예상 수행 시각**(`execution.time`, `HH:MM`, 프론트 알람용)을 함께 담아 `GET /today`로 노출합니다. 수행 시각은 규칙 기반 기본값을 LLM이 미션 맥락에 맞게 덮되, 형식이 어긋나면 규칙값으로 폴백합니다.
 
-조회 API(`/date/{date}`·`/calendar`·`/statistics/weekly`·`/statistics/summary`)는 순수 조회이며 프론트 연동 가능합니다. `POST /notifications/send`는 [api-notification.md](./api-notification.md) 참조 — `MISSION_REMINDER` 알림을 생성하며 자동 스케줄링/워커는 아직 없습니다(프론트가 직접 트리거). `POST /{mission_id}/verify`는 후속 Phase placeholder입니다.
+조회 API(`/date/{date}`·`/calendar`·`/statistics/weekly`·`/statistics/summary`)는 순수 조회이며 프론트 연동 가능합니다. `POST /api/v1/missions/notifications/send`는 [api-notification.md](./api-notification.md) 참조 — `MISSION_REMINDER` 알림을 생성하며 자동 스케줄링/워커는 아직 없습니다(프론트가 직접 트리거). `POST /{mission_id}/verify`는 후속 Phase placeholder입니다.
 
 미션 생성은 REST API가 아니라 백그라운드 스케줄러(매시 틱, PKG 기반)가 담당합니다. `GET /today`는 조회만 하고, 새 검진 저장 시 당일 미완료 미션을 무효화·재생성합니다. 완료 이력(14일 완료율)은 다음 생성에 반영됩니다.
 
