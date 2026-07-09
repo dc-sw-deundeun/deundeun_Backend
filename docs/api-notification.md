@@ -17,7 +17,7 @@
 | 알림 목록 | 구현 완료 | `GET /notifications` |
 | 알림 읽음 처리 | 구현 완료 | `PATCH /notifications/{notification_id}/read` |
 | 알림 설정 | My에서 구현 | `GET/PATCH /my/notification-settings` |
-| 미션 리마인드 발송 | 구현 완료 | `POST /missions/notifications/send` |
+| 미션 리마인드 발송 | 구현 완료 | `POST /api/v1/missions/notifications/send` |
 | push / 리마인드 worker(자동 트리거) | 미제공 | 후속 Phase |
 
 ## GET /notifications
@@ -98,7 +98,7 @@
 |------|-----------|-----------|------------|
 | `ANALYSIS_COMPLETED` | `POST /health-metrics/analyses` 저장 성공 | `deundeun://health-metrics/analyses/{analysis_id}` | always-on |
 | `LEVEL_UP` | `CharacterService.gain_exp` 결과 `leveled_up=true` | `deundeun://characters/me` | always-on |
-| `MISSION_REMINDER` | `POST /missions/notifications/send` 호출(프론트가 직접 트리거) | `deundeun://missions/{mission_id}` | `mission_alarm_enabled` |
+| `MISSION_REMINDER` | `POST /api/v1/missions/notifications/send` 호출(프론트가 직접 트리거) | `deundeun://missions/{mission_id}` | `mission_alarm_enabled` |
 
 Mission complete는 Phase 7에서 EXP/LEVEL_UP과 연결하지 않는다. `POST /api/v1/missions/{mission_id}/complete`는 상태 전이만 수행한다.
 
