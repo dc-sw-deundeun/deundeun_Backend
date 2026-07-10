@@ -17,7 +17,7 @@ _API_DESCRIPTION = """
 ### 현재 프론트 연동 가능 영역
 Auth/User, Onboarding, Record/OCR, HealthMetric, Character, Home, My(마이페이지), Notification, Search(질환 검색)는 구현되어 있습니다.
 Analysis Stub MVP 라우트는 legacy 호환용으로 유지하지만 신규 프론트 화면에서는 호출하지 않습니다.
-Mission API는 `GET /missions/today`, `POST /missions/{id}/complete`를 프론트 사용 구현 API로 제공합니다. 인증·캘린더·통계는 후속 Phase용 stub입니다.
+Mission API는 `GET /missions/today`, `POST /missions/{id}/complete`를 프론트 사용 구현 API로 제공합니다. 미션 완료 시 캐릭터 EXP가 즉시 지급되며, 백엔드 스케줄러가 매시 정각 미션 알림을 알림함에 자동 생성합니다. 인증·캘린더·통계는 후속 Phase용 stub입니다.
 Media API는 운영자가 SSH로 DB에 등록한 앱 정적 이미지를 공개 URL로 제공합니다.
 PKG API는 미션 엔진/서버 내부 소비용입니다. 신규 프론트 화면에서는 직접 호출하지 않습니다.
 Notification API는 알림함 목록·읽음 처리를 제공합니다. 알림 설정 화면은 `/my/notification-settings`를 사용하세요.
@@ -49,7 +49,7 @@ Notification API는 알림함 목록·읽음 처리를 제공합니다. 알림 �
 - `GET /characters/me`: 캐릭터 성장 상태와 실제 보유 동물 컬렉션을 반환합니다.
 - `GET /characters/animals`: 전체 동물 카탈로그와 잠금/해금 상태를 반환합니다.
 - `GET /missions/today`: 사용자 timezone 기준 오늘 배정된 미션 목록과 완료 집계를 반환합니다.
-- `POST /missions/{id}/complete`: 본인 미션을 self-report로 완료 처리합니다. 캐릭터 EXP 지급은 후속 Phase입니다.
+- `POST /missions/{id}/complete`: 본인 미션을 self-report로 완료 처리합니다. 완료 즉시 `xp_reward`만큼 캐릭터 EXP가 지급되고, 레벨업 시 알림이 생성됩니다. 멱등합니다(이미 완료된 미션 재요청은 no-op).
 
 ### Media 이미지 흐름
 - `GET /media/images`: 서버 DB에 등록된 시스템 이미지 메타 목록을 반환합니다.
@@ -97,7 +97,7 @@ _OPENAPI_TAGS = [
     },
     {
         "name": "Mission",
-        "description": "[프론트 사용] 오늘의 미션 조회와 self-report 완료 처리가 구현되어 있습니다. 인증·캘린더·통계 API는 후속 Phase stub입니다.",
+        "description": "[프론트 사용] 오늘의 미션 조회와 self-report 완료 처리가 구현되어 있습니다. 미션 완료 시 캐릭터 EXP 즉시 지급. 백엔드 스케줄러가 매시 정각 미션 알림을 자동 생성합니다. 인증·캘린더·통계 API는 후속 Phase stub입니다.",
     },
     {
         "name": "Record",

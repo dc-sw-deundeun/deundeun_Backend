@@ -81,7 +81,8 @@ class MissionService:
 
         본인 미션만 완료 가능하고, 이미 완료됐으면 no-op으로 XP 중복 지급을 막는다.
         완료 상태는 user_missions에 남아 build_pkg의 success_rate(14일창) 소스가 된다.
-        캐릭터 경험치 지급/알림은 Phase 4에서 별도 연결한다.
+        gain_exp()가 같은 세션을 commit하므로 미션 상태 + XP 지급이 원자적으로 저장된다.
+        gain_exp() 실패 시 명시적 rollback으로 미션 상태 flush도 함께 버린다(재시도 안전).
         """
         mission = self.repo.get_for_user(mission_id, user_id)
         if mission is None:
@@ -90,7 +91,23 @@ class MissionService:
             return  # 멱등: 이미 완료 (재요청·더블탭 안전)
         mission.status = "COMPLETED"
         mission.completed_at = datetime.now(timezone.utc)
-        self.repo.commit()
+        if mission.xp_reward > 0:
+            from app.domains.character.repository import CharacterRepository
+            from app.domains.character.service import CharacterService
+
+            try:
+                CharacterService(CharacterRepository(self.repo.db)).gain_exp(
+                    user_id=user_id,
+                    amount=mission.xp_reward,
+                    reason="mission_complete",
+                    source="mission",
+                    source_id=str(mission_id),
+                )
+            except Exception:
+                self.repo.db.rollback()
+                raise
+        else:
+            self.repo.commit()
 
     def verify_mission(self, user_id: int, mission_id: int) -> None:
         raise NotImplementedError
@@ -112,7 +129,7 @@ class MissionService:
         mission, template = found
         item = self._to_item(mission, template)
 
-        notif_repo = NotificationRepository(self.repo._db)
+        notif_repo = NotificationRepository(self.repo.db)
         pref = notif_repo.find_preference_by_user_id(user_id)
         if pref is not None and not pref.mission_alarm_enabled:
             return MissionNotificationResponse(

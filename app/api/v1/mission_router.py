@@ -4,7 +4,6 @@ from fastapi import APIRouter, Depends, Query, Security
 
 from app.core.dependencies import bearer_scheme, get_current_user, get_mission_service
 from app.core.response import not_implemented_response, success_response
-from app.domains.mission.schemas import MissionNotificationRequest
 from app.domains.mission.service import MissionService
 from app.domains.user.schemas import CurrentUser
 
@@ -97,7 +96,8 @@ def get_today_missions(
     "/{mission_id}/complete",
     summary="[프론트 사용] 미션 완료(self-report)",
     description=(
-        "인증된 사용자가 본인 미션을 완료 처리합니다(self-report). 이미 완료된 미션은 멱등 처리합니다. "
+        "인증된 사용자가 본인 미션을 완료 처리합니다(self-report). 완료 즉시 xp_reward만큼 캐릭터 EXP가 지급되며, "
+        "레벨업 시 알림이 생성됩니다. 이미 완료된 미션은 no-op으로 멱등 처리합니다. "
         "본인 미션이 아니거나 없으면 404."
     ),
 )
@@ -221,38 +221,4 @@ def get_statistics_summary(
     service: MissionService = Depends(get_mission_service),
 ):
     result = service.get_statistics_summary(current_user.id)
-    return success_response(data=result.model_dump(mode="json"))
-
-
-@router.post(
-    "/notifications/send",
-    summary="[프론트 사용] 미션 알림(리마인드) 발송",
-    description=(
-        "본인 미션의 리마인드 알림을 생성합니다. 알림설정(`mission_alarm_enabled`)이 꺼져 있으면 "
-        "생성 없이 sent=false를 반환합니다(에러 아님). 같은 미션에 재요청해도 중복 알림 없이 멱등합니다."
-    ),
-    dependencies=[Security(bearer_scheme)],
-    openapi_extra={
-        "responses": {
-            "200": {
-                "content": {
-                    "application/json": {
-                        "example": {
-                            "success": True,
-                            "message": "요청이 성공했습니다.",
-                            "data": {"sent": True, "notification_id": 42, "reason": None},
-                            "error_code": None,
-                        }
-                    }
-                }
-            }
-        }
-    },
-)
-def send_mission_notification(
-    body: MissionNotificationRequest,
-    current_user: CurrentUser = Depends(get_current_user),
-    service: MissionService = Depends(get_mission_service),
-):
-    result = service.send_mission_notification(current_user.id, body.mission_id)
     return success_response(data=result.model_dump(mode="json"))
