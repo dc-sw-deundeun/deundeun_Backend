@@ -211,7 +211,7 @@
 - 이미 `ASSIGNED`(미완료) 상태에서 호출하면 **멱등**하게 처리한다(에러 없이 그대로 유지).
 - 본인 미션이 아니거나 존재하지 않으면 `404`.
 - 취소 시 `completed_at`을 `null`로 되돌린다. 날짜 제한은 없다(`complete`와 대칭).
-- 아직 completion→XP 지급 연결이 없어(Phase 5 확장 대상) 이 API도 XP 롤백을 다루지 않는다.
+- `complete`가 지급한 `xp_reward`만큼 캐릭터 EXP를 회수한다(0 미만으로는 내려가지 않음).
 
 ### Response
 
