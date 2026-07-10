@@ -104,3 +104,16 @@ def local_date_for_timezone(timezone_name: str | None, *, now: datetime | None =
         logger.warning("unknown timezone %r; falling back to %s", timezone_name, _DEFAULT_TZ)
         zone = ZoneInfo(_DEFAULT_TZ)
     return current.astimezone(zone).date()
+
+
+def local_datetime_for_timezone(timezone_name: str | None, *, now: datetime | None = None) -> datetime:
+    """local_date_for_timezone와 동일한 폴백 규칙으로 로컬 datetime 반환 (알림 스케줄러용)."""
+    current = now or datetime.now(timezone.utc)
+    if current.tzinfo is None:
+        current = current.replace(tzinfo=timezone.utc)
+    try:
+        zone = ZoneInfo(timezone_name or _DEFAULT_TZ)
+    except (ZoneInfoNotFoundError, ValueError):
+        logger.warning("unknown timezone %r; falling back to %s", timezone_name, _DEFAULT_TZ)
+        zone = ZoneInfo(_DEFAULT_TZ)
+    return current.astimezone(zone)

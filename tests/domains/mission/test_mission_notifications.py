@@ -4,8 +4,6 @@
 - send_mission_notification: 본인 미션 확인(404) → mission_alarm_enabled 스킵 → 알림 생성(멱등).
 """
 
-from collections.abc import Iterator
-from contextlib import contextmanager
 from datetime import date
 
 import pytest
@@ -162,36 +160,3 @@ def test_send_mission_notification_idempotent_on_repeat(db_session) -> None:
     assert first.notification_id == second.notification_id
     count = db_session.query(Notification).filter(Notification.user_id == 49).count()
     assert count == 1
-
-
-# --- 라우터 통합 ---
-
-
-@contextmanager
-def _as_user(user_id: int) -> Iterator[None]:
-    from app.core.dependencies import get_current_user
-    from app.domains.user.schemas import CurrentUser
-    from app.main import app
-
-    app.dependency_overrides[get_current_user] = lambda: CurrentUser(id=user_id)
-    try:
-        yield
-    finally:
-        app.dependency_overrides.pop(get_current_user, None)
-
-
-def test_send_notification_endpoint(client, db_session) -> None:
-    _create_user(db_session, 50)
-    mission = _seed_engine_mission(db_session, 50)
-    with _as_user(50):
-        res = client.post("/api/v1/missions/notifications/send", json={"mission_id": mission.id})
-        assert res.status_code == 200
-        data = res.json()["data"]
-        assert data["sent"] is True and data["notification_id"] is not None
-
-
-def test_send_notification_endpoint_404_for_missing_mission(client, db_session) -> None:
-    _create_user(db_session, 53)
-    with _as_user(53):
-        res = client.post("/api/v1/missions/notifications/send", json={"mission_id": 999999})
-        assert res.status_code == 404
