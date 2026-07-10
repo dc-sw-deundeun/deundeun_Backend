@@ -42,7 +42,7 @@ async def run_daily_generation_tick() -> None:
     logger.info("mission daily tick done: %d/%d users generated", generated, len(targets))
 
 
-async def run_mission_notification_tick() -> None:
+def run_mission_notification_tick() -> None:
     """매시 정각: 미션 execution.time이 유저 로컬 현재 시각 HH와 일치하면 알림함 레코드를 생성한다.
 
     - mission_alarm_enabled=false인 유저는 스킵

@@ -14,7 +14,6 @@ XP 지급:
 - 같은 조건으로 tick 두 번 → Notification 1건만 (ON CONFLICT DO NOTHING)
 """
 
-import asyncio
 from datetime import date, datetime, timezone
 from unittest.mock import patch
 
@@ -181,7 +180,7 @@ def test_notification_tick_creates_notification_when_hour_matches(db_session, mo
         ),
     )
 
-    asyncio.run(run_mission_notification_tick())
+    run_mission_notification_tick()
 
     count = db_session.query(Notification).filter(Notification.user_id == 2001).count()
     assert count == 1
@@ -205,7 +204,7 @@ def test_notification_tick_skips_user_with_alarm_disabled(db_session, monkeypatc
         ),
     )
 
-    asyncio.run(run_mission_notification_tick())
+    run_mission_notification_tick()
 
     count = db_session.query(Notification).filter(Notification.user_id == 2002).count()
     assert count == 0
@@ -223,7 +222,7 @@ def test_notification_tick_skips_completed_mission(db_session, monkeypatch) -> N
         ),
     )
 
-    asyncio.run(run_mission_notification_tick())
+    run_mission_notification_tick()
 
     count = db_session.query(Notification).filter(Notification.user_id == 2003).count()
     assert count == 0
@@ -241,7 +240,7 @@ def test_notification_tick_skips_empty_execution_time(db_session, monkeypatch) -
         ),
     )
 
-    asyncio.run(run_mission_notification_tick())
+    run_mission_notification_tick()
 
     count = db_session.query(Notification).filter(Notification.user_id == 2004).count()
     assert count == 0
@@ -259,7 +258,7 @@ def test_notification_tick_skips_single_char_execution_time(db_session, monkeypa
         ),
     )
 
-    asyncio.run(run_mission_notification_tick())
+    run_mission_notification_tick()
 
     count = db_session.query(Notification).filter(Notification.user_id == 2005).count()
     assert count == 0
@@ -277,8 +276,8 @@ def test_notification_tick_is_idempotent_on_double_run(db_session, monkeypatch) 
         ),
     )
 
-    asyncio.run(run_mission_notification_tick())
-    asyncio.run(run_mission_notification_tick())
+    run_mission_notification_tick()
+    run_mission_notification_tick()
 
     count = db_session.query(Notification).filter(Notification.user_id == 2006).count()
     assert count == 1

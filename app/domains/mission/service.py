@@ -96,7 +96,7 @@ class MissionService:
             from app.domains.character.service import CharacterService
 
             try:
-                CharacterService(CharacterRepository(self.repo._db)).gain_exp(
+                CharacterService(CharacterRepository(self.repo.db)).gain_exp(
                     user_id=user_id,
                     amount=mission.xp_reward,
                     reason="mission_complete",
@@ -104,7 +104,7 @@ class MissionService:
                     source_id=str(mission_id),
                 )
             except Exception:
-                self.repo._db.rollback()
+                self.repo.db.rollback()
                 raise
         else:
             self.repo.commit()
@@ -129,7 +129,7 @@ class MissionService:
         mission, template = found
         item = self._to_item(mission, template)
 
-        notif_repo = NotificationRepository(self.repo._db)
+        notif_repo = NotificationRepository(self.repo.db)
         pref = notif_repo.find_preference_by_user_id(user_id)
         if pref is not None and not pref.mission_alarm_enabled:
             return MissionNotificationResponse(
