@@ -74,14 +74,14 @@ async def run_mission_notification_tick() -> None:
                     exec_time: str = (mission.payload or {}).get("execution", {}).get("time", "")
                     if not exec_time or len(exec_time) < 2 or exec_time[:2] != local_hour_str:
                         continue
-                    from app.domains.mission.service import MissionService
-
-                    item = MissionService._to_item(mission, template)
+                    title = (
+                        template.title if template else (mission.payload or {}).get("title", "")
+                    ) or "오늘의 미션"
                     body = f"{exec_time} 예정 — 지금 확인해보세요."
                     notif_svc.notify_mission_reminder(
                         user_id=user_id,
                         mission_id=mission.id,
-                        title=item.title or "오늘의 미션",
+                        title=title,
                         body=body,
                         commit=False,
                     )
@@ -89,7 +89,7 @@ async def run_mission_notification_tick() -> None:
                 db.commit()
         except Exception:
             logger.warning("mission notification tick failed (user_id=%s)", user_id, exc_info=True)
-    logger.info("mission notification tick done: %d notifications created", notified)
+    logger.info("mission notification tick done: %d notifications ensured", notified)
 
 
 def create_scheduler() -> AsyncIOScheduler:
