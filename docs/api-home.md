@@ -13,6 +13,7 @@
 - `GET /api/v1/home/summary`: 홈 상단/위젯용 축약 데이터
 - `GET /api/v1/missions/today`: 사용자 timezone 기준 오늘 미션
 - `POST /api/v1/missions/{mission_id}/complete`: 미션 self-report 완료
+- `DELETE /api/v1/missions/{mission_id}/complete`: 미션 완료(인증) 취소
 - Notification inbox 기반 `unread_notification_count`
 
 아직 후속 Phase 범위:
@@ -196,6 +197,28 @@
 {
   "success": true,
   "message": "미션을 완료했습니다.",
+  "data": null,
+  "error_code": null
+}
+```
+
+---
+
+## DELETE /api/v1/missions/{mission_id}/complete
+
+본인 미션의 완료(인증) 처리를 취소한다(오탭 등으로 잘못 완료했을 때 되돌리는 용도).
+
+- 이미 `ASSIGNED`(미완료) 상태에서 호출하면 **멱등**하게 처리한다(에러 없이 그대로 유지).
+- 본인 미션이 아니거나 존재하지 않으면 `404`.
+- 취소 시 `completed_at`을 `null`로 되돌린다. 날짜 제한은 없다(`complete`와 대칭).
+- `complete`가 지급한 `xp_reward`만큼 캐릭터 EXP를 회수한다(0 미만으로는 내려가지 않음).
+
+### Response
+
+```json
+{
+  "success": true,
+  "message": "미션 완료를 취소했습니다.",
   "data": null,
   "error_code": null
 }

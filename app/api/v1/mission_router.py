@@ -110,6 +110,24 @@ def complete_mission(
     return success_response(message="미션을 완료했습니다.")
 
 
+@router.delete(
+    "/{mission_id}/complete",
+    summary="[프론트 사용] 미션 완료(인증) 취소",
+    description=(
+        "인증된 사용자가 본인 미션의 완료 처리를 취소합니다(오탭 등으로 잘못 완료했을 때). "
+        "이미 미완료(ASSIGNED) 상태면 멱등 처리합니다. 본인 미션이 아니거나 없으면 404."
+    ),
+)
+def cancel_mission_completion(
+    mission_id: int,
+    current_user: CurrentUser = Depends(get_current_user),
+    service: MissionService = Depends(get_mission_service),
+):
+    """본인 미션의 완료 처리를 취소한다(complete와 대칭되는 라우터 진입점)."""
+    service.cancel_mission_completion(current_user.id, mission_id)
+    return success_response(message="미션 완료를 취소했습니다.")
+
+
 @router.post(
     "/{mission_id}/verify",
     summary="[프론트 작업 제외] 미션 인증 placeholder",

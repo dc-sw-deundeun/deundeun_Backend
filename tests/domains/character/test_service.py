@@ -153,6 +153,79 @@ def test_list_animals_returns_full_catalog_with_locked_state(db_session: Session
     assert animals[1].unlocked_at is None
 
 
+def test_revoke_exp_decreases_total_exp_and_writes_negative_growth_log(
+    db_session: Session,
+) -> None:
+    user = _create_user(db_session)
+    service = CharacterService(CharacterRepository(db_session))
+    service.gain_exp(user.id, 50, reason="TEST", source="unit")
+
+    result = service.revoke_exp(user.id, 20, reason="TEST_CANCEL", source="unit")
+
+    assert result.exp_gained == -20
+    assert result.level_before == 1
+    assert result.level_after == 1
+    assert result.leveled_up is False
+    assert result.profile.total_exp == 30
+    logs = list(
+        db_session.scalars(
+            select(CharacterGrowthLog)
+            .where(CharacterGrowthLog.user_id == user.id)
+            .order_by(CharacterGrowthLog.id)
+        )
+    )
+    assert len(logs) == 2
+    assert logs[1].exp_gained == -20
+    assert logs[1].before_total_exp == 50
+    assert logs[1].after_total_exp == 30
+
+
+def test_revoke_exp_does_not_go_below_zero(db_session: Session) -> None:
+    user = _create_user(db_session)
+    service = CharacterService(CharacterRepository(db_session))
+    service.gain_exp(user.id, 10, reason="TEST", source="unit")
+
+    result = service.revoke_exp(user.id, 999, reason="TEST_CANCEL", source="unit")
+
+    assert result.profile.total_exp == 0
+    assert result.exp_gained == -10
+
+
+def test_revoke_exp_can_decrease_level(db_session: Session) -> None:
+    user = _create_user(db_session)
+    service = CharacterService(CharacterRepository(db_session))
+    amount = policy.cumulative_exp_before_level(5) + 37
+    service.gain_exp(user.id, amount, reason="TEST", source="unit")
+
+    result = service.revoke_exp(user.id, amount, reason="TEST_CANCEL", source="unit")
+
+    assert result.level_before == 5
+    assert result.level_after == 1
+    assert result.profile.total_exp == 0
+
+
+def test_latest_growth_log_reason_reflects_most_recent_event(db_session: Session) -> None:
+    user = _create_user(db_session)
+    repo = CharacterRepository(db_session)
+    service = CharacterService(repo)
+
+    assert repo.latest_growth_log_reason(user.id, source="mission", source_id="7") is None
+
+    service.gain_exp(user.id, 20, reason="mission_complete", source="mission", source_id="7")
+    assert (
+        repo.latest_growth_log_reason(user.id, source="mission", source_id="7")
+        == "mission_complete"
+    )
+
+    service.revoke_exp(
+        user.id, 20, reason="mission_complete_cancelled", source="mission", source_id="7"
+    )
+    assert (
+        repo.latest_growth_log_reason(user.id, source="mission", source_id="7")
+        == "mission_complete_cancelled"
+    )
+
+
 def test_gain_mock_mission_exp_uses_mission_reward_and_unlocks(db_session: Session) -> None:
     user = _create_user(db_session)
     service = CharacterService(CharacterRepository(db_session))

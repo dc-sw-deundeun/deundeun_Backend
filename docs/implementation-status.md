@@ -14,7 +14,7 @@
 | Record / OCR | 구현 | 가능 |
 | HealthMetric | 구현 | 가능 |
 | Analysis | legacy stub | 프론트 작업 제외 |
-| Mission | 부분 | `GET /today`·조회(날짜별/주간/월간/총계)·complete 가능, 인증·complete→EXP는 후속 |
+| Mission | 부분 | `GET /today`·조회(날짜별/주간/월간/총계)·complete·complete 취소 가능, 웨어러블 인증·complete→EXP는 후속 |
 | Character | 구현 | 가능 |
 | Media | 구현 | 공개 이미지 URL 가능 |
 | Home | 구현 | 가능 |
@@ -139,9 +139,10 @@ OCR 업로드 플로우 상세는 [api-record-ocr.md](./api-record-ocr.md) 참�
 | GET | `/statistics/weekly?date=` | 주간(월~일) 일별·합계 집계 |
 | GET | `/statistics/summary` | 총 배정·완료 수 + 완성도(completion_rate) |
 | POST | `/{mission_id}/complete` | 본인 미션 self-report 완료(멱등) |
+| DELETE | `/{mission_id}/complete` | 본인 미션 완료(인증) 취소(멱등) |
 | POST | `/notifications/send` | 본인 미션 리마인드 알림 발송(멱등, 알림설정 반영) |
 
-`POST /{mission_id}/complete`는 self-report 완료(멱등, 상태 전이만)입니다. **캐릭터 EXP 지급·LEVEL_UP 알림은 연결되지 않았으며**(생성 미션이 지닌 `xp_reward` 값을 지급하도록 연결) Phase 5 확장 대상입니다.
+`POST /{mission_id}/complete`는 self-report 완료(멱등, 상태 전이만)입니다. **캐릭터 EXP 지급·LEVEL_UP 알림은 연결되지 않았으며**(생성 미션이 지닌 `xp_reward` 값을 지급하도록 연결) Phase 5 확장 대상입니다. `DELETE /{mission_id}/complete`는 오탭 등으로 잘못 완료했을 때 되돌리는 취소 API로, `ASSIGNED`면 멱등(no-op)이고 `COMPLETED`면 되돌리며 지급됐던 `xp_reward`만큼 EXP를 회수합니다.
 
 생성된 미션은 **난이도 기반 EXP 보상**(`xp_reward` = difficulty×10)과 **예상 수행 시각**(`execution.time`, `HH:MM`, 프론트 알람용)을 함께 담아 `GET /today`로 노출합니다. 수행 시각은 규칙 기반 기본값을 LLM이 미션 맥락에 맞게 덮되, 형식이 어긋나면 규칙값으로 폴백합니다.
 

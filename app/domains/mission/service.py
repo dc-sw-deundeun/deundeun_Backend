@@ -109,6 +109,51 @@ class MissionService:
         else:
             self.repo.commit()
 
+    def cancel_mission_completion(self, user_id: int, mission_id: int) -> None:
+        """미션 완료(인증)를 취소하고 ASSIGNED로 되돌린다(멱등).
+
+        complete_mission과 대칭 — 오탭 등으로 잘못 완료했을 때 되돌리는 용도.
+        complete_mission이 지급한 XP를 revoke_exp()로 회수해 재완료 시 XP를 중복 획득하지 못하게 한다.
+        """
+        mission = self.repo.get_for_user(mission_id, user_id)
+        if mission is None:
+            raise NotFoundException(message="미션을 찾을 수 없습니다.")
+        if mission.status == "ASSIGNED":
+            return  # 멱등: 이미 미완료
+        mission.status = "ASSIGNED"
+        mission.completed_at = None
+
+        char_repo = None
+        if mission.xp_reward > 0:
+            from app.domains.character.repository import CharacterRepository
+
+            char_repo = CharacterRepository(self.repo.db)
+            # growth log 감사기록으로 이 미션이 실제로 gain_exp를 지급받은 상태인지 확인한다.
+            # (예: #72 배포 이전 코드로 gain_exp 없이 바로 COMPLETED 저장된 레거시 데이터라면
+            # xp_reward만큼 무조건 회수 시 사용자가 다른 미션에서 실제로 번 XP까지 깎이게 된다.)
+            latest_reason = char_repo.latest_growth_log_reason(
+                user_id, source="mission", source_id=str(mission_id)
+            )
+            if latest_reason != "mission_complete":
+                char_repo = None
+
+        if char_repo is not None:
+            from app.domains.character.service import CharacterService
+
+            try:
+                CharacterService(char_repo).revoke_exp(
+                    user_id=user_id,
+                    amount=mission.xp_reward,
+                    reason="mission_complete_cancelled",
+                    source="mission",
+                    source_id=str(mission_id),
+                )
+            except Exception:
+                self.repo.db.rollback()
+                raise
+        else:
+            self.repo.commit()
+
     def verify_mission(self, user_id: int, mission_id: int) -> None:
         raise NotImplementedError
 

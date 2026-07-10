@@ -93,6 +93,61 @@ class CharacterService:
             )
         return response
 
+    def revoke_exp(
+        self,
+        user_id: int,
+        amount: int,
+        reason: str,
+        source: str = "internal",
+        source_id: str | None = None,
+        note: str | None = None,
+    ) -> CharacterGainExpResponse:
+        """경험치를 회수합니다(gain_exp의 역연산). 취소된 미션 완료 등에서 호출하는 seam.
+
+        total_exp는 0 미만으로 내려가지 않으며(자연히 level도 함께 내려갈 수 있음),
+        레벨업 알림과 달리 레벨 하락은 알림을 보내지 않는다.
+        """
+        self._require_active_user(user_id)
+        if amount <= 0:
+            raise BadRequestException(
+                message="회수 경험치는 1 이상이어야 합니다.", error_code="INVALID_EXP_AMOUNT"
+            )
+
+        profile = self.repo.get_or_create_by_user_id_for_update(user_id)
+        before_level = profile.level
+        before_total_exp = profile.total_exp
+        after_total_exp = max(policy.INITIAL_TOTAL_EXP, before_total_exp - amount)
+        after_level = policy.level_for_total_exp(after_total_exp)
+
+        profile.total_exp = after_total_exp
+        profile.level = after_level
+
+        self.repo.save_growth_log(
+            CharacterGrowthLog(
+                character_profile_id=profile.id,
+                user_id=user_id,
+                exp_gained=after_total_exp - before_total_exp,
+                before_level=before_level,
+                after_level=after_level,
+                before_total_exp=before_total_exp,
+                after_total_exp=after_total_exp,
+                reason=reason,
+                source=source,
+                source_id=source_id,
+                note=note,
+            )
+        )
+        owned_animals = self._sync_owned_animals(profile)
+        self.repo.db.commit()
+        self.repo.db.refresh(profile)
+        return CharacterGainExpResponse(
+            profile=self._to_response(profile, owned_animals=owned_animals),
+            exp_gained=after_total_exp - before_total_exp,
+            level_before=before_level,
+            level_after=after_level,
+            leveled_up=False,
+        )
+
     def gain_mock_mission_exp(
         self, user_id: int, mission_type: str, mission_id: int | str | None = None
     ) -> CharacterGainExpResponse:
