@@ -57,6 +57,7 @@ def _metric_list(service: RecordService, user_id: int, record_id: int) -> list[d
                             "data": {
                                 "page_count": 1,
                                 "failed_pages": [],
+                                "pages_without_metrics": [],
                                 "ocr_status": "COMPLETED",
                                 "content_hash": "a3f1e2d4b5c6a7e8f9012345678901234567890123456789012345678901234",
                                 "metrics": [
@@ -153,6 +154,7 @@ async def preview_checkup_ocr(
         data=UploadResponse(
             page_count=outcome.page_count,
             failed_pages=outcome.failed_pages,
+            pages_without_metrics=outcome.pages_without_metrics,
             ocr_status=outcome.ocr_status,
             content_hash=outcome.content_hash,
             metrics=metrics,

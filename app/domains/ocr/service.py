@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 class UploadOutcome:
     page_count: int
     failed_pages: list[int]
+    pages_without_metrics: list[int]
     metrics: list[ParsedMetric]
     ocr_status: str
     content_hash: str
@@ -102,20 +103,24 @@ class OcrService:
             raise OcrFailedException()
 
         parsed: list[ParsedMetric] = []
+        pages_without_metrics: list[int] = []
         for idx, result in successful:
-            for metric in self._parser.parse(result):
-                parsed.append(
-                    ParsedMetric(
-                        metric_code=metric.metric_code,
-                        metric_name=metric.metric_name,
-                        value=metric.value,
-                        unit=metric.unit,
-                        confidence=metric.confidence,
-                        raw_text=metric.raw_text,
-                        page_index=idx,
-                        out_of_range=metric.out_of_range,
-                    )
+            page_metrics = [
+                ParsedMetric(
+                    metric_code=m.metric_code,
+                    metric_name=m.metric_name,
+                    value=m.value,
+                    unit=m.unit,
+                    confidence=m.confidence,
+                    raw_text=m.raw_text,
+                    page_index=idx,
+                    out_of_range=m.out_of_range,
                 )
+                for m in self._parser.parse(result)
+            ]
+            if not page_metrics:
+                pages_without_metrics.append(idx)
+            parsed.extend(page_metrics)
 
         merged = self._merge_metrics(parsed)
         ocr_status = OcrStatus.PARTIAL.value if failed_pages else OcrStatus.COMPLETED.value
@@ -126,12 +131,14 @@ class OcrService:
                 "user_id": user_id,
                 "page_count": len(images),
                 "failed_pages": failed_pages,
+                "pages_without_metrics": pages_without_metrics,
                 "parsed_count": len(merged),
             },
         )
         return UploadOutcome(
             page_count=len(images),
             failed_pages=failed_pages,
+            pages_without_metrics=pages_without_metrics,
             metrics=merged,
             ocr_status=ocr_status,
             content_hash=content_hash,

@@ -82,6 +82,7 @@ class MultiImageUploadRequest(BaseModel):
 class UploadResponse(BaseModel):
     page_count: int
     failed_pages: list[int]
+    pages_without_metrics: list[int] = Field(default_factory=list)
     ocr_status: str
     content_hash: str
     metrics: list[PreviewMetricResponse]

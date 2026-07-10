@@ -304,3 +304,57 @@ def test_commit_upload_rolls_back_when_metric_insert_fails(db_session):
     db_session.rollback()
     assert db_session.query(CheckupRecord).filter(CheckupRecord.user_id == 1).all() == []
     assert db_session.query(OcrJob).all() == []
+
+
+def _empty_result() -> OcrResultDTO:
+    return OcrResultDTO(fields=[])
+
+
+@pytest.mark.asyncio
+async def test_pages_without_metrics_when_all_metrics_empty(db_session):
+    # All pages yield no metrics → every page index is in pages_without_metrics
+    client = _PerPageClient([_empty_result(), _empty_result(), _empty_result()])
+    service = _make_service(db_session, client)
+    outcome = await service.process_upload(user_id=1, images=[_PNG, _PNG, _PNG], content_hash=_HASH)
+
+    assert outcome.pages_without_metrics == [0, 1, 2]
+    assert outcome.metrics == []
+    assert outcome.ocr_status == OcrStatus.COMPLETED.value
+
+
+@pytest.mark.asyncio
+async def test_some_pages_without_metrics(db_session):
+    # Page 0 yields metrics, page 1 yields nothing
+    client = _PerPageClient([_glucose_result(), _empty_result()])
+    service = _make_service(db_session, client)
+    outcome = await service.process_upload(user_id=1, images=[_PNG, _PNG], content_hash=_HASH)
+
+    assert outcome.pages_without_metrics == [1]
+    codes = {metric.metric_code for metric in outcome.metrics}
+    assert "fasting_glucose" in codes
+
+
+@pytest.mark.asyncio
+async def test_failed_pages_and_empty_pages_are_separate(db_session):
+    # Page 0 succeeds with metrics, page 1 fails OCR, page 2 succeeds but yields no metrics
+    client = _PerPageClient([_glucose_result(), RuntimeError("ocr error"), _empty_result()])
+    service = _make_service(db_session, client)
+    outcome = await service.process_upload(user_id=1, images=[_PNG, _PNG, _PNG], content_hash=_HASH)
+
+    assert outcome.failed_pages == [1]
+    assert outcome.pages_without_metrics == [2]
+    assert outcome.ocr_status == OcrStatus.PARTIAL.value
+    codes = {metric.metric_code for metric in outcome.metrics}
+    assert "fasting_glucose" in codes
+
+
+@pytest.mark.asyncio
+async def test_ocr_status_unaffected_by_pages_without_metrics(db_session):
+    # pages_without_metrics present but failed_pages empty → ocr_status must be COMPLETED
+    client = _PerPageClient([_glucose_result(), _empty_result()])
+    service = _make_service(db_session, client)
+    outcome = await service.process_upload(user_id=1, images=[_PNG, _PNG], content_hash=_HASH)
+
+    assert outcome.pages_without_metrics == [1]
+    assert outcome.failed_pages == []
+    assert outcome.ocr_status == OcrStatus.COMPLETED.value
