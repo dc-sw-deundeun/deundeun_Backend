@@ -19,7 +19,8 @@
 | 알림 목록 | 구현 완료 | `GET /notifications` |
 | 알림 읽음 처리 | 구현 완료 | `PATCH /notifications/{notification_id}/read` |
 | 알림 설정 | My에서 구현 | `GET/PATCH /my/notification-settings` |
-| 미션 리마인드 발송 | 구현 완료(자동) | 백엔드 스케줄러(매시 정각) |
+| 미션 리마인드 발송 | 구현 완료 | `POST /api/v1/missions/notifications/send` |
+| push / 리마인드 worker(자동 트리거) | 미제공 | 후속 Phase |
 
 ## GET /notifications
 
@@ -100,15 +101,30 @@
 |------|-----------|-----------|------------|
 | `ANALYSIS_COMPLETED` | `POST /health-metrics/analyses` 저장 성공 | `deundeun://health-metrics/analyses/{analysis_id}` | always-on |
 | `LEVEL_UP` | `CharacterService.gain_exp` 결과 `leveled_up=true` | `deundeun://characters/me` | always-on |
-| `MISSION_REMINDER` | 백엔드 스케줄러(매시 정각 tick)가 생성 | `deundeun://missions/{mission_id}` | `mission_alarm_enabled` |
+| `MISSION_REMINDER` | `POST /api/v1/missions/notifications/send` 호출(프론트가 직접 트리거) | `deundeun://missions/{mission_id}` | `mission_alarm_enabled` |
 
-`POST /api/v1/missions/{mission_id}/complete`는 완료 즉시 `xp_reward`만큼 캐릭터 EXP를 지급하며, 레벨업 시 `LEVEL_UP` 알림을 생성한다. `DELETE /api/v1/missions/{mission_id}/complete`(완료 취소)는 지급된 XP를 대칭적으로 회수한다.
+Mission complete는 Phase 7에서 EXP/LEVEL_UP과 연결하지 않는다. `POST /api/v1/missions/{mission_id}/complete`는 상태 전이만 수행한다.
 
-## 미션 리마인드 알림 (자동, 매시 정각)
+## POST /api/v1/missions/notifications/send
 
-프론트가 직접 호출하는 발송 API는 없다. 백엔드 스케줄러(`run_mission_notification_tick`)가 매시 정각에 실행되며:
+본인 미션의 리마인드 알림을 생성한다(실제 스케줄링/발송 워커가 아니라, 호출 시점에 알림 1건을 즉시 만드는 API). `mission_alarm_enabled`(My 알림설정)이 꺼져 있으면 알림을 만들지 않고 `sent=false`를 반환한다(에러 아님). 같은 `mission_id`로 재요청해도 `(user_id, type, source, source_id)` 유니크 제약 덕에 중복 생성 없이 기존 알림의 `notification_id`를 그대로 돌려준다(멱등).
 
-- 유저 로컬 시각 기준 `execution.time`의 시(`HH`)가 현재 시각과 일치하는 `ASSIGNED` 미션에 대해 `MISSION_REMINDER` 알림을 생성한다(`COMPLETED` 미션은 제외).
-- `mission_alarm_enabled=false`인 유저는 스킵한다.
-- `(user_id, type, source, source_id)` 유니크 제약(`ON CONFLICT DO NOTHING`)으로 같은 시각에 여러 번 tick이 돌아도 알림은 1건만 생성된다(멱등).
-- 유저 1명의 처리 실패가 다른 유저에게 전파되지 않는다(유저별 `try/except`).
+### Request
+
+```json
+{ "mission_id": 10 }
+```
+
+### Response data
+
+| 필드 | 타입 | 설명 |
+|---|---|---|
+| `sent` | `bool` | 알림 생성 여부(설정 꺼짐이면 `false`) |
+| `notification_id` | `int\|null` | 생성/기존 알림 id. `sent=false`면 `null` |
+| `reason` | `string\|null` | 미발송 이유(설정 꺼짐 등). `sent=true`면 `null` |
+
+```json
+{ "success": true, "message": "요청이 성공했습니다.", "data": { "sent": true, "notification_id": 42, "reason": null }, "error_code": null }
+```
+
+본인 미션이 아니거나 없으면 404.
