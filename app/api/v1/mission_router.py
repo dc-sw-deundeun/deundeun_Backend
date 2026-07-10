@@ -123,6 +123,7 @@ def cancel_mission_completion(
     current_user: CurrentUser = Depends(get_current_user),
     service: MissionService = Depends(get_mission_service),
 ):
+    """본인 미션의 완료 처리를 취소한다(complete와 대칭되는 라우터 진입점)."""
     service.cancel_mission_completion(current_user.id, mission_id)
     return success_response(message="미션 완료를 취소했습니다.")
 
