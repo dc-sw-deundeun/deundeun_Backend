@@ -58,6 +58,24 @@ class CharacterRepository:
         self.db.flush()
         return log
 
+    def latest_growth_log_reason(self, user_id: int, *, source: str, source_id: str) -> str | None:
+        """(user_id, source, source_id)의 가장 최근 growth log reason. 없으면 None.
+
+        gain_exp/revoke_exp가 서로 대칭 reason으로 로그를 남기므로, 가장 최근 행의 reason이
+        현재 그 이벤트에 대해 XP가 지급된 상태인지(회수되지 않은 상태인지)를 알려준다.
+        """
+        row = self.db.scalar(
+            select(CharacterGrowthLog)
+            .where(
+                CharacterGrowthLog.user_id == user_id,
+                CharacterGrowthLog.source == source,
+                CharacterGrowthLog.source_id == source_id,
+            )
+            .order_by(CharacterGrowthLog.id.desc())
+            .limit(1)
+        )
+        return row.reason if row else None
+
     def list_owned_animals(self, user_id: int) -> list[CharacterOwnedAnimal]:
         rows = list(
             self.db.scalars(
