@@ -12,14 +12,15 @@
 - `GET /api/v1/home`: 홈 화면 전체 데이터
 - `GET /api/v1/home/summary`: 홈 상단/위젯용 축약 데이터
 - `GET /api/v1/missions/today`: 사용자 timezone 기준 오늘 미션
-- `POST /api/v1/missions/{mission_id}/complete`: 미션 self-report 완료(EXP 지급 + 레벨업 알림 포함)
-- `DELETE /api/v1/missions/{mission_id}/complete`: 미션 완료(인증) 취소(지급된 EXP 회수)
-- 미션 리마인드 알림: 백엔드 스케줄러가 매시 정각 자동 생성
+- `POST /api/v1/missions/{mission_id}/complete`: 미션 self-report 완료
+- `DELETE /api/v1/missions/{mission_id}/complete`: 미션 완료(인증) 취소
 - Notification inbox 기반 `unread_notification_count`
 
 아직 후속 Phase 범위:
 
 - 미션 인증(웨어러블 자동 인증)
+- push / 리마인드 알림 worker
+- 미션 완료→EXP→LEVEL_UP (Phase 5 확장, Phase 7과 별도)
 
 > 미션 조회 API(날짜별/주간/월간/총계)는 구현됨 — 아래 "미션 조회 API" 참조.
 
@@ -162,7 +163,7 @@
 | `items[].title` | `string` | 미션 제목 |
 | `items[].status` | `"ASSIGNED"\|"COMPLETED"` | 현재 상태 |
 | `items[].assigned_date` | `date` | 배정일 |
-| `items[].xp_reward` | `int` | 미션 보상 EXP. 엔진 생성분은 **난이도 기반**(difficulty×10 = 10/20/30). 레거시는 템플릿 `default_xp`. `complete` 시 캐릭터에 즉시 지급된다 |
+| `items[].xp_reward` | `int` | 미션 보상 EXP. 엔진 생성분은 **난이도 기반**(difficulty×10 = 10/20/30). 레거시는 템플릿 `default_xp`. (완료→캐릭터 EXP 지급 루프는 Phase 5 미연결) |
 | `items[].completed_at` | `string\|null` | 완료 처리 시각(ISO datetime), 미완료면 `null` |
 | `items[].source_record_id` | `int\|null` | 미션 생성 원천 검진 기록. 엔진 생성분은 현재 `null`(미설정) |
 | `items[].rationale` | `string` | **엔진 생성분만**: 이 미션을 추천한 이유. 레거시는 `""` |
@@ -185,11 +186,10 @@
 
 인증된 사용자가 본인 미션을 self-report로 완료 처리한다.
 
-- 이미 `COMPLETED`인 미션을 다시 호출하면 **멱등**하게 처리한다(에러 없이 그대로 완료 유지, 재요청/더블탭 안전 — XP도 중복 지급되지 않는다).
+- 이미 `COMPLETED`인 미션을 다시 호출하면 **멱등**하게 처리한다(에러 없이 그대로 완료 유지, 재요청/더블탭 안전).
 - 본인 미션이 아니거나 존재하지 않으면 `404`.
 - 완료 상태는 `completed_at`에 기록되고, 최근 14일 완료율(`success_rate`)로 계산돼 다음 날 미션 생성 시 난이도 조정에 반영된다.
-- 완료 즉시 `xp_reward`만큼 캐릭터 EXP가 지급된다(미션 상태 전이와 같은 트랜잭션으로 원자적 커밋 — EXP 지급 실패 시 미션 상태도 함께 롤백). 레벨업하면 `LEVEL_UP` 알림이 생성된다.
-- 미션 리마인드 알림은 프론트가 호출하는 API가 아니라 백엔드 스케줄러가 매시 정각 자동 생성한다([api-notification.md](./api-notification.md)).
+- 미션 완료 시 캐릭터 EXP 지급·자동 알림은 아직 연결되지 않았다(후속 Phase). 미션 리마인드 알림은 별도로 `POST /api/v1/missions/notifications/send`로 발송한다([api-notification.md](./api-notification.md)).
 
 ### Response
 
@@ -210,7 +210,8 @@
 
 - 이미 `ASSIGNED`(미완료) 상태에서 호출하면 **멱등**하게 처리한다(에러 없이 그대로 유지).
 - 본인 미션이 아니거나 존재하지 않으면 `404`.
-- 취소 시 `completed_at`을 `null`로 되돌리고, `complete`가 지급했던 `xp_reward`만큼 캐릭터 EXP를 회수한다(0 미만으로는 내려가지 않음). 날짜 제한은 없다(`complete`와 대칭).
+- 취소 시 `completed_at`을 `null`로 되돌린다. 날짜 제한은 없다(`complete`와 대칭).
+- 아직 completion→XP 지급 연결이 없어(Phase 5 확장 대상) 이 API도 XP 롤백을 다루지 않는다.
 
 ### Response
 
@@ -285,5 +286,5 @@
 - 온보딩 완료 시에도 캐릭터 기본 프로필을 미리 생성한다.
 - Home은 `UserRepository`, `CharacterService`, `MissionService`, `NotificationService`를 조합한다.
 - 알림 수는 Notification inbox의 미읽음 row를 조회한다. 설정 API는 `/my/notification-settings`(정본), 알림함은 `/notifications` — [api-notification.md](./api-notification.md).
-- `POST /missions/{id}/complete`는 상태 전이 + EXP 지급(레벨업 시 `LEVEL_UP` 알림)까지 수행한다. `DELETE /missions/{id}/complete`(취소)는 지급된 EXP를 대칭적으로 회수한다.
+- `POST /missions/{id}/complete`는 상태 전이만 하며 EXP·LEVEL_UP 알림과 연결되지 않는다(Phase 5 확장).
 - **미션 생성은 API가 아니라 백그라운드 스케줄러**(매시 틱)가 PKG 기반으로 담당한다. 새 검진이 저장되면 당일 미완료 미션을 무효화하고 재생성한다(완료분은 보존). 프론트는 생성을 트리거할 필요가 없고 `/today`로 조회만 하면 된다.
