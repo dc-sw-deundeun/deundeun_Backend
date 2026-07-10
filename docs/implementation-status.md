@@ -14,7 +14,7 @@
 | Record / OCR | 구현 | 가능 |
 | HealthMetric | 구현 | 가능 |
 | Analysis | legacy stub | 프론트 작업 제외 |
-| Mission | 부분 | `GET /today`·조회(날짜별/주간/월간/총계)·complete(EXP 지급)·complete 취소(EXP 회수) 가능, 웨어러블 인증은 후속 |
+| Mission | 부분 | `GET /today`·조회(날짜별/주간/월간/총계)·complete·complete 취소 가능, 웨어러블 인증·complete→EXP는 후속 |
 | Character | 구현 | 가능 |
 | Media | 구현 | 공개 이미지 URL 가능 |
 | Home | 구현 | 가능 |
@@ -138,14 +138,15 @@ OCR 업로드 플로우 상세는 [api-record-ocr.md](./api-record-ocr.md) 참�
 | GET | `/calendar?year=&month=` | 월간 캘린더 — 미션 있는 날의 일별 집계 |
 | GET | `/statistics/weekly?date=` | 주간(월~일) 일별·합계 집계 |
 | GET | `/statistics/summary` | 총 배정·완료 수 + 완성도(completion_rate) |
-| POST | `/{mission_id}/complete` | 본인 미션 self-report 완료(멱등, EXP 지급) |
-| DELETE | `/{mission_id}/complete` | 본인 미션 완료(인증) 취소(멱등, EXP 회수) |
+| POST | `/{mission_id}/complete` | 본인 미션 self-report 완료(멱등) |
+| DELETE | `/{mission_id}/complete` | 본인 미션 완료(인증) 취소(멱등) |
+| POST | `/notifications/send` | 본인 미션 리마인드 알림 발송(멱등, 알림설정 반영) |
 
-`POST /{mission_id}/complete`는 self-report 완료(멱등)이며, **완료 즉시 `xp_reward`만큼 캐릭터 EXP를 지급**하고 레벨업 시 `LEVEL_UP` 알림을 생성합니다(미션 상태 전이와 원자적 커밋 — EXP 지급 실패 시 상태도 롤백). `DELETE /{mission_id}/complete`는 오탭 등으로 잘못 완료했을 때 되돌리는 취소 API로, `ASSIGNED`면 멱등(no-op)이고 `COMPLETED`면 상태를 되돌리며 지급됐던 EXP를 대칭적으로 회수합니다(0 미만으로는 내려가지 않음).
+`POST /{mission_id}/complete`는 self-report 완료(멱등, 상태 전이만)입니다. **캐릭터 EXP 지급·LEVEL_UP 알림은 연결되지 않았으며**(생성 미션이 지닌 `xp_reward` 값을 지급하도록 연결) Phase 5 확장 대상입니다. `DELETE /{mission_id}/complete`는 오탭 등으로 잘못 완료했을 때 되돌리는 취소 API로, `ASSIGNED`면 멱등(no-op)입니다. XP 지급 연결 전이라 취소도 XP 롤백을 다루지 않으며, Phase 5에서 지급 연결 시 함께 반영해야 합니다.
 
 생성된 미션은 **난이도 기반 EXP 보상**(`xp_reward` = difficulty×10)과 **예상 수행 시각**(`execution.time`, `HH:MM`, 프론트 알람용)을 함께 담아 `GET /today`로 노출합니다. 수행 시각은 규칙 기반 기본값을 LLM이 미션 맥락에 맞게 덮되, 형식이 어긋나면 규칙값으로 폴백합니다.
 
-조회 API(`/date/{date}`·`/calendar`·`/statistics/weekly`·`/statistics/summary`)는 순수 조회이며 프론트 연동 가능합니다. 미션 리마인드 알림(`MISSION_REMINDER`)은 프론트가 호출하는 API가 없고 백엔드 스케줄러가 매시 정각 자동 생성합니다 — [api-notification.md](./api-notification.md) 참조. `POST /{mission_id}/verify`(웨어러블 자동 인증)는 후속 Phase placeholder입니다.
+조회 API(`/date/{date}`·`/calendar`·`/statistics/weekly`·`/statistics/summary`)는 순수 조회이며 프론트 연동 가능합니다. `POST /api/v1/missions/notifications/send`는 [api-notification.md](./api-notification.md) 참조 — `MISSION_REMINDER` 알림을 생성하며 자동 스케줄링/워커는 아직 없습니다(프론트가 직접 트리거). `POST /{mission_id}/verify`는 후속 Phase placeholder입니다.
 
 미션 생성은 REST API가 아니라 백그라운드 스케줄러(매시 틱, PKG 기반)가 담당합니다. `GET /today`는 조회만 하고, 새 검진 저장 시 당일 미완료 미션을 무효화·재생성합니다. 완료 이력(14일 완료율)은 다음 생성에 반영됩니다.
 
@@ -194,13 +195,13 @@ PKG는 미션 생성 엔진이 소비하는 서버/내부 계약입니다. 로�
 
 **알림 설정 정본 (D-BE-004, 옵션 A)**: `GET/PATCH /my/notification-settings` — [api-my-page.md](./api-my-page.md)
 
-`GET/PATCH /notifications/settings`, `POST /notifications/test`는 제공하지 않습니다. HealthMetric 분석 저장은 `ANALYSIS_COMPLETED`, `gain_exp` 레벨업은 `LEVEL_UP` 알림을 생성합니다. 미션 complete→`gain_exp`→`LEVEL_UP` 알림은 연결되어 있습니다(`MISSION_REMINDER`는 백엔드 스케줄러가 매시 정각 자동 생성).
+`GET/PATCH /notifications/settings`, `POST /notifications/test`는 제공하지 않습니다. HealthMetric 분석 저장은 `ANALYSIS_COMPLETED`, `gain_exp` 레벨업은 `LEVEL_UP` 알림을 생성합니다. 미션 complete→EXP→LEVEL_UP 알림은 Phase 5 확장입니다.
 
 ## Stub API
 
 | Prefix | 상태 |
 |--------|------|
-| `/api/v1/missions/*` | 조회(today·날짜별·주간·월간·총계)·complete(EXP 지급)·complete 취소(EXP 회수) 외 미션 인증(verify, 웨어러블) 미완성 |
+| `/api/v1/missions/*` | 조회(today·날짜별·주간·월간·총계)·complete·알림 발송 외 미션 인증(verify) 미완성 |
 | `/api/v1/my/app-lock`, `/api/v1/my/support` | 마이페이지 후속 기능 미완성 |
 
 ## 마이그레이션
@@ -221,10 +222,10 @@ PKG는 미션 생성 엔진이 소비하는 서버/내부 계약입니다. 로�
 
 ## 다음 구현 우선순위
 
-1. Mission 후속: 웨어러블 자동 인증(verify)
+1. Phase 5 Mission 확장: complete→`gain_exp`·LEVEL_UP 루프, 인증·캘린더·통계
 2. My 후속: 앱잠금, 문의, 비밀번호 변경
-3. Notification 7b: push worker
-4. Legacy Analysis 도메인 제거 또는 migration 정리 정책 확정
+3. Notification 7b: push, 리마인드 scheduler workers
+5. Legacy Analysis 도메인 제거 또는 migration 정리 정책 확정
 
 ## 검증 기준
 
