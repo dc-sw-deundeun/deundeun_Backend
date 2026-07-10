@@ -94,6 +94,7 @@ class MissionService:
         if mission.xp_reward > 0:
             from app.domains.character.repository import CharacterRepository
             from app.domains.character.service import CharacterService
+
             try:
                 CharacterService(CharacterRepository(self.repo._db)).gain_exp(
                     user_id=user_id,

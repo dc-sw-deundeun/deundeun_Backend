@@ -176,7 +176,9 @@ def test_notification_tick_creates_notification_when_hour_matches(db_session, mo
     # local_datetime_for_timezone가 KST 13시를 반환하도록 고정
     monkeypatch.setattr(
         "app.domains.mission.scheduler.local_datetime_for_timezone",
-        lambda tz, **kw: _UTC_NOW_AT_KST_13.astimezone(__import__("zoneinfo").ZoneInfo("Asia/Seoul")),
+        lambda tz, **kw: _UTC_NOW_AT_KST_13.astimezone(
+            __import__("zoneinfo").ZoneInfo("Asia/Seoul")
+        ),
     )
 
     asyncio.run(run_mission_notification_tick())
@@ -198,7 +200,9 @@ def test_notification_tick_skips_user_with_alarm_disabled(db_session, monkeypatc
 
     monkeypatch.setattr(
         "app.domains.mission.scheduler.local_datetime_for_timezone",
-        lambda tz, **kw: _UTC_NOW_AT_KST_13.astimezone(__import__("zoneinfo").ZoneInfo("Asia/Seoul")),
+        lambda tz, **kw: _UTC_NOW_AT_KST_13.astimezone(
+            __import__("zoneinfo").ZoneInfo("Asia/Seoul")
+        ),
     )
 
     asyncio.run(run_mission_notification_tick())
@@ -214,7 +218,9 @@ def test_notification_tick_skips_completed_mission(db_session, monkeypatch) -> N
 
     monkeypatch.setattr(
         "app.domains.mission.scheduler.local_datetime_for_timezone",
-        lambda tz, **kw: _UTC_NOW_AT_KST_13.astimezone(__import__("zoneinfo").ZoneInfo("Asia/Seoul")),
+        lambda tz, **kw: _UTC_NOW_AT_KST_13.astimezone(
+            __import__("zoneinfo").ZoneInfo("Asia/Seoul")
+        ),
     )
 
     asyncio.run(run_mission_notification_tick())
@@ -230,7 +236,9 @@ def test_notification_tick_skips_empty_execution_time(db_session, monkeypatch) -
 
     monkeypatch.setattr(
         "app.domains.mission.scheduler.local_datetime_for_timezone",
-        lambda tz, **kw: _UTC_NOW_AT_KST_13.astimezone(__import__("zoneinfo").ZoneInfo("Asia/Seoul")),
+        lambda tz, **kw: _UTC_NOW_AT_KST_13.astimezone(
+            __import__("zoneinfo").ZoneInfo("Asia/Seoul")
+        ),
     )
 
     asyncio.run(run_mission_notification_tick())
@@ -246,7 +254,9 @@ def test_notification_tick_skips_single_char_execution_time(db_session, monkeypa
 
     monkeypatch.setattr(
         "app.domains.mission.scheduler.local_datetime_for_timezone",
-        lambda tz, **kw: _UTC_NOW_AT_KST_13.astimezone(__import__("zoneinfo").ZoneInfo("Asia/Seoul")),
+        lambda tz, **kw: _UTC_NOW_AT_KST_13.astimezone(
+            __import__("zoneinfo").ZoneInfo("Asia/Seoul")
+        ),
     )
 
     asyncio.run(run_mission_notification_tick())
@@ -262,7 +272,9 @@ def test_notification_tick_is_idempotent_on_double_run(db_session, monkeypatch) 
 
     monkeypatch.setattr(
         "app.domains.mission.scheduler.local_datetime_for_timezone",
-        lambda tz, **kw: _UTC_NOW_AT_KST_13.astimezone(__import__("zoneinfo").ZoneInfo("Asia/Seoul")),
+        lambda tz, **kw: _UTC_NOW_AT_KST_13.astimezone(
+            __import__("zoneinfo").ZoneInfo("Asia/Seoul")
+        ),
     )
 
     asyncio.run(run_mission_notification_tick())

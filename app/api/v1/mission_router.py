@@ -222,4 +222,3 @@ def get_statistics_summary(
 ):
     result = service.get_statistics_summary(current_user.id)
     return success_response(data=result.model_dump(mode="json"))
-

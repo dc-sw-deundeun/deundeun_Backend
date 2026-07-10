@@ -106,7 +106,9 @@ def local_date_for_timezone(timezone_name: str | None, *, now: datetime | None =
     return current.astimezone(zone).date()
 
 
-def local_datetime_for_timezone(timezone_name: str | None, *, now: datetime | None = None) -> datetime:
+def local_datetime_for_timezone(
+    timezone_name: str | None, *, now: datetime | None = None
+) -> datetime:
     """local_date_for_timezone와 동일한 폴백 규칙으로 로컬 datetime 반환 (알림 스케줄러용)."""
     current = now or datetime.now(timezone.utc)
     if current.tzinfo is None:

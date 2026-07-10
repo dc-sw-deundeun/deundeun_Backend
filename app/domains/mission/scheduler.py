@@ -75,6 +75,7 @@ async def run_mission_notification_tick() -> None:
                     if not exec_time or len(exec_time) < 2 or exec_time[:2] != local_hour_str:
                         continue
                     from app.domains.mission.service import MissionService
+
                     item = MissionService._to_item(mission, template)
                     body = f"{exec_time} 예정 — 지금 확인해보세요."
                     notif_svc.notify_mission_reminder(
@@ -87,9 +88,7 @@ async def run_mission_notification_tick() -> None:
                     notified += 1
                 db.commit()
         except Exception:
-            logger.warning(
-                "mission notification tick failed (user_id=%s)", user_id, exc_info=True
-            )
+            logger.warning("mission notification tick failed (user_id=%s)", user_id, exc_info=True)
     logger.info("mission notification tick done: %d notifications created", notified)
 
 
