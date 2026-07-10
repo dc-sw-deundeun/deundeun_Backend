@@ -204,6 +204,28 @@ def test_revoke_exp_can_decrease_level(db_session: Session) -> None:
     assert result.profile.total_exp == 0
 
 
+def test_latest_growth_log_reason_reflects_most_recent_event(db_session: Session) -> None:
+    user = _create_user(db_session)
+    repo = CharacterRepository(db_session)
+    service = CharacterService(repo)
+
+    assert repo.latest_growth_log_reason(user.id, source="mission", source_id="7") is None
+
+    service.gain_exp(user.id, 20, reason="mission_complete", source="mission", source_id="7")
+    assert (
+        repo.latest_growth_log_reason(user.id, source="mission", source_id="7")
+        == "mission_complete"
+    )
+
+    service.revoke_exp(
+        user.id, 20, reason="mission_complete_cancelled", source="mission", source_id="7"
+    )
+    assert (
+        repo.latest_growth_log_reason(user.id, source="mission", source_id="7")
+        == "mission_complete_cancelled"
+    )
+
+
 def test_gain_mock_mission_exp_uses_mission_reward_and_unlocks(db_session: Session) -> None:
     user = _create_user(db_session)
     service = CharacterService(CharacterRepository(db_session))
