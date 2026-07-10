@@ -117,6 +117,33 @@ def test_cancel_mission_completion_with_zero_xp_reward_no_exp_change(db_session)
     assert reverted is not None and reverted.status == "ASSIGNED"
 
 
+def test_cancel_mission_completion_skips_revoke_for_mission_never_actually_granted_xp(
+    db_session,
+) -> None:
+    """레거시 데이터 등으로 gain_exp 없이 COMPLETED로 저장된 미션은 취소해도 XP를 건드리지 않는다.
+
+    complete_mission을 거치지 않고 status="COMPLETED"만 직접 저장된 미션(예: #72 배포 전
+    레코드)을 취소할 때, xp_reward만큼 무조건 revoke하면 그 사용자가 다른 미션에서 실제로
+    획득한 XP까지 깎아먹는다. growth log 감사기록으로 실제 지급 여부를 확인해 회수 여부를
+    결정해야 한다.
+    """
+    from app.domains.character.models import CharacterProfile
+    from app.domains.character.repository import CharacterRepository
+    from app.domains.character.service import CharacterService
+
+    _create_user(db_session, 90)
+    CharacterService(CharacterRepository(db_session)).gain_exp(
+        90, 15, reason="OTHER", source="unit"
+    )
+    phantom = _seed_mission(db_session, 90, status="COMPLETED")  # gain_exp 없이 바로 COMPLETED
+
+    _svc(db_session).cancel_mission_completion(90, phantom.id)
+
+    profile = db_session.scalar(select(CharacterProfile).where(CharacterProfile.user_id == 90))
+    assert profile is not None
+    assert profile.total_exp == 15  # 실제로 번 XP가 건드려지지 않아야 함
+
+
 def test_cancel_mission_completion_rolls_back_status_when_revoke_exp_raises(db_session) -> None:
     _create_user(db_session, 82)
     mission = _seed_mission(db_session, 82, status="ASSIGNED")
