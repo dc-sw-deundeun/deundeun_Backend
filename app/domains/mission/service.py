@@ -113,7 +113,7 @@ class MissionService:
         """미션 완료(인증)를 취소하고 ASSIGNED로 되돌린다(멱등).
 
         complete_mission과 대칭 — 오탭 등으로 잘못 완료했을 때 되돌리는 용도.
-        아직 completion→XP 지급 연결이 없어 XP 롤백은 다루지 않는다(#71에서 지급 연결 시 반영).
+        complete_mission이 지급한 XP를 revoke_exp()로 회수해 재완료 시 XP를 중복 획득하지 못하게 한다.
         """
         mission = self.repo.get_for_user(mission_id, user_id)
         if mission is None:
@@ -122,7 +122,23 @@ class MissionService:
             return  # 멱등: 이미 미완료
         mission.status = "ASSIGNED"
         mission.completed_at = None
-        self.repo.commit()
+        if mission.xp_reward > 0:
+            from app.domains.character.repository import CharacterRepository
+            from app.domains.character.service import CharacterService
+
+            try:
+                CharacterService(CharacterRepository(self.repo.db)).revoke_exp(
+                    user_id=user_id,
+                    amount=mission.xp_reward,
+                    reason="mission_complete_cancelled",
+                    source="mission",
+                    source_id=str(mission_id),
+                )
+            except Exception:
+                self.repo.db.rollback()
+                raise
+        else:
+            self.repo.commit()
 
     def verify_mission(self, user_id: int, mission_id: int) -> None:
         raise NotImplementedError
