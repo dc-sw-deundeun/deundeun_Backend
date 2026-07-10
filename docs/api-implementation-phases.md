@@ -772,7 +772,7 @@ ANALYSIS_CALLBACK_SECRET
 | RECORD_REMINDER | notification scheduler (7b) | SHOULD |
 | WEEKLY_REPORT | notification scheduler (7b) | SHOULD |
 
-> **범위 경계**: `POST /missions/{id}/complete`는 상태 전이만 하며 `gain_exp`·알림을 호출하지 않음. complete→EXP→LEVEL_UP은 **Phase 5 확장**. legacy `/analysis/callback`은 ANALYSIS_COMPLETED 트리거에서 제외.
+> **범위 경계**: `POST /missions/{id}/complete`는 상태 전이 + `gain_exp` 호출 + 레벨업 시 `LEVEL_UP` 알림까지 수행함(연결 완료). legacy `/analysis/callback`은 ANALYSIS_COMPLETED 트리거에서 제외.
 
 ### 10.3 Workers (Phase 7b)
 
@@ -966,11 +966,11 @@ workers/record_reminder_worker.py
 ### Mission `/api/v1/missions` (Phase 5)
 
 - [x] GET `/today`
-- [x] POST `/{mission_id}/complete` — self-report, 상태 전이만 (gain_exp 미연결)
-- [ ] POST `/{mission_id}/verify`
-- [ ] GET `/calendar`
-- [ ] GET `/statistics/weekly`
-- [ ] complete → `gain_exp` → LEVEL_UP 알림 루프 (Phase 5 확장, Phase 7과 별도)
+- [x] POST `/{mission_id}/complete` — self-report + `gain_exp` 지급 + `LEVEL_UP` 알림
+- [x] DELETE `/{mission_id}/complete` — 완료 취소 + EXP 회수
+- [ ] POST `/{mission_id}/verify` — 웨어러블 자동 인증
+- [x] GET `/calendar`
+- [x] GET `/statistics/weekly`
 - [ ] POST `/api/v1/records/checkups/{record_id}/missions` — 추천 미션 생성
 
 ### Growth `/api/v1/growth` (Phase 5)
