@@ -48,7 +48,7 @@ Router에는 비즈니스 로직을 넣지 않습니다. Service는 DB 세부 �
 | `ocr` | 구현 | Clova OCR job, parser, metric dictionary |
 | `health_metric` | 구현 | 건강 지표 평가, reference seed |
 | `analysis` | legacy stub | Phase 4 호환용. 신규 프론트는 HealthMetric 사용 |
-| `mission` | 부분 | 조회(오늘·날짜별·주간·월간·총계)·complete(EXP 지급)·complete 취소(EXP 회수) 구현. 웨어러블 인증은 후속 |
+| `mission` | 부분 | 오늘 미션·self-report complete 구현. complete→EXP·인증·캘린더·통계는 후속 |
 | `character` | 구현 | 캐릭터 성장 상태와 보유 동물 컬렉션 |
 | `home` | 구현 | 사용자·캐릭터·오늘 미션·알림 수 집계 |
 | `my` | 부분 | 연동 앱 관리, 알림 설정 구현. 프로필·앱잠금·문의·계정삭제는 stub |
@@ -69,7 +69,7 @@ Router에는 비즈니스 로직을 넣지 않습니다. Service는 DB 세부 �
 /api/v1/ocr
 /api/v1/health-metrics
 /api/v1/analysis       # legacy stub
-/api/v1/missions       # 조회(today·날짜별·주간·월간·총계)·complete(EXP 지급)·complete 취소(EXP 회수) 구현
+/api/v1/missions       # GET /today, POST /{id}/complete 구현, complete→EXP 미연결
 /api/v1/characters     # 성장/동물 조회 구현
 /api/v1/home           # 홈 집계 구현
 /api/v1/my             # 연동 앱·알림 설정 구현, 일부 stub
