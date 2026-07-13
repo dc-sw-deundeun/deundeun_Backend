@@ -225,6 +225,7 @@ def test_try_claim_reclaims_non_successful_runs(db_session) -> None:
         (711, "skipped", None),
         (712, "pending", None),
         (713, "generated", 0),  # generated지만 미션 0개 → 재시도 대상
+        (714, "generated", None),  # generated지만 mission_count 미기록(NULL) → 재시도 대상
     ]
     for uid, status, mc in cases:
         _create_user(db_session, uid)
