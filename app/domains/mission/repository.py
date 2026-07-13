@@ -1,11 +1,16 @@
 from datetime import date, timedelta
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
 from app.domains.mission import policy
-from app.domains.mission.models import MissionGenerationRun, MissionTemplate, UserMission
+from app.domains.mission.models import (
+    MissionGenerationRun,
+    MissionTemplate,
+    UserMission,
+    _now,  # 재claim 시 updated_at 갱신용
+)
 from app.domains.mission.schemas import GeneratedMission, History
 
 
@@ -237,10 +242,12 @@ class MissionGenerationRunRepository:
         self._db = db
 
     def try_claim(self, user_id: int, generation_date: date, *, source: str = "scheduler") -> bool:
-        """원자적 선점. 새로 꽂히면 True(생성 진행), 이미 있으면 False(스킵).
+        """원자적 선점/재시도. 새로 꽂히거나, 아직 성공하지 못한 run을 재claim하면 True.
 
-        claim row는 **즉시 커밋**한다 — 생성 실패 시 서비스가 rollback해도 pending row가
-        살아남아 mark("failed")로 상태·attempts를 남길 수 있다(관측·재시도 계약 유지).
+        **성공(status='generated' & mission_count>0)한 run만 스킵(False)** 하고,
+        실패(failed)·중단(pending)·PKG 늦음(skipped)·0개 생성 run은 재claim을 허용한다 →
+        다음 스케줄러 틱이 자동 재시도해 그날 미션이 결국 생성된다. generated는 보호되므로
+        중복 생성은 늘지 않는다. claim row는 **즉시 커밋**한다(실패해도 살아남아 관측 가능).
         """
         stmt = (
             pg_insert(MissionGenerationRun)
@@ -250,7 +257,20 @@ class MissionGenerationRunRepository:
                 status="pending",
                 source=source,
             )
-            .on_conflict_do_nothing(index_elements=["user_id", "generation_date"])
+            .on_conflict_do_update(
+                index_elements=["user_id", "generation_date"],
+                set_={
+                    "status": "pending",
+                    "source": source,
+                    "attempts": MissionGenerationRun.attempts + 1,
+                    "updated_at": _now(),
+                },
+                where=or_(
+                    MissionGenerationRun.status != "generated",
+                    MissionGenerationRun.mission_count.is_(None),
+                    MissionGenerationRun.mission_count == 0,
+                ),
+            )
             .returning(MissionGenerationRun.id)
         )
         claimed = self._db.execute(stmt).first() is not None

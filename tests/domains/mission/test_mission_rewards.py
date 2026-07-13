@@ -74,6 +74,25 @@ def test_build_seeds_sets_execution_time() -> None:
         assert re.match(_TIME_RE, s.execution.time), f"{s.title}: time={s.execution.time!r}"
 
 
+# --- execution.when 매핑 (M2: 모든 템플릿이 수행 시점을 가져야 함) ---
+
+
+def test_every_template_defines_when() -> None:
+    from app.domains.mission import pool
+
+    missing = [t["id"] for t in pool.templates() if not t.get("when")]
+    assert not missing, f"when 미정의 템플릿: {missing}"
+
+
+def test_build_seeds_sets_execution_when() -> None:
+    # 조건이 많은 페르소나로 여러 타입 템플릿이 seed로 뽑히게 한 뒤 when이 비지 않는지 확인.
+    pkg = PKG(id="u1", conditions=["hypertension", "type2_diabetes", "obesity", "dyslipidemia"])
+    seeds = build_seeds(InMemoryPKG(pkg), pkg, n=8)
+    assert seeds
+    for s in seeds:
+        assert s.execution.when, f"{s.title}: when이 비어있음"
+
+
 # --- _apply_phrase가 LLM time 적용 / 폴백 ---
 
 

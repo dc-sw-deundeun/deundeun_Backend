@@ -72,6 +72,7 @@
     {
       "id": "walk_after_meal",
       "type": "exercise",
+      "when": "식후",
       "template": "식후 {duration}분 걷기",
       "slots": {"duration": {"base": 10, "unit": "분"}},
       "targets": ["type2_diabetes", "prediabetes", "obesity", "hypertension", "fatty_liver"]
@@ -79,6 +80,7 @@
     {
       "id": "light_strength",
       "type": "exercise",
+      "when": "낮 시간",
       "template": "가벼운 스쿼트 {count}회 하기",
       "slots": {"count": {"base": 10, "unit": "회"}},
       "targets": ["obesity", "type2_diabetes", "dyslipidemia"]
@@ -86,6 +88,7 @@
     {
       "id": "low_sodium_meal",
       "type": "diet",
+      "when": "식사 시",
       "template": "오늘 한 끼 저염식 하기",
       "slots": {},
       "targets": ["hypertension", "ckd", "cardiovascular_disease"]
@@ -93,6 +96,7 @@
     {
       "id": "leafy_greens",
       "type": "diet",
+      "when": "식사 시",
       "template": "끼니에 녹색잎채소 {count}가지 챙기기",
       "slots": {"count": {"base": 1, "unit": "가지"}},
       "targets": ["dyslipidemia", "obesity", "type2_diabetes"]
@@ -100,6 +104,7 @@
     {
       "id": "reduce_sugar_drink",
       "type": "diet",
+      "when": "낮 시간",
       "template": "단 음료 대신 물·차 마시기",
       "slots": {},
       "targets": ["type2_diabetes", "prediabetes", "fatty_liver", "obesity"]
@@ -107,6 +112,7 @@
     {
       "id": "purine_moderate",
       "type": "diet",
+      "when": "식사 시",
       "template": "오늘 고기·해산물 과식 피하기",
       "slots": {},
       "targets": ["gout"]
@@ -114,6 +120,7 @@
     {
       "id": "hydration",
       "type": "hydration",
+      "when": "낮 시간",
       "template": "물 {cups}잔 마시기",
       "slots": {"cups": {"base": 8, "unit": "잔"}},
       "targets": ["gout"]
@@ -121,6 +128,7 @@
     {
       "id": "sleep_routine",
       "type": "sleep",
+      "when": "취침 전",
       "template": "{hour}시 전에 잠자리에 들기",
       "slots": {"hour": {"base": 24, "unit": "시"}},
       "targets": ["insomnia", "hypertension", "depression_screen"]
@@ -128,6 +136,7 @@
     {
       "id": "breathing_stretch",
       "type": "stress",
+      "when": "낮 시간",
       "template": "{minutes}분 심호흡·가벼운 스트레칭 하기",
       "slots": {"minutes": {"base": 10, "unit": "분"}},
       "targets": ["depression_screen", "hypertension", "insomnia"]
@@ -135,6 +144,7 @@
     {
       "id": "record_meal",
       "type": "habit",
+      "when": "식사 시",
       "template": "오늘 먹은 식사 사진으로 기록하기",
       "slots": {},
       "targets": []
@@ -142,6 +152,7 @@
     {
       "id": "clinic_followup",
       "type": "checkup_followup",
+      "when": "낮 시간",
       "template": "가까운 시일 내 병원에서 {topic} 상담받기",
       "slots": {"topic": {"base": "검진 결과"}},
       "targets": ["anemia", "ckd", "depression_screen"]
@@ -149,6 +160,7 @@
     {
       "id": "stair_use",
       "type": "exercise",
+      "when": "낮 시간",
       "template": "엘리베이터 대신 계단 이용하기",
       "slots": {},
       "targets": ["obesity", "type2_diabetes", "dyslipidemia", "fatty_liver", "hypertension"]
@@ -156,6 +168,7 @@
     {
       "id": "sit_to_stand",
       "type": "exercise",
+      "when": "낮 시간",
       "template": "앉았다 일어서기 {count}회 하기",
       "slots": {"count": {"base": 10, "unit": "회"}},
       "targets": ["obesity", "type2_diabetes", "dyslipidemia"]
@@ -163,6 +176,7 @@
     {
       "id": "whole_grain",
       "type": "diet",
+      "when": "식사 시",
       "template": "흰쌀밥 대신 잡곡밥 먹기",
       "slots": {},
       "targets": ["type2_diabetes", "prediabetes", "dyslipidemia", "obesity", "fatty_liver"]
@@ -170,6 +184,7 @@
     {
       "id": "veggie_first",
       "type": "diet",
+      "when": "식사 시",
       "template": "식사 때 채소부터 먹기",
       "slots": {},
       "targets": ["type2_diabetes", "prediabetes", "obesity", "dyslipidemia"]
@@ -177,6 +192,7 @@
     {
       "id": "leave_broth",
       "type": "diet",
+      "when": "식사 시",
       "template": "국·찌개 국물 남기기",
       "slots": {},
       "targets": ["hypertension", "ckd", "cardiovascular_disease"]
@@ -184,6 +200,7 @@
     {
       "id": "slow_eating",
       "type": "diet",
+      "when": "식사 시",
       "template": "천천히 꼭꼭 씹어 먹기",
       "slots": {},
       "targets": ["gerd", "obesity", "fatty_liver"]
@@ -191,6 +208,7 @@
     {
       "id": "avoid_late_snack",
       "type": "diet",
+      "when": "취침 전",
       "template": "취침 전 야식 피하기",
       "slots": {},
       "targets": ["obesity", "fatty_liver", "gerd", "type2_diabetes"]
@@ -198,6 +216,7 @@
     {
       "id": "less_processed",
       "type": "diet",
+      "when": "식사 시",
       "template": "가공식품 대신 자연식품 고르기",
       "slots": {},
       "targets": ["hypertension", "dyslipidemia", "obesity"]
@@ -205,6 +224,7 @@
     {
       "id": "morning_water",
       "type": "hydration",
+      "when": "기상 후",
       "template": "기상 후 물 한 잔 마시기",
       "slots": {},
       "targets": ["gout"]
@@ -212,6 +232,7 @@
     {
       "id": "no_screen_before_bed",
       "type": "sleep",
+      "when": "취침 전",
       "template": "잠들기 30분 전 스마트폰 멀리하기",
       "slots": {},
       "targets": ["insomnia", "depression_screen"]
@@ -219,6 +240,7 @@
     {
       "id": "fixed_wake_time",
       "type": "sleep",
+      "when": "기상 후",
       "template": "매일 같은 시간에 일어나기",
       "slots": {},
       "targets": ["insomnia", "depression_screen"]
@@ -226,6 +248,7 @@
     {
       "id": "limit_caffeine_pm",
       "type": "sleep",
+      "when": "낮 시간",
       "template": "오후엔 커피·카페인 줄이기",
       "slots": {},
       "targets": ["insomnia", "hypertension"]
@@ -233,6 +256,7 @@
     {
       "id": "gratitude_note",
       "type": "stress",
+      "when": "취침 전",
       "template": "오늘 감사한 일 한 가지 적어보기",
       "slots": {},
       "targets": ["depression_screen"]
@@ -240,6 +264,7 @@
     {
       "id": "short_break",
       "type": "stress",
+      "when": "낮 시간",
       "template": "일하는 중 5분 눈 감고 쉬기",
       "slots": {},
       "targets": ["depression_screen", "hypertension", "insomnia"]
@@ -247,6 +272,7 @@
     {
       "id": "nature_moment",
       "type": "stress",
+      "when": "낮 시간",
       "template": "창밖을 보며 잠시 숨 고르기",
       "slots": {},
       "targets": ["depression_screen", "hypertension"]
@@ -254,6 +280,7 @@
     {
       "id": "posture_check",
       "type": "habit",
+      "when": "낮 시간",
       "template": "바른 자세로 앉기 신경 쓰기",
       "slots": {},
       "targets": []
@@ -261,6 +288,7 @@
     {
       "id": "stretch_break",
       "type": "habit",
+      "when": "낮 시간",
       "template": "한 시간마다 몸 가볍게 펴기",
       "slots": {},
       "targets": []
@@ -268,6 +296,7 @@
     {
       "id": "mindful_meal",
       "type": "habit",
+      "when": "식사 시",
       "template": "핸드폰 없이 식사에 집중하기",
       "slots": {},
       "targets": ["obesity", "gerd"]
@@ -275,6 +304,7 @@
     {
       "id": "leg_elevation",
       "type": "habit",
+      "when": "취침 전",
       "template": "다리를 심장보다 높게 올려 잠시 쉬기",
       "slots": {},
       "targets": ["ankle_edema"]
@@ -282,6 +312,7 @@
     {
       "id": "gentle_stretch",
       "type": "exercise",
+      "when": "기상 후",
       "template": "관절에 무리 없이 가볍게 스트레칭하기",
       "slots": {},
       "targets": ["osteoarthritis"]

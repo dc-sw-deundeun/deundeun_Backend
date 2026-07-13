@@ -24,6 +24,7 @@ from app.domains.pkg.neighborhood import deterministic_curation
 from app.domains.pkg.repository import PkgRepository
 from app.domains.pkg.trends import compute_trends, group_trend_values
 from app.domains.record.repository import RecordRepository
+from app.domains.user.repository import UserRepository
 
 logger = logging.getLogger(__name__)
 
@@ -35,11 +36,13 @@ class PkgService:
         analysis_repo: AnalysisRepository,
         hm_analysis_repo: HealthMetricAnalysisRepository,
         pkg_repo: PkgRepository,
+        user_repo: UserRepository,
     ) -> None:
         self._record_repo = record_repo
         self._analysis_repo = analysis_repo
         self._hm_analysis_repo = hm_analysis_repo
         self._pkg_repo = pkg_repo
+        self._user_repo = user_repo
 
     def build_pkg(self, user_id: int) -> PKG:
         record = self._record_repo.get_latest_verified_record(user_id)
@@ -58,8 +61,13 @@ class PkgService:
             )
         else:
             metrics = self._record_repo.list_metrics(record.id)
+            # 성별 특이 지표(HGB·WAIST·GGT)를 올바르게 재평가하려면 sex가 필요하다.
+            # UserSex는 str 서브클래스라 evaluate_metric_status가 그대로 정규화한다.
+            user = self._user_repo.find_by_id(user_id)
+            sex = user.sex if user is not None else None
             conditions, flags = derive_conditions_and_flags(
                 [MetricReading(metric_code=m.metric_code, value=m.value) for m in metrics],
+                sex=sex,
                 risk_level=risk_level,
             )
 
