@@ -8,8 +8,6 @@ from app.domains.mission import policy, pool
 from app.domains.mission.pkg import PKGClient
 from app.domains.mission.schemas import PKG, Execution, MissionCandidate
 
-_WHEN = {"walk_after_meal": "식후", "sleep_routine": "취침 전", "light_strength": "낮 시간"}
-
 
 def compute_params(template: dict, pkg_client: PKGClient, pkg: PKG) -> dict:
     slots = template.get("slots", {})
@@ -81,7 +79,7 @@ def build_seeds(
         title = t["template"].format(**params) if params else t["template"]
         duration = params.get("duration") or params.get("minutes")
         count = params.get("count") or params.get("cups")
-        when = _WHEN.get(t["id"], "")
+        when = t.get("when", "")  # 템플릿이 정의한 수행 시점(mission_pool.json)
         seeds.append(
             MissionCandidate(
                 title=title,
