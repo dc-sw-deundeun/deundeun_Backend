@@ -14,16 +14,18 @@ from app.domains.pkg.repository import PkgRepository
 from app.domains.pkg.service import PkgService
 from app.domains.record.models import CheckupMetricResult, CheckupRecord
 from app.domains.record.repository import RecordRepository
-from app.domains.user.models import OnboardingStep, User
+from app.domains.user.models import OnboardingStep, User, UserSex
+from app.domains.user.repository import UserRepository
 
 
-def _create_user(db, user_id):
+def _create_user(db, user_id, *, sex: UserSex = UserSex.MALE):
     db.add(
         User(
             id=user_id,
             email=f"pkg-{user_id}@example.com",
             password_hash="hash",
             nickname=f"pkg-user-{user_id}",
+            sex=sex,
             onboarding_step=OnboardingStep.INITIAL_CHECKUP.value,
             timezone="Asia/Seoul",
         )
@@ -37,6 +39,7 @@ def _service(db):
         AnalysisRepository(db),
         HealthMetricAnalysisRepository(db),
         PkgRepository(db),
+        UserRepository(db),
     )
 
 
@@ -92,6 +95,29 @@ def test_build_pkg_derives_conditions_flags_and_fallback_edges(db_session) -> No
     # 엣지 endpoint는 모두 노드로 존재
     node_ids = {n.id for n in pkg.nodes}
     assert all(e.src in node_ids and e.dst in node_ids for e in pkg.edges)
+
+
+def test_build_pkg_fallback_uses_user_sex_for_sex_specific_metric(db_session) -> None:
+    """폴백 경로(분석 결과물 없음)에서 성별 특이 지표가 user.sex로 올바르게 판정된다(M5).
+
+    WAIST=87: 성별 없으면 UNKNOWN(조건 없음)이지만, female면 85 이상이라 RISK→obesity.
+    """
+    _create_user(db_session, 30, sex=UserSex.FEMALE)
+    _seed_record(db_session, 30, [("waist", "87")])
+
+    pkg = _service(db_session).build_pkg(30)
+
+    assert "obesity" in pkg.conditions
+
+
+def test_build_pkg_fallback_male_waist_below_threshold_no_obesity(db_session) -> None:
+    """대조: 동일 WAIST=87도 male 기준(<90)에선 정상이라 obesity가 도출되지 않는다."""
+    _create_user(db_session, 31, sex=UserSex.MALE)
+    _seed_record(db_session, 31, [("waist", "87")])
+
+    pkg = _service(db_session).build_pkg(31)
+
+    assert "obesity" not in pkg.conditions
 
 
 def test_build_pkg_404_without_verified_record(db_session) -> None:
