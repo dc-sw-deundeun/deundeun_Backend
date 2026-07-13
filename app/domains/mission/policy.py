@@ -48,6 +48,7 @@ def xp_for_difficulty(difficulty: int) -> int:
 _TIME_BY_WHEN = {
     "기상 후": "07:00",
     "식후": "13:00",
+    "식사 시": "12:00",
     "취침 전": "22:00",
     "낮 시간": "15:00",
 }
