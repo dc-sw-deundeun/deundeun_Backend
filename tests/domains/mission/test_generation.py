@@ -18,7 +18,10 @@ from app.domains.mission.generation_service import (
 )
 from app.domains.mission.models import MissionGenerationRun
 from app.domains.mission.policy import local_date_for_timezone
-from app.domains.mission.repository import MissionRepository
+from app.domains.mission.repository import (
+    MissionGenerationRunRepository,
+    MissionRepository,
+)
 from app.domains.mission.scheduler import run_daily_generation_tick
 from app.domains.mission.schemas import GeneratedMission
 from app.domains.mission.service import MissionService
@@ -198,6 +201,68 @@ def test_generate_failure_records_failed_run(db_session, monkeypatch) -> None:
     assert run.error_code == "GENERATION_ERROR"
     assert run.attempts >= 1
     assert MissionRepository(db_session).list_for_date(701, _TODAY) == []
+
+
+def _seed_run(db, user_id: int, status: str, mission_count: int | None = None) -> None:
+    db.add(
+        MissionGenerationRun(
+            user_id=user_id,
+            generation_date=_TODAY,
+            status=status,
+            source="scheduler",
+            attempts=1,
+            mission_count=mission_count,
+        )
+    )
+    db.commit()
+
+
+def test_try_claim_reclaims_non_successful_runs(db_session) -> None:
+    """실패/중단/스킵/0개-생성 run은 재claim이 허용돼 다음 틱이 재시도할 수 있어야 한다(H3)."""
+    repo = MissionGenerationRunRepository(db_session)
+    cases = [
+        (710, "failed", None),
+        (711, "skipped", None),
+        (712, "pending", None),
+        (713, "generated", 0),  # generated지만 미션 0개 → 재시도 대상
+    ]
+    for uid, status, mc in cases:
+        _create_user(db_session, uid)
+        _seed_run(db_session, uid, status, mc)
+        assert repo.try_claim(uid, _TODAY, source="scheduler") is True, status
+
+
+def test_try_claim_skips_successful_generated_run(db_session) -> None:
+    """생성 성공(generated & 미션>0) run은 재claim 거부 — 멱등/중복 생성 방지 유지."""
+    repo = MissionGenerationRunRepository(db_session)
+    _create_user(db_session, 720)
+    _seed_run(db_session, 720, "generated", 3)
+    assert repo.try_claim(720, _TODAY, source="scheduler") is False
+
+
+def test_generate_retries_after_failed_run(db_session, monkeypatch) -> None:
+    """실패한 run은 다음 생성 호출에서 재claim되어 재시도된다 → 그날 미션이 결국 생성된다(H3)."""
+
+    async def _boom(*args, **kwargs):
+        raise RuntimeError("pipeline blew up")
+
+    _create_user(db_session, 702)
+    _seed_record(db_session, 702, [("systolic_bp", "150")])
+
+    monkeypatch.setattr(
+        "app.domains.mission.generation_service.MissionPipeline.generate_missions", _boom
+    )
+    assert _gen(db_session, 702) is False
+    db_session.expire_all()
+    failed = _gen_run(db_session, 702)
+    assert failed is not None and failed.status == "failed"
+
+    monkeypatch.undo()  # 다음 틱은 정상 동작
+    assert _gen(db_session, 702) is True  # 실패 run을 재claim해 재시도
+    db_session.expire_all()
+    assert len(MissionRepository(db_session).list_for_date(702, _TODAY)) >= 1
+    retried = _gen_run(db_session, 702)
+    assert retried is not None and retried.status == "generated"
 
 
 def test_checkup_regeneration_worker_runs_in_own_session(db_session) -> None:
