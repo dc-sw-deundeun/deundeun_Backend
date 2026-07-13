@@ -7,6 +7,7 @@ from app.domains.health_metric.repository import HealthMetricAnalysisRepository
 from app.domains.pkg.repository import PkgRepository
 from app.domains.pkg.service import PkgService
 from app.domains.record.repository import RecordRepository
+from app.domains.user.repository import UserRepository
 
 
 def build_pkg_service(db: Session) -> PkgService:
@@ -16,6 +17,7 @@ def build_pkg_service(db: Session) -> PkgService:
         AnalysisRepository(db),
         HealthMetricAnalysisRepository(db),
         PkgRepository(db),
+        UserRepository(db),
     )
 
 
